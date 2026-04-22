@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { products } from '../data/products';
@@ -6,64 +6,29 @@ import { meladen7, meladen8, meladen9, meladen10, meladen11 } from '../data/mela
 import bento1 from '../assets/Bento1.png';
 import bento2 from '../assets/BentoPerfumeRight.png';
 import heroVideo from '../assets/HeroVideo.webm';
+import heroVideoMp4 from '../assets/Homepagevideo.mp4';
+import heroPoster from '../assets/hero.png';
 import ProductCard from '../components/ProductCard';
+import AutoplayVideo from '../components/AutoplayVideo';
 import { pageVariants, fadeUp, staggerContainer } from '../animations/variants';
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
-  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
   const newArrivals = products.filter(p => p.isNew || p.isBestseller).slice(0, 4);
-
-  useEffect(() => {
-    const video = heroVideoRef.current;
-    if (!video) return;
-
-    const tryPlay = () => {
-      video.muted = true;
-      video.defaultMuted = true;
-      void video.play().catch(() => {});
-    };
-
-    tryPlay();
-
-    const frameId = window.requestAnimationFrame(tryPlay);
-    const timeoutId = window.setTimeout(tryPlay, 250);
-
-    video.addEventListener('canplay', tryPlay);
-    document.addEventListener('visibilitychange', tryPlay);
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      window.clearTimeout(timeoutId);
-      video.removeEventListener('canplay', tryPlay);
-      document.removeEventListener('visibilitychange', tryPlay);
-    };
-  }, []);
 
   return (
     <motion.div variants={pageVariants} initial="hidden" animate="visible" className="relative isolate overflow-x-clip bg-brand-cream">
 
       {/* ── HERO ── */}
       <section className="relative mx-3 mt-3 mb-8 lg:mx-6 lg:mt-4 lg:mb-10 rounded-3xl overflow-hidden h-[480px] lg:h-[90vh]">
-        <video
-          ref={heroVideoRef}
-          src={heroVideo}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          controls={false}
-          controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
-          disableRemotePlayback
-          disablePictureInPicture
-          className="pointer-events-none absolute inset-0 w-full h-full object-cover object-center"
-          onLoadedData={(e) => {
-            e.currentTarget.muted = true;
-            e.currentTarget.defaultMuted = true;
-            e.currentTarget.play().catch(() => {});
-          }}
+        <AutoplayVideo
+          sources={[
+            { src: heroVideoMp4, type: 'video/mp4' },
+            { src: heroVideo, type: 'video/webm' },
+          ]}
+          poster={heroPoster}
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/15 to-black/75" />
         <div className="absolute inset-0 flex flex-col justify-end px-7 pb-10 lg:justify-center lg:pb-0 lg:px-16">
@@ -120,7 +85,7 @@ export default function HomePage() {
             <img
               src={bento1}
               alt="Men's fragrance"
-              className="pointer-events-none absolute left-1/2 bottom-0 w-[82%] max-w-[250px] -translate-x-1/2 object-contain drop-shadow-[0_24px_32px_rgba(0,0,0,0.45)] transition-transform duration-700 group-hover:scale-[1.04] lg:bottom-0"
+              className="pointer-events-none absolute left-1/2 bottom-0 w-[82%] max-w-[250px] -translate-x-1/2 object-contain drop-shadow-[0_24px_32px_rgba(0,0,0,0.45)] lg:bottom-0"
               loading="lazy"
               decoding="async"
             />
@@ -146,7 +111,7 @@ export default function HomePage() {
             <img
               src={bento2}
               alt="Women's fragrance"
-              className="pointer-events-none absolute left-1/2 bottom-0 w-[82%] max-w-[250px] -translate-x-1/2 object-contain drop-shadow-[0_24px_32px_rgba(0,0,0,0.45)] transition-transform duration-700 group-hover:scale-[1.04] lg:bottom-0"
+              className="pointer-events-none absolute left-1/2 bottom-0 w-[82%] max-w-[250px] -translate-x-1/2 object-contain drop-shadow-[0_24px_32px_rgba(0,0,0,0.45)] lg:bottom-0"
               loading="lazy"
               decoding="async"
             />

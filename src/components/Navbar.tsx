@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import { overlayVariants } from '../animations/variants';
 import CartDrawer from './CartDrawer';
 import sparklingLogo from '../assets/Sparkling Logo.mp4';
+import AutoplayVideo from './AutoplayVideo';
 
 const navLinks = [
   { label: 'Home', path: '/' },
@@ -18,8 +19,6 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const { count } = useCart();
-  const desktopLogoRef = useRef<HTMLVideoElement | null>(null);
-  const mobileLogoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -31,37 +30,6 @@ export default function Navbar() {
     document.body.style.overflow = (menuOpen || cartOpen) ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [menuOpen, cartOpen]);
-
-  useEffect(() => {
-    const videos = [desktopLogoRef.current, mobileLogoRef.current].filter(
-      (video): video is HTMLVideoElement => video !== null,
-    );
-
-    if (videos.length === 0) return;
-
-    const tryPlayAll = () => {
-      videos.forEach(video => {
-        video.muted = true;
-        video.defaultMuted = true;
-        void video.play().catch(() => {});
-      });
-    };
-
-    tryPlayAll();
-
-    const frameId = window.requestAnimationFrame(tryPlayAll);
-    const timeoutId = window.setTimeout(tryPlayAll, 250);
-
-    videos.forEach(video => video.addEventListener('canplay', tryPlayAll));
-    document.addEventListener('visibilitychange', tryPlayAll);
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      window.clearTimeout(timeoutId);
-      videos.forEach(video => video.removeEventListener('canplay', tryPlayAll));
-      document.removeEventListener('visibilitychange', tryPlayAll);
-    };
-  }, [menuOpen]);
 
   return (
     <>
@@ -91,24 +59,9 @@ export default function Navbar() {
             className="absolute left-1/2 flex h-[4.5rem] w-48 -translate-x-1/2 items-center justify-center overflow-hidden lg:static lg:h-20 lg:w-56 lg:translate-x-0 lg:justify-self-start"
             aria-label="Meladen home"
           >
-            <video
-              ref={desktopLogoRef}
-              src={sparklingLogo}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-              controls={false}
-              controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
-              disableRemotePlayback
-              disablePictureInPicture
+            <AutoplayVideo
+              sources={[{ src: sparklingLogo, type: 'video/mp4' }]}
               className="pointer-events-none h-full w-full object-contain"
-              onLoadedData={(e) => {
-                e.currentTarget.muted = true;
-                e.currentTarget.defaultMuted = true;
-                e.currentTarget.play().catch(() => {});
-              }}
             />
           </Link>
 
@@ -188,24 +141,9 @@ export default function Navbar() {
                 onClick={() => setMenuOpen(false)}
                 aria-label="Meladen home"
               >
-                <video
-                  ref={mobileLogoRef}
-                  src={sparklingLogo}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="auto"
-                  controls={false}
-                  controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
-                  disableRemotePlayback
-                  disablePictureInPicture
+                <AutoplayVideo
+                  sources={[{ src: sparklingLogo, type: 'video/mp4' }]}
                   className="pointer-events-none h-full w-full object-contain"
-                  onLoadedData={(e) => {
-                    e.currentTarget.muted = true;
-                    e.currentTarget.defaultMuted = true;
-                    e.currentTarget.play().catch(() => {});
-                  }}
                 />
               </Link>
               <ul className="space-y-6 flex-1">
