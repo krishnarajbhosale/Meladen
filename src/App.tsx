@@ -1,0 +1,36 @@
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
+import MobileContainer from './components/MobileContainer';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import HomePage from './pages/HomePage';
+import ProductPage from './pages/ProductPage';
+import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
+import OrderConfirmationPage from './pages/OrderConfirmationPage';
+import CollectionPage from './pages/CollectionPage';
+
+const CHROME_ROUTES = ['/', '/cart', '/checkout', '/collection'];
+
+export default function App() {
+  const location = useLocation();
+  const showChrome =
+    CHROME_ROUTES.includes(location.pathname) || location.pathname.startsWith('/product');
+
+  return (
+    <MobileContainer>
+      {showChrome && <Navbar />}
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/collection" element={<CollectionPage />} />
+          <Route path="/product/:id" element={<ProductPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
+        </Routes>
+      </AnimatePresence>
+      {showChrome && <Footer />}
+    </MobileContainer>
+  );
+}
