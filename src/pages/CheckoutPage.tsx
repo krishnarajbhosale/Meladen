@@ -102,15 +102,15 @@ export default function CheckoutPage() {
           {/* Items */}
           <div className="space-y-4 mb-6">
             {items.map(item => (
-              <div key={item.product.id} className="flex gap-3 items-center">
+              <div key={`${item.product.id}-${item.size}`} className="flex gap-3 items-center">
                 <div className="w-14 h-16 rounded-xl overflow-hidden bg-brand-light-gray flex-shrink-0">
                   <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-serif text-sm font-medium text-brand-dark truncate">{item.product.name}</p>
-                  <p className="text-xs text-brand-gray">Qty: {item.quantity}</p>
+                  <p className="text-xs text-brand-gray">{item.size} · Qty: {item.quantity}</p>
                 </div>
-                <p className="text-sm font-medium text-brand-dark">${(item.product.price * item.quantity).toFixed(0)}</p>
+                <p className="text-sm font-medium text-brand-dark">${(item.unitPrice * item.quantity).toFixed(0)}</p>
               </div>
             ))}
           </div>
@@ -137,15 +137,15 @@ export default function CheckoutPage() {
       <Drawer open={summaryOpen} onClose={() => setSummaryOpen(false)} title="Order Summary">
         <div className="space-y-4">
           {items.map(item => (
-            <div key={item.product.id} className="flex gap-3 items-center">
+            <div key={`${item.product.id}-${item.size}`} className="flex gap-3 items-center">
               <div className="w-14 h-16 rounded-xl overflow-hidden bg-brand-light-gray flex-shrink-0">
                 <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
               </div>
               <div className="flex-1">
                 <p className="font-serif text-sm font-medium text-brand-dark">{item.product.name}</p>
-                <p className="text-xs text-brand-gray">Qty: {item.quantity}</p>
+                <p className="text-xs text-brand-gray">{item.size} · Qty: {item.quantity}</p>
               </div>
-              <p className="text-sm font-medium text-brand-dark">${(item.product.price * item.quantity).toFixed(0)}</p>
+              <p className="text-sm font-medium text-brand-dark">${(item.unitPrice * item.quantity).toFixed(0)}</p>
             </div>
           ))}
           <div className="h-px bg-brand-beige" />

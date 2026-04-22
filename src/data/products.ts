@@ -31,6 +31,21 @@ export interface Product {
   isBestseller?: boolean;
 }
 
+export interface ProductSizeOption {
+  label: string;
+  price: number;
+}
+
+export function getProductSizeOptions(product: Product): ProductSizeOption[] {
+  const basePrice = product.price;
+
+  return [
+    { label: '30ml', price: Math.round(basePrice * 0.75) },
+    { label: '50ml', price: basePrice },
+    { label: '100ml', price: Math.round(basePrice * 1.7) },
+  ];
+}
+
 export const products: Product[] = [
   {
     id: '1',

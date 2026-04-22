@@ -41,7 +41,7 @@ export default function CartPage() {
           <AnimatePresence>
             {items.map((item, i) => (
               <motion.div
-                key={item.product.id}
+                key={`${item.product.id}-${item.size}`}
                 layout
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -58,13 +58,13 @@ export default function CartPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] text-brand-gray tracking-widest uppercase mb-0.5">{item.product.category}</p>
                   <p className="font-serif text-base font-medium text-brand-dark leading-tight mb-1">{item.product.name}</p>
-                  <p className="text-sm text-brand-gray mb-3">{item.product.size}</p>
+                  <p className="text-sm text-brand-gray mb-3">{item.size}</p>
                   <div className="flex items-center justify-between">
-                    <QuantityStepper value={item.quantity} onChange={v => updateQty(item.product.id, v)} />
-                    <p className="font-medium text-brand-dark">${(item.product.price * item.quantity).toFixed(0)}</p>
+                    <QuantityStepper value={item.quantity} onChange={v => updateQty(item.product.id, item.size, v)} />
+                    <p className="font-medium text-brand-dark">${(item.unitPrice * item.quantity).toFixed(0)}</p>
                   </div>
                 </div>
-                <button onClick={() => removeFromCart(item.product.id)} className="self-start text-brand-gray/50 hover:text-brand-gray transition-colors">
+                <button onClick={() => removeFromCart(item.product.id, item.size)} className="self-start text-brand-gray/50 hover:text-brand-gray transition-colors">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                   </svg>

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import MobileContainer from './components/MobileContainer';
@@ -12,6 +13,16 @@ import CollectionPage from './pages/CollectionPage';
 
 const CHROME_ROUTES = ['/', '/cart', '/checkout', '/collection'];
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname]);
+
+  return null;
+}
+
 export default function App() {
   const location = useLocation();
   const showChrome =
@@ -19,6 +30,7 @@ export default function App() {
 
   return (
     <MobileContainer>
+      <ScrollToTop />
       {showChrome && <Navbar />}
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>

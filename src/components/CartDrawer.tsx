@@ -109,7 +109,7 @@ export default function CartDrawer({ open, onClose }: Props) {
                   <AnimatePresence>
                     {items.map(item => (
                       <motion.div
-                        key={item.product.id}
+                        key={`${item.product.id}-${item.size}`}
                         layout
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -129,20 +129,20 @@ export default function CartDrawer({ open, onClose }: Props) {
                         <div className="flex-1 min-w-0">
                           <p className="font-serif text-sm font-medium text-brand-dark leading-tight mb-0.5">{item.product.name}</p>
                           <p className="text-[10px] text-brand-gray tracking-widest uppercase mb-0.5">{item.product.category}</p>
-                          <p className="text-[11px] text-brand-gray mb-3">{item.product.size}</p>
+                          <p className="text-[11px] text-brand-gray mb-3">{item.size}</p>
 
                           {/* Qty stepper */}
                           <div className="flex items-center gap-3">
                             <div className="flex items-center border border-brand-beige rounded-full">
                               <button
-                                onClick={() => updateQty(item.product.id, item.quantity - 1)}
+                                onClick={() => updateQty(item.product.id, item.size, item.quantity - 1)}
                                 className="w-7 h-7 flex items-center justify-center text-brand-gray hover:text-brand-dark transition-colors text-base"
                               >
                                 −
                               </button>
                               <span className="w-6 text-center text-[12px] font-medium text-brand-dark">{item.quantity}</span>
                               <button
-                                onClick={() => updateQty(item.product.id, item.quantity + 1)}
+                                onClick={() => updateQty(item.product.id, item.size, item.quantity + 1)}
                                 className="w-7 h-7 flex items-center justify-center text-brand-gray hover:text-brand-dark transition-colors text-base"
                               >
                                 +
@@ -154,14 +154,14 @@ export default function CartDrawer({ open, onClose }: Props) {
                         {/* Price + remove */}
                         <div className="flex flex-col items-end justify-between flex-shrink-0">
                           <button
-                            onClick={() => removeFromCart(item.product.id)}
+                            onClick={() => removeFromCart(item.product.id, item.size)}
                             className="text-brand-gray/40 hover:text-brand-gray transition-colors"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                               <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                             </svg>
                           </button>
-                          <p className="text-sm font-medium text-brand-dark">${(item.product.price * item.quantity).toFixed(2)}</p>
+                          <p className="text-sm font-medium text-brand-dark">${(item.unitPrice * item.quantity).toFixed(2)}</p>
                         </div>
                       </motion.div>
                     ))}

@@ -4,14 +4,16 @@ import type { Product } from '../data/products';
 
 export interface CartItem {
   product: Product;
+  size: string;
+  unitPrice: number;
   quantity: number;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product) => void;
-  removeFromCart: (id: string) => void;
-  updateQty: (id: string, qty: number) => void;
+  addToCart: (product: Product, size?: string, unitPrice?: number) => void;
+  removeFromCart: (id: string, size: string) => void;
+  updateQty: (id: string, size: string, qty: number) => void;
   total: number;
   count: number;
 }
@@ -21,28 +23,32 @@ const CartContext = createContext<CartContextType | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, size = product.size, unitPrice = product.price) => {
     setItems(prev => {
-      const existing = prev.find(i => i.product.id === product.id);
+      const existing = prev.find(i => i.product.id === product.id && i.size === size);
       if (existing)
         return prev.map(i =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i,
+          i.product.id === product.id && i.size === size
+            ? { ...i, quantity: i.quantity + 1 }
+            : i,
         );
-      return [...prev, { product, quantity: 1 }];
+      return [...prev, { product, size, unitPrice, quantity: 1 }];
     });
   };
 
-  const removeFromCart = (id: string) =>
-    setItems(prev => prev.filter(i => i.product.id !== id));
+  const removeFromCart = (id: string, size: string) =>
+    setItems(prev => prev.filter(i => !(i.product.id === id && i.size === size)));
 
-  const updateQty = (id: string, qty: number) => {
-    if (qty <= 0) return removeFromCart(id);
+  const updateQty = (id: string, size: string, qty: number) => {
+    if (qty <= 0) return removeFromCart(id, size);
     setItems(prev =>
-      prev.map(i => (i.product.id === id ? { ...i, quantity: qty } : i)),
+      prev.map(i =>
+        i.product.id === id && i.size === size ? { ...i, quantity: qty } : i,
+      ),
     );
   };
 
-  const total = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+  const total = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (

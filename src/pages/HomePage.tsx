@@ -19,7 +19,7 @@ export default function HomePage() {
       {/* ── HERO ── */}
       <section className="relative mx-3 mt-3 mb-8 lg:mx-6 lg:mt-4 lg:mb-10 rounded-3xl overflow-hidden h-[480px] lg:h-[90vh]">
         <video
-          src="/src/assets/Homepagevideo.mp4"
+          src="/src/assets/HeroVideo.webm"
           autoPlay
           muted
           loop
@@ -81,7 +81,7 @@ export default function HomePage() {
             <img
               src={bento1}
               alt="Men's fragrance"
-              className="pointer-events-none absolute left-1/2 bottom-[0%] w-[82%] max-w-[250px] -translate-x-1/2 scale-x-[1.22] object-contain drop-shadow-[0_24px_32px_rgba(0,0,0,0.45)] transition-transform duration-700 group-hover:scale-x-[1.28] lg:bottom-[0%]"
+              className="pointer-events-none absolute left-1/2 bottom-0 w-[82%] max-w-[250px] -translate-x-1/2 object-contain drop-shadow-[0_24px_32px_rgba(0,0,0,0.45)] transition-transform duration-700 group-hover:scale-[1.04] lg:bottom-0"
               loading="lazy"
               decoding="async"
             />
@@ -107,7 +107,7 @@ export default function HomePage() {
             <img
               src={bento2}
               alt="Women's fragrance"
-              className="pointer-events-none absolute left-1/2 bottom-[0%] w-[82%] max-w-[250px] -translate-x-1/2 scale-x-[1.22] object-contain drop-shadow-[0_24px_32px_rgba(0,0,0,0.45)] transition-transform duration-700 group-hover:scale-x-[1.28] lg:bottom-[0%]"
+              className="pointer-events-none absolute left-1/2 bottom-0 w-[82%] max-w-[250px] -translate-x-1/2 object-contain drop-shadow-[0_24px_32px_rgba(0,0,0,0.45)] transition-transform duration-700 group-hover:scale-[1.04] lg:bottom-0"
               loading="lazy"
               decoding="async"
             />
@@ -296,7 +296,7 @@ export default function HomePage() {
       </section>
 
       {/* ── CURATED FAVORITES — desktop only ── */}
-      <section className="px-5 lg:px-10 xl:px-20 py-14 lg:py-20">
+      {/* <section className="px-5 lg:px-10 xl:px-20 py-14 lg:py-20">
         <motion.h2 variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}
           className="font-serif text-[1.4rem] lg:text-3xl font-medium text-brand-dark text-center mb-9 lg:mb-14">
           Curated Favorites
@@ -312,9 +312,9 @@ export default function HomePage() {
               custom={i}
               className="flex flex-col items-center text-center cursor-pointer group"
               onClick={() => navigate(`/product/${p.id}`)}
-            >
+            > */}
               {/* Circular product background */}
-              <div className="w-[190px] h-[190px] lg:w-[220px] lg:h-[220px] rounded-full bg-brand-light-gray flex items-center justify-center mb-5 overflow-hidden group-hover:bg-brand-beige transition-colors duration-300">
+              {/* <div className="w-[190px] h-[190px] lg:w-[220px] lg:h-[220px] rounded-full bg-brand-light-gray flex items-center justify-center mb-5 overflow-hidden group-hover:bg-brand-beige transition-colors duration-300">
                 <img
                   src={p.image}
                   alt={p.name}
@@ -334,7 +334,7 @@ export default function HomePage() {
             </motion.div>
           ))}
         </motion.div>
-      </section>
+      </section> */}
 
       {/* ── CRAFTED IN GRASSE — mobile only ── */}
       <section className="hidden">
