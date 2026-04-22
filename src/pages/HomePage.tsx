@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { products } from '../data/products';
@@ -12,6 +12,7 @@ import { pageVariants, fadeUp, staggerContainer } from '../animations/variants';
 export default function HomePage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
   const newArrivals = products.filter(p => p.isNew || p.isBestseller).slice(0, 4);
 
   return (
@@ -20,12 +21,22 @@ export default function HomePage() {
       {/* ── HERO ── */}
       <section className="relative mx-3 mt-3 mb-8 lg:mx-6 lg:mt-4 lg:mb-10 rounded-3xl overflow-hidden h-[480px] lg:h-[90vh]">
         <video
+          ref={heroVideoRef}
           src={heroVideo}
           autoPlay
           muted
+          defaultMuted
           loop
           playsInline
+          preload="auto"
+          controls={false}
+          disablePictureInPicture
           className="absolute inset-0 w-full h-full object-cover object-center"
+          onLoadedData={(e) => {
+            e.currentTarget.muted = true;
+            e.currentTarget.defaultMuted = true;
+            e.currentTarget.play().catch(() => {});
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/15 to-black/75" />
         <div className="absolute inset-0 flex flex-col justify-end px-7 pb-10 lg:justify-center lg:pb-0 lg:px-16">

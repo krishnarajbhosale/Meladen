@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
@@ -18,6 +18,8 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const { count } = useCart();
+  const desktopLogoRef = useRef<HTMLVideoElement | null>(null);
+  const mobileLogoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -29,6 +31,15 @@ export default function Navbar() {
     document.body.style.overflow = (menuOpen || cartOpen) ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [menuOpen, cartOpen]);
+
+  useEffect(() => {
+    [desktopLogoRef.current, mobileLogoRef.current].forEach(video => {
+      if (!video) return;
+      video.muted = true;
+      video.defaultMuted = true;
+      video.play().catch(() => {});
+    });
+  }, [menuOpen]);
 
   return (
     <>
@@ -59,12 +70,22 @@ export default function Navbar() {
             aria-label="Meladen home"
           >
             <video
+              ref={desktopLogoRef}
               src={sparklingLogo}
               autoPlay
               muted
+              defaultMuted
               loop
               playsInline
+              preload="auto"
+              controls={false}
+              disablePictureInPicture
               className="h-full w-full object-contain"
+              onLoadedData={(e) => {
+                e.currentTarget.muted = true;
+                e.currentTarget.defaultMuted = true;
+                e.currentTarget.play().catch(() => {});
+              }}
             />
           </Link>
 
@@ -145,12 +166,22 @@ export default function Navbar() {
                 aria-label="Meladen home"
               >
                 <video
+                  ref={mobileLogoRef}
                   src={sparklingLogo}
                   autoPlay
                   muted
+                  defaultMuted
                   loop
                   playsInline
+                  preload="auto"
+                  controls={false}
+                  disablePictureInPicture
                   className="h-full w-full object-contain"
+                  onLoadedData={(e) => {
+                    e.currentTarget.muted = true;
+                    e.currentTarget.defaultMuted = true;
+                    e.currentTarget.play().catch(() => {});
+                  }}
                 />
               </Link>
               <ul className="space-y-6 flex-1">
