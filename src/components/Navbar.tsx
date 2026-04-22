@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import { overlayVariants } from '../animations/variants';
 import CartDrawer from './CartDrawer';
+import sparklingLogo from '../assets/Sparkling Logo.mp4';
 
 const navLinks = [
   { label: 'Home', path: '/' },
@@ -54,9 +55,17 @@ export default function Navbar() {
           {/* Logo */}
           <Link
             to="/"
-            className="font-serif text-xl font-semibold tracking-[0.18em] text-[#c9a84c] uppercase absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0 lg:justify-self-start"
+            className="absolute left-1/2 flex h-[4.5rem] w-48 -translate-x-1/2 items-center justify-center overflow-hidden lg:static lg:h-20 lg:w-56 lg:translate-x-0 lg:justify-self-start"
+            aria-label="Meladen home"
           >
-            Meladen
+            <video
+              src={sparklingLogo}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="h-full w-full object-contain"
+            />
           </Link>
 
           {/* Desktop: centered nav */}
@@ -129,7 +138,21 @@ export default function Navbar() {
                   <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                 </svg>
               </button>
-              <p className="font-serif text-2xl font-medium text-brand-dark tracking-[0.15em] uppercase mb-10">Meladen</p>
+              <Link
+                to="/"
+                className="mb-10 flex h-24 w-56 items-center justify-center overflow-hidden"
+                onClick={() => setMenuOpen(false)}
+                aria-label="Meladen home"
+              >
+                <video
+                  src={sparklingLogo}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  className="h-full w-full object-contain"
+                />
+              </Link>
               <ul className="space-y-6 flex-1">
                 {navLinks.map((link, i) => (
                   <motion.li
