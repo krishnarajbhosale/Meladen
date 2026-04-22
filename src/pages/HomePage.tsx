@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { products } from '../data/products';
@@ -15,6 +15,32 @@ export default function HomePage() {
   const heroVideoRef = useRef<HTMLVideoElement | null>(null);
   const newArrivals = products.filter(p => p.isNew || p.isBestseller).slice(0, 4);
 
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (!video) return;
+
+    const tryPlay = () => {
+      video.muted = true;
+      video.defaultMuted = true;
+      void video.play().catch(() => {});
+    };
+
+    tryPlay();
+
+    const frameId = window.requestAnimationFrame(tryPlay);
+    const timeoutId = window.setTimeout(tryPlay, 250);
+
+    video.addEventListener('canplay', tryPlay);
+    document.addEventListener('visibilitychange', tryPlay);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+      video.removeEventListener('canplay', tryPlay);
+      document.removeEventListener('visibilitychange', tryPlay);
+    };
+  }, []);
+
   return (
     <motion.div variants={pageVariants} initial="hidden" animate="visible" className="relative isolate overflow-x-clip bg-brand-cream">
 
@@ -25,13 +51,14 @@ export default function HomePage() {
           src={heroVideo}
           autoPlay
           muted
-          defaultMuted
           loop
           playsInline
           preload="auto"
           controls={false}
+          controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
+          disableRemotePlayback
           disablePictureInPicture
-          className="absolute inset-0 w-full h-full object-cover object-center"
+          className="pointer-events-none absolute inset-0 w-full h-full object-cover object-center"
           onLoadedData={(e) => {
             e.currentTarget.muted = true;
             e.currentTarget.defaultMuted = true;

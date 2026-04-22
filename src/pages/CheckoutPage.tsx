@@ -13,9 +13,17 @@ export default function CheckoutPage() {
   const [summaryOpen, setSummaryOpen] = useState(false);
 
   const [form, setForm] = useState({
-    firstName: '', lastName: '', email: '', phone: '',
-    address: '', city: '', postcode: '', country: '',
-    card: '', expiry: '', cvv: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    postcode: '',
+    country: '',
+    card: '',
+    expiry: '',
+    cvv: '',
   });
 
   const set = (key: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [key]: v }));
@@ -27,30 +35,39 @@ export default function CheckoutPage() {
   };
 
   return (
-    <motion.div variants={pageVariants} initial="hidden" animate="visible" className="pb-32 lg:max-w-5xl lg:mx-auto">
-
-      {/* Page header */}
-      <div className="px-5 lg:px-0 pt-6 pb-4 flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-brand-gray hover:text-brand-dark transition-colors">
+    <motion.div variants={pageVariants} initial="hidden" animate="visible" className="pb-32 lg:mx-auto lg:max-w-6xl">
+      <div className="flex items-center justify-between px-5 pb-4 pt-6 lg:px-0">
+        <button onClick={() => navigate(-1)} className="text-brand-gray transition-colors hover:text-brand-dark">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path
+              d="M19 12H5M12 5l-7 7 7 7"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </button>
         <h1 className="font-serif text-xl font-medium text-brand-dark">Checkout</h1>
-        <button onClick={() => setSummaryOpen(true)} className="text-[11px] text-brand-gray tracking-wide underline underline-offset-4 lg:hidden">
+        <button
+          onClick={() => setSummaryOpen(true)}
+          className="text-[11px] tracking-wide text-brand-gray underline underline-offset-4 lg:hidden"
+        >
           Summary
         </button>
-        <div className="hidden lg:block w-10" />
+        <div className="hidden w-10 lg:block" />
       </div>
 
-      <form onSubmit={handleSubmit} className="px-5 lg:px-0 lg:grid lg:grid-cols-[1fr_380px] lg:gap-12 lg:items-start">
-
-        {/* ── LEFT: Contact + Shipping + Payment ── */}
-        <div className="space-y-8">
-
-          {/* Contact */}
-          <motion.div variants={fadeUp} custom={0} initial="hidden" animate="visible">
-            <p className="text-[10px] text-brand-gray tracking-[0.2em] uppercase mb-4">Contact</p>
+      <form onSubmit={handleSubmit} className="px-5 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-12 lg:px-0">
+        <div className="space-y-6">
+          <motion.div
+            variants={fadeUp}
+            custom={0}
+            initial="hidden"
+            animate="visible"
+            className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#101010)] p-5 lg:p-6"
+          >
+            <p className="mb-4 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Contact</p>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <InputField label="First Name" value={form.firstName} onChange={set('firstName')} required />
@@ -61,9 +78,14 @@ export default function CheckoutPage() {
             </div>
           </motion.div>
 
-          {/* Shipping */}
-          <motion.div variants={fadeUp} custom={1} initial="hidden" animate="visible">
-            <p className="text-[10px] text-brand-gray tracking-[0.2em] uppercase mb-4">Shipping Address</p>
+          <motion.div
+            variants={fadeUp}
+            custom={1}
+            initial="hidden"
+            animate="visible"
+            className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#101010)] p-5 lg:p-6"
+          >
+            <p className="mb-4 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Shipping Address</p>
             <div className="space-y-3">
               <InputField label="Street Address" value={form.address} onChange={set('address')} required />
               <div className="grid grid-cols-2 gap-3">
@@ -74,9 +96,14 @@ export default function CheckoutPage() {
             </div>
           </motion.div>
 
-          {/* Payment */}
-          <motion.div variants={fadeUp} custom={2} initial="hidden" animate="visible">
-            <p className="text-[10px] text-brand-gray tracking-[0.2em] uppercase mb-4">Payment</p>
+          <motion.div
+            variants={fadeUp}
+            custom={2}
+            initial="hidden"
+            animate="visible"
+            className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#101010)] p-5 lg:p-6"
+          >
+            <p className="mb-4 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Payment</p>
             <div className="space-y-3">
               <InputField label="Card Number" value={form.card} onChange={set('card')} required />
               <div className="grid grid-cols-2 gap-3">
@@ -86,60 +113,67 @@ export default function CheckoutPage() {
             </div>
           </motion.div>
 
-          {/* Submit — mobile only (desktop has it in right col) */}
           <div className="lg:hidden">
-            <Button type="submit" fullWidth>Place Order</Button>
+            <Button type="submit" fullWidth>
+              Place Order
+            </Button>
           </div>
         </div>
 
-        {/* ── RIGHT: Order Summary (desktop sticky) ── */}
-        <motion.div
-          variants={fadeUp} custom={3} initial="hidden" animate="visible"
-          className="hidden lg:block lg:sticky lg:top-24"
+        <motion.aside
+          variants={fadeUp}
+          custom={3}
+          initial="hidden"
+          animate="visible"
+          className="hidden lg:sticky lg:top-24 lg:block"
         >
-          <p className="text-[10px] text-brand-gray tracking-[0.2em] uppercase mb-5">Order Summary</p>
+          <div className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#0f0f0f)] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.24)]">
+            <p className="mb-5 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Order Summary</p>
 
-          {/* Items */}
-          <div className="space-y-4 mb-6">
-            {items.map(item => (
-              <div key={`${item.product.id}-${item.size}`} className="flex gap-3 items-center">
-                <div className="w-14 h-16 rounded-xl overflow-hidden bg-brand-light-gray flex-shrink-0">
-                  <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
+            <div className="mb-6 space-y-4 rounded-2xl border border-[#252525] bg-[#141414] p-4">
+              {items.map(item => (
+                <div key={`${item.product.id}-${item.size}`} className="flex items-center gap-3">
+                  <div className="h-16 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-brand-light-gray">
+                    <img src={item.product.image} alt={item.product.name} className="h-full w-full object-cover" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-serif text-sm font-medium text-brand-dark">{item.product.name}</p>
+                    <p className="text-xs text-brand-gray">{item.size} · Qty: {item.quantity}</p>
+                  </div>
+                  <p className="text-sm font-medium text-brand-dark">${(item.unitPrice * item.quantity).toFixed(0)}</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-serif text-sm font-medium text-brand-dark truncate">{item.product.name}</p>
-                  <p className="text-xs text-brand-gray">{item.size} · Qty: {item.quantity}</p>
-                </div>
-                <p className="text-sm font-medium text-brand-dark">${(item.unitPrice * item.quantity).toFixed(0)}</p>
+              ))}
+            </div>
+
+            <div className="mb-6 space-y-2 rounded-2xl border border-[#252525] bg-[#141414] p-5">
+              <div className="flex justify-between text-sm text-brand-gray">
+                <span>Subtotal</span>
+                <span>${total.toFixed(0)}</span>
               </div>
-            ))}
-          </div>
+              <div className="flex justify-between text-sm text-brand-gray">
+                <span>Shipping</span>
+                <span>{shipping === 0 ? 'Free' : `$${shipping}`}</span>
+              </div>
+              <div className="h-px bg-[#262626]" />
+              <div className="flex justify-between font-medium text-brand-dark">
+                <span>Total</span>
+                <span>${(total + shipping).toFixed(0)}</span>
+              </div>
+            </div>
 
-          {/* Totals */}
-          <div className="bg-brand-beige/40 rounded-2xl p-5 space-y-2 mb-6">
-            <div className="flex justify-between text-sm text-brand-gray">
-              <span>Subtotal</span><span>${total.toFixed(0)}</span>
-            </div>
-            <div className="flex justify-between text-sm text-brand-gray">
-              <span>Shipping</span><span>{shipping === 0 ? 'Free' : `$${shipping}`}</span>
-            </div>
-            <div className="h-px bg-brand-beige" />
-            <div className="flex justify-between font-medium text-brand-dark">
-              <span>Total</span><span>${(total + shipping).toFixed(0)}</span>
-            </div>
+            <Button type="submit" fullWidth>
+              Place Order
+            </Button>
           </div>
-
-          <Button type="submit" fullWidth>Place Order</Button>
-        </motion.div>
+        </motion.aside>
       </form>
 
-      {/* Mobile summary drawer */}
       <Drawer open={summaryOpen} onClose={() => setSummaryOpen(false)} title="Order Summary">
         <div className="space-y-4">
           {items.map(item => (
-            <div key={`${item.product.id}-${item.size}`} className="flex gap-3 items-center">
-              <div className="w-14 h-16 rounded-xl overflow-hidden bg-brand-light-gray flex-shrink-0">
-                <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
+            <div key={`${item.product.id}-${item.size}`} className="flex items-center gap-3">
+              <div className="h-16 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-brand-light-gray">
+                <img src={item.product.image} alt={item.product.name} className="h-full w-full object-cover" />
               </div>
               <div className="flex-1">
                 <p className="font-serif text-sm font-medium text-brand-dark">{item.product.name}</p>
@@ -150,7 +184,8 @@ export default function CheckoutPage() {
           ))}
           <div className="h-px bg-brand-beige" />
           <div className="flex justify-between font-medium text-brand-dark">
-            <span>Total</span><span>${(total + shipping).toFixed(0)}</span>
+            <span>Total</span>
+            <span>${(total + shipping).toFixed(0)}</span>
           </div>
         </div>
       </Drawer>

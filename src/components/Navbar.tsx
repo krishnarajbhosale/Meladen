@@ -33,12 +33,34 @@ export default function Navbar() {
   }, [menuOpen, cartOpen]);
 
   useEffect(() => {
-    [desktopLogoRef.current, mobileLogoRef.current].forEach(video => {
-      if (!video) return;
-      video.muted = true;
-      video.defaultMuted = true;
-      video.play().catch(() => {});
-    });
+    const videos = [desktopLogoRef.current, mobileLogoRef.current].filter(
+      (video): video is HTMLVideoElement => video !== null,
+    );
+
+    if (videos.length === 0) return;
+
+    const tryPlayAll = () => {
+      videos.forEach(video => {
+        video.muted = true;
+        video.defaultMuted = true;
+        void video.play().catch(() => {});
+      });
+    };
+
+    tryPlayAll();
+
+    const frameId = window.requestAnimationFrame(tryPlayAll);
+    const timeoutId = window.setTimeout(tryPlayAll, 250);
+
+    videos.forEach(video => video.addEventListener('canplay', tryPlayAll));
+    document.addEventListener('visibilitychange', tryPlayAll);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+      videos.forEach(video => video.removeEventListener('canplay', tryPlayAll));
+      document.removeEventListener('visibilitychange', tryPlayAll);
+    };
   }, [menuOpen]);
 
   return (
@@ -74,13 +96,14 @@ export default function Navbar() {
               src={sparklingLogo}
               autoPlay
               muted
-              defaultMuted
               loop
               playsInline
               preload="auto"
               controls={false}
+              controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
+              disableRemotePlayback
               disablePictureInPicture
-              className="h-full w-full object-contain"
+              className="pointer-events-none h-full w-full object-contain"
               onLoadedData={(e) => {
                 e.currentTarget.muted = true;
                 e.currentTarget.defaultMuted = true;
@@ -170,13 +193,14 @@ export default function Navbar() {
                   src={sparklingLogo}
                   autoPlay
                   muted
-                  defaultMuted
                   loop
                   playsInline
                   preload="auto"
                   controls={false}
+                  controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
+                  disableRemotePlayback
                   disablePictureInPicture
-                  className="h-full w-full object-contain"
+                  className="pointer-events-none h-full w-full object-contain"
                   onLoadedData={(e) => {
                     e.currentTarget.muted = true;
                     e.currentTarget.defaultMuted = true;

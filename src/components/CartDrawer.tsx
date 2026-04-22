@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import { meladen13, meladen14 } from '../data/meladenImages';
+import QuantityStepper from './QuantityStepper';
 
 interface Props {
   open: boolean;
@@ -30,223 +31,249 @@ export default function CartDrawer({ open, onClose }: Props) {
     <AnimatePresence>
       {open && (
         <>
-          {/* Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm"
             onClick={onClose}
           />
 
-          {/* Drawer — slides from right */}
-          <motion.div
+          <motion.aside
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-            className="fixed top-0 right-0 h-full w-full max-w-[420px] bg-[#111111] z-50 flex flex-col shadow-2xl"
+            className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[440px] flex-col border-l border-[#242424] bg-[linear-gradient(180deg,#121212,#0d0d0d)] shadow-[0_28px_80px_rgba(0,0,0,0.5)]"
           >
-            {/* ── HEADER ── */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-brand-beige flex-shrink-0">
-              <div>
-                <span className="font-serif text-lg font-medium text-brand-dark">Your Cart</span>
-                <span className="text-[11px] text-brand-gray ml-2">({count} {count === 1 ? 'item' : 'items'})</span>
+            <div className="border-b border-[#252525] px-6 py-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-brand-gray">Shopping Bag</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <h2 className="font-serif text-2xl text-brand-dark">Your Cart</h2>
+                    <span className="rounded-full border border-[#31291c] px-2.5 py-0.5 text-[10px] uppercase tracking-[0.16em] text-brand-dark">
+                      {count} {count === 1 ? 'item' : 'items'}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[#2d2d2d] text-brand-gray transition-colors hover:border-brand-dark hover:text-brand-dark"
+                  aria-label="Close cart"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </button>
               </div>
-              <button
-                onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center text-brand-gray hover:text-brand-dark transition-colors"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-              </button>
+
+              <div className="mt-5 rounded-2xl border border-[#2d2418] bg-[#15120d] px-4 py-3">
+                <div className="mb-2 flex items-center justify-between text-[11px] text-brand-gray">
+                  <span>
+                    {remaining > 0
+                      ? `$${remaining.toFixed(0)} away from free shipping`
+                      : 'Free shipping unlocked'}
+                  </span>
+                  <span>{Math.round(progress)}%</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-[#242424]">
+                  <motion.div
+                    className="h-full rounded-full bg-[linear-gradient(90deg,#8d7440,#c9a84c)]"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.5, ease: 'easeOut' }}
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* ── FREE SHIPPING PROGRESS ── */}
-            <div className="px-6 py-3 border-b border-brand-beige flex-shrink-0">
-              <p className="text-[11px] text-brand-gray text-center mb-2">
-                {remaining > 0
-                  ? <>You are <span className="text-brand-dark font-medium">${remaining.toFixed(0)}</span> away from free shipping.</>
-                  : <span className="text-brand-sage font-medium">You've unlocked free shipping! 🎉</span>
-                }
-              </p>
-              <div className="h-0.5 bg-brand-beige rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-brand-dark rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                />
-              </div>
-            </div>
-
-            {/* ── SCROLLABLE BODY ── */}
-            <div className="flex-1 overflow-y-auto">
-
+            <div className="flex-1 overflow-y-auto px-6 py-5">
               {items.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full gap-4 px-6 text-center">
-                  <div className="w-16 h-16 rounded-full bg-brand-beige flex items-center justify-center">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-                      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <div className="flex h-full flex-col items-center justify-center text-center">
+                  <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-[#2d2418] bg-[#181818]">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
+                        stroke="#666"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M3 6h18M16 10a4 4 0 01-8 0"
+                        stroke="#666"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </div>
-                  <p className="font-serif text-lg text-brand-dark">Your cart is empty</p>
-                  <p className="text-sm text-brand-gray">Use the cart icon to save your selections.</p>
+                  <p className="font-serif text-2xl text-brand-dark">Your cart is empty</p>
+                  <p className="mt-2 max-w-xs text-sm leading-relaxed text-brand-gray">
+                    Use the cart icon to save your selections.
+                  </p>
                   <button
-                    onClick={() => { onClose(); navigate('/collection'); }}
-                    className="mt-2 bg-brand-dark text-brand-cream text-[11px] tracking-widest uppercase px-6 py-3 rounded-sm hover:bg-brand-dark/85 transition-colors"
+                    onClick={() => {
+                      onClose();
+                      navigate('/collection');
+                    }}
+                    className="mt-6 rounded-full bg-brand-dark px-6 py-3 text-[11px] uppercase tracking-[0.16em] text-brand-cream transition-colors hover:bg-brand-dark/85"
                   >
                     Shop Cart
                   </button>
                 </div>
               ) : (
-                <div className="px-6 py-4 space-y-0">
-
-                  {/* Cart items */}
+                <div className="space-y-4">
                   <AnimatePresence>
                     {items.map(item => (
-                      <motion.div
+                      <motion.article
                         key={`${item.product.id}-${item.size}`}
                         layout
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                         transition={{ duration: 0.25 }}
-                        className="flex gap-4 py-5 border-b border-brand-beige last:border-0"
+                        className="rounded-[1.5rem] border border-[#252525] bg-[#141414] p-4"
                       >
-                        {/* Thumbnail */}
-                        <div
-                          className="w-[72px] h-[80px] rounded-xl overflow-hidden bg-brand-light-gray flex-shrink-0 cursor-pointer"
-                          onClick={() => { onClose(); navigate(`/product/${item.product.id}`); }}
-                        >
-                          <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
-                        </div>
+                        <div className="flex gap-4">
+                          <button
+                            type="button"
+                            className="h-[92px] w-[78px] flex-shrink-0 overflow-hidden rounded-2xl border border-[#262626] bg-brand-light-gray"
+                            onClick={() => {
+                              onClose();
+                              navigate(`/product/${item.product.id}`);
+                            }}
+                          >
+                            <img src={item.product.image} alt={item.product.name} className="h-full w-full object-cover" />
+                          </button>
 
-                        {/* Details */}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-serif text-sm font-medium text-brand-dark leading-tight mb-0.5">{item.product.name}</p>
-                          <p className="text-[10px] text-brand-gray tracking-widest uppercase mb-0.5">{item.product.category}</p>
-                          <p className="text-[11px] text-brand-gray mb-3">{item.size}</p>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="font-serif text-base leading-tight text-brand-dark">{item.product.name}</p>
+                                <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-brand-gray">
+                                  {item.product.category}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeFromCart(item.product.id, item.size)}
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#2d2d2d] text-brand-gray transition-colors hover:border-brand-dark hover:text-brand-dark"
+                                aria-label={`Remove ${item.product.name}`}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                </svg>
+                              </button>
+                            </div>
 
-                          {/* Qty stepper */}
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center border border-brand-beige rounded-full">
-                              <button
-                                onClick={() => updateQty(item.product.id, item.size, item.quantity - 1)}
-                                className="w-7 h-7 flex items-center justify-center text-brand-gray hover:text-brand-dark transition-colors text-base"
-                              >
-                                −
-                              </button>
-                              <span className="w-6 text-center text-[12px] font-medium text-brand-dark">{item.quantity}</span>
-                              <button
-                                onClick={() => updateQty(item.product.id, item.size, item.quantity + 1)}
-                                className="w-7 h-7 flex items-center justify-center text-brand-gray hover:text-brand-dark transition-colors text-base"
-                              >
-                                +
-                              </button>
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                              <span className="rounded-full border border-[#3a3121] bg-[#181512] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-brand-dark">
+                                {item.size}
+                              </span>
+                              <span className="rounded-full border border-[#2b2b2b] px-2.5 py-1 text-[10px] text-brand-gray">
+                                ${item.unitPrice.toFixed(0)} each
+                              </span>
+                            </div>
+
+                            <div className="mt-4 flex items-end justify-between gap-3">
+                              <QuantityStepper
+                                value={item.quantity}
+                                onChange={value => updateQty(item.product.id, item.size, value)}
+                              />
+                              <div className="text-right">
+                                <p className="text-[10px] uppercase tracking-[0.18em] text-brand-gray">Total</p>
+                                <p className="mt-1 font-serif text-xl text-brand-dark">
+                                  ${(item.unitPrice * item.quantity).toFixed(2)}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
-
-                        {/* Price + remove */}
-                        <div className="flex flex-col items-end justify-between flex-shrink-0">
-                          <button
-                            onClick={() => removeFromCart(item.product.id, item.size)}
-                            className="text-brand-gray/40 hover:text-brand-gray transition-colors"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                            </svg>
-                          </button>
-                          <p className="text-sm font-medium text-brand-dark">${(item.unitPrice * item.quantity).toFixed(2)}</p>
-                        </div>
-                      </motion.div>
+                      </motion.article>
                     ))}
                   </AnimatePresence>
 
-                  {/* Complimentary samples notice */}
-                  <div className="flex gap-3 bg-brand-beige/40 rounded-xl p-4 mt-4">
-                    <span className="text-lg flex-shrink-0">🎁</span>
-                    <div>
-                      <p className="text-[11px] font-medium text-brand-dark mb-0.5">Complimentary Samples Included</p>
-                      <p className="text-[10px] text-brand-gray leading-relaxed">
-                        Your order includes 2 complimentary 2ml samples of our bestselling fragrances. Select at checkout.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* You may also like */}
-                  <div className="pt-6">
-                    <p className="text-[9px] text-brand-gray tracking-[0.2em] uppercase mb-4">You May Also Like</p>
+                  <div className="rounded-[1.5rem] border border-[#252525] bg-[#141414] p-4">
+                    <p className="mb-4 text-[10px] uppercase tracking-[0.2em] text-brand-gray">You May Also Like</p>
                     <div className="grid grid-cols-2 gap-3">
                       {upsells.map(u => (
-                        <div key={u.name} className="bg-brand-light-gray rounded-xl overflow-hidden cursor-pointer hover:opacity-90 transition-opacity">
-                          <div className="h-[100px] overflow-hidden">
-                            <img src={u.img} alt={u.name} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          key={u.name}
+                          className="overflow-hidden rounded-2xl border border-[#262626] bg-[#101010] text-left transition-opacity hover:opacity-90"
+                        >
+                          <div className="h-[104px] overflow-hidden">
+                            <img src={u.img} alt={u.name} className="h-full w-full object-cover" />
                           </div>
                           <div className="p-3">
-                            <p className="text-[11px] font-medium text-brand-dark leading-tight">{u.name}</p>
-                            <p className="text-[11px] text-brand-gray">${u.price}.00</p>
+                            <p className="text-[11px] font-medium leading-tight text-brand-dark">{u.name}</p>
+                            <p className="mt-1 text-[11px] text-brand-gray">${u.price}.00</p>
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Promo code */}
-                  <div className="pt-6 pb-2">
-                    <button className="flex items-center gap-2 text-[11px] text-brand-gray hover:text-brand-dark transition-colors">
-                      <span className="w-4 h-4 rounded-full border border-brand-gray/40 flex items-center justify-center text-[9px]">+</span>
-                      Add a promo code
-                    </button>
-                  </div>
+                  <button className="flex items-center gap-2 text-[11px] text-brand-gray transition-colors hover:text-brand-dark">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full border border-brand-gray/40 text-[10px]">
+                      +
+                    </span>
+                    Add a promo code
+                  </button>
                 </div>
               )}
             </div>
 
-            {/* ── FOOTER — totals + CTA ── */}
             {items.length > 0 && (
-              <div className="flex-shrink-0 border-t border-[#2a2a2a] px-6 pt-4 pb-6 bg-[#111111]">
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-[12px] text-brand-gray">
-                    <span>Subtotal</span>
-                    <span>${total.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-[12px] text-brand-gray">
-                    <span>Shipping</span>
-                    <span>{shipping === 0 ? 'Free' : 'Calculated at checkout'}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-medium text-brand-dark pt-1 border-t border-brand-beige">
-                    <span>Total</span>
-                    <span>${total.toFixed(2)}</span>
+              <div className="border-t border-[#252525] bg-[#101010] px-6 pb-6 pt-5">
+                <div className="rounded-[1.5rem] border border-[#252525] bg-[#141414] p-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-[12px] text-brand-gray">
+                      <span>Subtotal</span>
+                      <span>${total.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-[12px] text-brand-gray">
+                      <span>Shipping</span>
+                      <span>{shipping === 0 ? 'Free' : 'Calculated at checkout'}</span>
+                    </div>
+                    <div className="h-px bg-[#262626]" />
+                    <div className="flex justify-between text-base font-medium text-brand-dark">
+                      <span>Total</span>
+                      <span>${total.toFixed(2)}</span>
+                    </div>
                   </div>
                 </div>
 
-                <p className="text-[10px] text-brand-gray text-center mb-3 leading-relaxed">
-                  Taxes and shipping calculated at checkout.<br />Complimentary returns within 30 days.
+                <p className="mb-4 mt-4 text-center text-[10px] leading-relaxed text-brand-gray">
+                  Taxes and shipping calculated at checkout.
+                  <br />
+                  Complimentary returns within 30 days.
                 </p>
 
                 <button
                   onClick={handleCheckout}
-                  className="w-full bg-brand-dark text-brand-cream text-[11px] font-medium tracking-[0.15em] uppercase py-4 rounded-sm hover:bg-brand-dark/85 transition-colors flex items-center justify-center gap-2"
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-dark py-4 text-[11px] font-medium uppercase tracking-[0.15em] text-brand-cream transition-colors hover:bg-brand-dark/85"
                 >
-                  Proceed to Checkout →
+                  Proceed to Checkout
+                  <span aria-hidden="true">→</span>
                 </button>
 
-                {/* Payment icons */}
-                <div className="flex justify-center gap-2 mt-3">
+                <div className="mt-4 flex justify-center gap-2">
                   {['VISA', 'MC', 'AMEX', 'PYPL', 'GPY'].map(p => (
-                    <span key={p} className="text-[8px] text-brand-gray/50 border border-brand-beige rounded px-1.5 py-0.5 font-medium tracking-wide">
+                    <span
+                      key={p}
+                      className="rounded border border-brand-beige px-1.5 py-0.5 text-[8px] font-medium tracking-wide text-brand-gray/50"
+                    >
                       {p}
                     </span>
                   ))}
                 </div>
               </div>
             )}
-          </motion.div>
+          </motion.aside>
         </>
       )}
     </AnimatePresence>
