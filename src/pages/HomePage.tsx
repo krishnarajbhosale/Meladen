@@ -5,6 +5,7 @@ import { products } from '../data/products';
 import { meladen7, meladen8, meladen9, meladen10, meladen11 } from '../data/meladenImages';
 import bento1 from '../assets/Bento1.png';
 import bento2 from '../assets/BentoPerfumeRight.png';
+import heroVideo from '../assets/HeroVideo.webm';
 import ProductCard from '../components/ProductCard';
 import { pageVariants, fadeUp, staggerContainer } from '../animations/variants';
 
@@ -19,7 +20,7 @@ export default function HomePage() {
       {/* ── HERO ── */}
       <section className="relative mx-3 mt-3 mb-8 lg:mx-6 lg:mt-4 lg:mb-10 rounded-3xl overflow-hidden h-[480px] lg:h-[90vh]">
         <video
-          src="/src/assets/HeroVideo.webm"
+          src={heroVideo}
           autoPlay
           muted
           loop
