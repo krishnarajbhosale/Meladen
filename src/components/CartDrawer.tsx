@@ -74,7 +74,7 @@ export default function CartDrawer({ open, onClose }: Props) {
                   <span>
                     {remaining > 0
                       ? `$${remaining.toFixed(0)} away from free shipping`
-                      : 'Free shipping unlocked'}
+                      : 'Complimentary shipping applied'}
                   </span>
                   <span>{Math.round(progress)}%</span>
                 </div>
@@ -125,7 +125,7 @@ export default function CartDrawer({ open, onClose }: Props) {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <AnimatePresence>
                     {items.map(item => (
                       <motion.article
@@ -135,12 +135,12 @@ export default function CartDrawer({ open, onClose }: Props) {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                         transition={{ duration: 0.25 }}
-                        className="rounded-[1.5rem] border border-[#252525] bg-[#141414] p-4"
+                        className="rounded-[1.4rem] border border-[#252525] bg-[#141414] p-3.5"
                       >
-                        <div className="flex gap-4">
+                        <div className="flex gap-3">
                           <button
                             type="button"
-                            className="h-[92px] w-[78px] flex-shrink-0 overflow-hidden rounded-2xl border border-[#262626] bg-brand-light-gray"
+                            className="h-[84px] w-[72px] flex-shrink-0 overflow-hidden rounded-2xl border border-[#262626] bg-brand-light-gray"
                             onClick={() => {
                               onClose();
                               navigate(`/product/${item.product.id}`);
@@ -152,7 +152,7 @@ export default function CartDrawer({ open, onClose }: Props) {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <p className="font-serif text-base leading-tight text-brand-dark">{item.product.name}</p>
+                                <p className="font-serif text-[15px] leading-tight text-brand-dark">{item.product.name}</p>
                                 <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-brand-gray">
                                   {item.product.category}
                                 </p>
@@ -169,7 +169,7 @@ export default function CartDrawer({ open, onClose }: Props) {
                               </button>
                             </div>
 
-                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <div className="mt-2.5 flex flex-wrap items-center gap-2">
                               <span className="rounded-full border border-[#3a3121] bg-[#181512] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-brand-dark">
                                 {item.size}
                               </span>
@@ -178,14 +178,14 @@ export default function CartDrawer({ open, onClose }: Props) {
                               </span>
                             </div>
 
-                            <div className="mt-4 flex items-end justify-between gap-3">
+                            <div className="mt-3 flex items-end justify-between gap-3">
                               <QuantityStepper
                                 value={item.quantity}
                                 onChange={value => updateQty(item.product.id, item.size, value)}
                               />
                               <div className="text-right">
                                 <p className="text-[10px] uppercase tracking-[0.18em] text-brand-gray">Total</p>
-                                <p className="mt-1 font-serif text-xl text-brand-dark">
+                                <p className="mt-1 font-serif text-lg text-brand-dark">
                                   ${(item.unitPrice * item.quantity).toFixed(2)}
                                 </p>
                               </div>
@@ -228,26 +228,26 @@ export default function CartDrawer({ open, onClose }: Props) {
             </div>
 
             {items.length > 0 && (
-              <div className="border-t border-[#252525] bg-[#101010] px-6 pb-6 pt-5">
-                <div className="rounded-[1.5rem] border border-[#252525] bg-[#141414] p-4">
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-[12px] text-brand-gray">
+              <div className="border-t border-[#252525] bg-[#101010] px-6 pb-5 pt-4">
+                <div className="rounded-[1.4rem] border border-[#252525] bg-[#141414] p-3.5">
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between text-[11px] text-brand-gray">
                       <span>Subtotal</span>
                       <span>${total.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-[12px] text-brand-gray">
+                    <div className="flex justify-between text-[11px] text-brand-gray">
                       <span>Shipping</span>
                       <span>{shipping === 0 ? 'Free' : 'Calculated at checkout'}</span>
                     </div>
                     <div className="h-px bg-[#262626]" />
-                    <div className="flex justify-between text-base font-medium text-brand-dark">
+                    <div className="flex justify-between text-[15px] font-medium text-brand-dark">
                       <span>Total</span>
                       <span>${total.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
 
-                <p className="mb-4 mt-4 text-center text-[10px] leading-relaxed text-brand-gray">
+                <p className="mb-3 mt-3 text-center text-[9px] leading-relaxed text-brand-gray">
                   Taxes and shipping calculated at checkout.
                   <br />
                   Complimentary returns within 30 days.
@@ -255,7 +255,7 @@ export default function CartDrawer({ open, onClose }: Props) {
 
                 <button
                   onClick={handleCheckout}
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-dark py-4 text-[11px] font-medium uppercase tracking-[0.15em] text-brand-cream transition-colors hover:bg-brand-dark/85"
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-dark py-3.5 text-[11px] font-medium uppercase tracking-[0.15em] text-brand-cream transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-dark/85 hover:shadow-[0_14px_30px_rgba(201,168,76,0.16)]"
                 >
                   Proceed to Checkout
                   <span aria-hidden="true">→</span>

@@ -151,7 +151,7 @@ export default function ProductPage() {
 
           <motion.div variants={fadeUp} custom={4} initial="hidden" animate="visible" className="mb-8">
             <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Choose Size</p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2.5">
               {sizeOptions.map(option => {
                 const isActive = selectedSize.label === option.label;
                 const badge =
@@ -166,10 +166,10 @@ export default function ProductPage() {
                     key={option.label}
                     type="button"
                     onClick={() => setSelectedSizeLabel(option.label)}
-                    className={`rounded-2xl border px-3 py-3 text-left transition-colors ${
+                    className={`flex min-h-[112px] flex-col items-center justify-center rounded-2xl border px-3 py-3 text-center transition-all duration-300 ${
                       isActive
-                        ? 'border-brand-dark bg-brand-beige text-brand-dark'
-                        : 'border-[#2a2a2a] bg-brand-light-gray text-brand-gray hover:border-brand-dark'
+                        ? 'border-brand-dark bg-brand-beige text-brand-dark shadow-[0_14px_30px_rgba(184,179,172,0.16)]'
+                        : 'border-[#2a2a2a] bg-brand-light-gray text-brand-gray hover:border-brand-dark hover:bg-[#f3ede2]'
                     }`}
                   >
                     {badge && (
@@ -178,8 +178,9 @@ export default function ProductPage() {
                         {badge}
                       </span>
                     )}
-                    <span className="block text-sm font-medium">{option.label}</span>
-                    <span className="mt-1 block text-xs">${option.price}</span>
+                    {!badge && <span className="mb-[18px] block" aria-hidden="true" />}
+                    <span className="block w-full text-center text-sm font-medium">{option.label}</span>
+                    <span className="mt-1 block w-full text-center text-xs">${option.price}</span>
                   </button>
                 );
               })}

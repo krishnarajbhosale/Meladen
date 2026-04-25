@@ -10,9 +10,15 @@ interface ProductCardProps {
   index?: number;
   /** `contain` keeps full bottle visible on dark cards (e.g. homepage grids). */
   imageLayout?: 'cover' | 'contain';
+  cardClassName?: string;
 }
 
-export default function ProductCard({ product, index = 0, imageLayout = 'cover' }: ProductCardProps) {
+export default function ProductCard({
+  product,
+  index = 0,
+  imageLayout = 'cover',
+  cardClassName = 'w-[160px] lg:w-full',
+}: ProductCardProps) {
   const [wished, setWished] = useState(false);
   const [hovered, setHovered] = useState(false);
   const { addToCart } = useCart();
@@ -24,7 +30,7 @@ export default function ProductCard({ product, index = 0, imageLayout = 'cover' 
       custom={index}
       initial="hidden"
       animate="visible"
-      className="flex-shrink-0 w-[160px] lg:w-full cursor-pointer"
+      className={`flex-shrink-0 cursor-pointer transition-transform duration-300 ease-in-out hover:scale-[1.02] ${cardClassName}`}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
     >

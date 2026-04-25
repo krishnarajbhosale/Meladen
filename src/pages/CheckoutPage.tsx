@@ -115,7 +115,7 @@ export default function CheckoutPage() {
 
           <div className="lg:hidden">
             <Button type="submit" fullWidth>
-              Place Order
+              View Summary
             </Button>
           </div>
         </div>
@@ -162,7 +162,7 @@ export default function CheckoutPage() {
             </div>
 
             <Button type="submit" fullWidth>
-              Place Order
+              View Summary
             </Button>
           </div>
         </motion.aside>
