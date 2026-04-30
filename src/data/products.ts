@@ -29,6 +29,21 @@ export interface Product {
   notes: { top: string[]; heart: string[]; base: string[] };
   isNew?: boolean;
   isBestseller?: boolean;
+  /** When set (from API), cart size picker uses these list prices. */
+  price30Ml?: number;
+  price50Ml?: number;
+  price100Ml?: number;
+  inspiredBy?: string;
+  luxuryDescription?: string;
+  mood?: string;
+  occasion?: string;
+  season?: string;
+  idealFor?: string;
+  moreInformation?: string;
+  searchKeywords?: string;
+  category2?: string;
+  productOil?: number;
+  concentration?: string;
 }
 
 export interface ProductSizeOption {
@@ -36,14 +51,44 @@ export interface ProductSizeOption {
   price: number;
 }
 
-export function getProductSizeOptions(product: Product): ProductSizeOption[] {
-  const basePrice = product.price;
+export interface ProductSizeAvailability extends ProductSizeOption {
+  available: boolean;
+}
 
+const SIZE_RECIPES: Record<string, { oil: number; alcohol: number }> = {
+  '30ml': { oil: 6, alcohol: 18 },
+  '50ml': { oil: 10, alcohol: 30 },
+  '100ml': { oil: 20, alcohol: 60 },
+};
+
+export function getProductSizeOptions(product: Product): ProductSizeOption[] {
+  const base = product.price50Ml ?? product.price;
+  const p30 = product.price30Ml ?? Math.round(base * 0.75);
+  const p50 = product.price50Ml ?? product.price;
+  const p100 = product.price100Ml ?? Math.round(base * 1.7);
   return [
-    { label: '30ml', price: Math.round(basePrice * 0.75) },
-    { label: '50ml', price: basePrice },
-    { label: '100ml', price: Math.round(basePrice * 1.7) },
+    { label: '30ml', price: p30 },
+    { label: '50ml', price: p50 },
+    { label: '100ml', price: p100 },
   ];
+}
+
+export function getProductSizeAvailability(
+  product: Product,
+  alcoholStockGm: number | null | undefined,
+): ProductSizeAvailability[] {
+  const options = getProductSizeOptions(product);
+  return options.map(option => {
+    const recipe = SIZE_RECIPES[option.label];
+    if (!recipe) return { ...option, available: true };
+    const oil = product.productOil;
+    const alcohol = alcoholStockGm;
+    const hasBothStocks = oil != null && alcohol != null;
+    return {
+      ...option,
+      available: Boolean(hasBothStocks && oil >= recipe.oil && alcohol >= recipe.alcohol),
+    };
+  });
 }
 
 export const products: Product[] = [

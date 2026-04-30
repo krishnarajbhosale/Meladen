@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useCart } from '../context/CartContext';
+import { placePublicOrder } from '../api/catalog';
 import InputField from '../components/InputField';
 import Button from '../components/Button';
 import Drawer from '../components/Drawer';
@@ -9,8 +10,10 @@ import { pageVariants, fadeUp } from '../animations/variants';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const { items, total } = useCart();
+  const { items, total, clearCart } = useCart();
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     firstName: '',
@@ -29,9 +32,38 @@ export default function CheckoutPage() {
   const set = (key: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [key]: v }));
   const shipping = total >= 150 ? 0 : 12;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/order-confirmation');
+    if (items.length === 0) {
+      setSubmitError('Your cart is empty.');
+      return;
+    }
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await placePublicOrder({
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+        phone: form.phone || null,
+        address: form.address,
+        city: form.city,
+        postcode: form.postcode,
+        country: form.country,
+        items: items.map(item => ({
+          productId: item.product.id,
+          size: item.size,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        })),
+      });
+      clearCart();
+      navigate('/order-confirmation');
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Order placement failed');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -114,9 +146,10 @@ export default function CheckoutPage() {
           </motion.div>
 
           <div className="lg:hidden">
-            <Button type="submit" fullWidth>
-              View Summary
+            <Button type="submit" fullWidth disabled={submitting}>
+              {submitting ? 'Placing Order...' : 'Place Order'}
             </Button>
+            {submitError && <p className="mt-3 text-sm text-red-500">{submitError}</p>}
           </div>
         </div>
 
@@ -161,9 +194,10 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <Button type="submit" fullWidth>
-              View Summary
+            <Button type="submit" fullWidth disabled={submitting}>
+              {submitting ? 'Placing Order...' : 'Place Order'}
             </Button>
+            {submitError && <p className="mt-3 text-sm text-red-500">{submitError}</p>}
           </div>
         </motion.aside>
       </form>

@@ -1,22 +1,86 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { products, getProductSizeOptions } from '../data/products';
+import { products, getProductSizeAvailability, type Product } from '../data/products';
 import { useCart } from '../context/CartContext';
 import Accordion from '../components/Accordion';
 import Button from '../components/Button';
+import HorizontalProductRail from '../components/HorizontalProductRail';
 import QuantityStepper from '../components/QuantityStepper';
 import { pageVariants, fadeUp } from '../animations/variants';
+import { apiProductToProduct, fetchCategoriesWithProducts, fetchPublicProduct, fetchPublicStock } from '../api/catalog';
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const product = products.find(p => p.id === id);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
   const [added, setAdded] = useState(false);
   const [selectedSizeLabel, setSelectedSizeLabel] = useState('50ml');
+  const [alcoholStockGm, setAlcoholStockGm] = useState<number | null>(null);
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setProduct(null);
+      try {
+        if (id) {
+          const localProduct = products.find(p => p.id === id) ?? null;
+          // Static/demo product ids (e.g. "1", "2") should not hit API endpoints.
+          if (/^\d+$/.test(id) && localProduct) {
+            if (!cancelled) setProduct(localProduct);
+            return;
+          }
+          const api = await fetchPublicProduct(id);
+          if (!cancelled) setProduct(apiProductToProduct(api));
+        }
+      } catch {
+        if (!cancelled) setProduct(products.find(p => p.id === id) ?? null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const stock = await fetchPublicStock();
+        if (!cancelled) setAlcoholStockGm(stock.alcoholStockGm);
+      } catch {
+        if (!cancelled) setAlcoholStockGm(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchCategoriesWithProducts();
+        if (cancelled) return;
+        const fromApi = data.flatMap(section => section.products.map(apiProductToProduct));
+        setCatalogProducts(fromApi.length > 0 ? fromApi : products);
+      } catch {
+        if (!cancelled) setCatalogProducts(products);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setSelectedSizeLabel('50ml');
@@ -24,6 +88,24 @@ export default function ProductPage() {
     setActiveImg(0);
     setAdded(false);
   }, [id]);
+
+  useEffect(() => {
+    if (!product) return;
+    const options = getProductSizeAvailability(product, alcoholStockGm);
+    const selected = options.find(option => option.label === selectedSizeLabel);
+    const firstAvailable = options.find(option => option.available);
+    if ((!selected || !selected.available) && firstAvailable) {
+      setSelectedSizeLabel(firstAvailable.label);
+    }
+  }, [product, alcoholStockGm, selectedSizeLabel]);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-brand-gray">Loading…</p>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -33,18 +115,34 @@ export default function ProductPage() {
     );
   }
 
-  const images = [product.image, product.gallery[0], product.gallery[1]];
-  const sizeOptions = getProductSizeOptions(product);
-  const selectedSize =
-    sizeOptions.find(option => option.label === selectedSizeLabel) ?? sizeOptions[1] ?? sizeOptions[0];
+  const images = [
+    product.image,
+    product.gallery[0] ?? product.image,
+    product.gallery[1] ?? product.gallery[0] ?? product.image,
+    product.gallery[2] ?? product.gallery[1] ?? product.gallery[0] ?? product.image,
+  ];
+  const sizeOptions = getProductSizeAvailability(product, alcoholStockGm);
+  const firstAvailable = sizeOptions.find(option => option.available) ?? null;
+  const selectedSize = sizeOptions.find(option => option.label === selectedSizeLabel) ?? firstAvailable ?? sizeOptions[1] ?? sizeOptions[0];
+  const selectedUnavailable = selectedSize ? !selectedSize.available : true;
 
   const handleAdd = () => {
+    if (!selectedSize || selectedUnavailable) return;
     for (let i = 0; i < qty; i++) {
       addToCart(product, selectedSize.label, selectedSize.price);
     }
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
+
+  const sourceProducts = catalogProducts.length > 0 ? catalogProducts : products;
+  const normalizedCategory2 = (product.category2 ?? '').trim().toLowerCase();
+  const relatedProducts = sourceProducts
+    .filter(p => p.id !== id)
+    .filter(p => {
+      if (!normalizedCategory2) return false;
+      return (p.category2 ?? '').trim().toLowerCase() === normalizedCategory2;
+    });
 
   return (
     <motion.div variants={pageVariants} initial="hidden" animate="visible">
@@ -74,7 +172,7 @@ export default function ProductPage() {
                 key={activeImg}
                 src={images[activeImg]}
                 alt={product.name}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain p-3"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
@@ -92,7 +190,7 @@ export default function ProductPage() {
                   activeImg === i ? 'border-brand-dark' : 'border-transparent opacity-50'
                 }`}
               >
-                <img src={img} alt="" className="h-full w-full object-cover" />
+                <img src={img} alt="" className="h-full w-full object-contain bg-brand-light-gray p-1" />
               </button>
             ))}
           </div>
@@ -165,11 +263,14 @@ export default function ProductPage() {
                   <button
                     key={option.label}
                     type="button"
+                    disabled={!option.available}
                     onClick={() => setSelectedSizeLabel(option.label)}
                     className={`flex min-h-[112px] flex-col items-center justify-center rounded-2xl border px-3 py-3 text-center transition-all duration-300 ${
                       isActive
                         ? 'border-brand-dark bg-brand-beige text-brand-dark shadow-[0_14px_30px_rgba(184,179,172,0.16)]'
-                        : 'border-[#2a2a2a] bg-brand-light-gray text-brand-gray hover:border-brand-dark hover:bg-[#f3ede2]'
+                        : option.available
+                          ? 'border-[#2a2a2a] bg-brand-light-gray text-brand-gray hover:border-brand-dark hover:bg-[#f3ede2]'
+                          : 'border-[#2a2a2a] bg-brand-light-gray text-brand-gray'
                     }`}
                   >
                     {badge && (
@@ -181,10 +282,20 @@ export default function ProductPage() {
                     {!badge && <span className="mb-[18px] block" aria-hidden="true" />}
                     <span className="block w-full text-center text-sm font-medium">{option.label}</span>
                     <span className="mt-1 block w-full text-center text-xs">${option.price}</span>
+                    {!option.available && (
+                      <span className="mt-1 block text-[10px] font-semibold uppercase tracking-wide text-red-700">
+                        Out of stock
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
+            {selectedUnavailable && (
+              <p className="mt-2 text-xs text-red-700">
+                Selected size is out of stock. Choose another size.
+              </p>
+            )}
           </motion.div>
 
           <motion.div
@@ -195,8 +306,8 @@ export default function ProductPage() {
             className="mb-10 flex items-center gap-3"
           >
             <QuantityStepper value={qty} onChange={setQty} />
-            <Button onClick={handleAdd} fullWidth className="flex-1">
-              {added ? 'Added to Bag' : 'Add to Bag'}
+            <Button onClick={handleAdd} fullWidth className="flex-1" disabled={selectedUnavailable}>
+              {selectedUnavailable ? 'Out of Stock' : added ? 'Added to Bag' : 'Add to Bag'}
             </Button>
           </motion.div>
 
@@ -235,29 +346,18 @@ export default function ProductPage() {
         </div>
       </div>
 
-      <section className="border-t border-brand-beige px-5 pb-16 pt-4 lg:px-16 xl:px-24">
-        <h3 className="mb-6 pt-10 font-serif text-xl font-medium text-brand-dark lg:text-3xl">
-          You May Also Like
-        </h3>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
-          {products
-            .filter(p => p.id !== id)
-            .slice(0, 4)
-            .map(p => (
-              <div key={p.id} className="group cursor-pointer" onClick={() => navigate(`/product/${p.id}`)}>
-                <div className="mb-3 h-[170px] overflow-hidden rounded-2xl bg-brand-light-gray lg:h-[260px]">
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                </div>
-                <p className="font-serif text-sm font-medium leading-tight text-brand-dark lg:text-base">{p.name}</p>
-                <p className="mt-0.5 text-xs text-brand-gray lg:text-sm">${p.price}</p>
-              </div>
-            ))}
+      {relatedProducts.length > 0 && (
+        <div className="px-0 pb-16 pt-4 lg:px-12 xl:px-16">
+          <HorizontalProductRail
+            title="You May Also Like"
+            subtitle="More from the same line."
+            products={relatedProducts}
+            showViewAll={false}
+            maxProducts={50}
+            tone="dark"
+          />
         </div>
-      </section>
+      )}
     </motion.div>
   );
 }

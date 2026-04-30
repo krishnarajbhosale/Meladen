@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Product } from '../data/products';
 import { useCart } from '../context/CartContext';
 import { fadeUp } from '../animations/variants';
@@ -11,6 +11,8 @@ interface ProductCardProps {
   /** `contain` keeps full bottle visible on dark cards (e.g. homepage grids). */
   imageLayout?: 'cover' | 'contain';
   cardClassName?: string;
+  /** `dark` = text for cards on dark sections (e.g. product detail rail). */
+  tone?: 'light' | 'dark';
 }
 
 export default function ProductCard({
@@ -18,11 +20,15 @@ export default function ProductCard({
   index = 0,
   imageLayout = 'cover',
   cardClassName = 'w-[160px] lg:w-full',
+  tone = 'light',
 }: ProductCardProps) {
-  const [wished, setWished] = useState(false);
   const [hovered, setHovered] = useState(false);
   const { addToCart } = useCart();
   const navigate = useNavigate();
+
+  const metaClass = tone === 'dark' ? 'text-white/45' : 'text-[#888]';
+  const titleClass = tone === 'dark' ? 'text-[#ece8e0]' : 'text-[#b8b3ac]';
+  const priceClass = tone === 'dark' ? 'text-[#d4cfc6]' : 'text-[#b8b3ac]';
 
   return (
     <motion.div
@@ -30,13 +36,13 @@ export default function ProductCard({
       custom={index}
       initial="hidden"
       animate="visible"
-      className={`flex-shrink-0 cursor-pointer transition-transform duration-300 ease-in-out hover:scale-[1.02] ${cardClassName}`}
+      className={`group flex min-w-0 max-w-full flex-shrink-0 flex-col cursor-pointer transition-transform duration-300 ease-in-out hover:scale-[1.02] ${cardClassName}`}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
     >
       {/* Image — dark card */}
       <div
-        className={`relative w-full h-[200px] lg:h-[280px] bg-[#121212] rounded-2xl overflow-hidden mb-3 border border-[#2a2a2a] ${imageLayout === 'contain' ? 'flex items-center justify-center' : ''}`}
+        className={`relative mb-3 h-[200px] w-full min-w-0 overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[#121212] lg:h-[280px] ${imageLayout === 'contain' ? 'flex items-center justify-center' : ''}`}
         onClick={() => navigate(`/product/${product.id}`)}
       >
         <motion.img
@@ -44,54 +50,40 @@ export default function ProductCard({
           alt={product.name}
           className={
             imageLayout === 'contain'
-              ? 'max-h-[88%] max-w-[88%] w-auto h-auto object-contain object-center'
-              : 'w-full h-full object-cover object-center'
+              ? 'max-h-[88%] max-w-[88%] h-auto w-auto object-contain object-center'
+              : 'h-full w-full object-cover object-center'
           }
           animate={{ scale: hovered ? 1.05 : 1 }}
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         />
 
-        {/* Tag — gold */}
-        {product.tag && (
-          <span className="absolute top-2.5 left-2.5 bg-[#c9a84c] text-black text-[9px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full">
-            {product.tag}
+        {product.inspiredBy && (
+          <span
+            className="absolute left-2.5 top-2.5 max-w-[calc(100%-1.25rem)] truncate rounded-full bg-[#c9a84c] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-black shadow-sm"
+            title={product.inspiredBy}
+          >
+            {product.inspiredBy}
           </span>
         )}
 
-        {/* Wishlist */}
-        <motion.button
-          className="absolute top-2.5 right-2.5 w-7 h-7 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center"
-          onClick={(e) => { e.stopPropagation(); setWished(w => !w); }}
-          whileTap={{ scale: 1.2 }}
-          transition={{ duration: 0.15 }}
+        {/* Add to bag: always on touch / small screens; hover-only on md+ */}
+        <button
+          type="button"
+          className="absolute bottom-2.5 left-2.5 right-2.5 rounded-xl bg-[#c9a84c] py-2 text-[10px] font-semibold uppercase tracking-widest text-black opacity-100 transition-opacity duration-200 md:opacity-0 md:group-hover:opacity-100"
+          onClick={e => {
+            e.stopPropagation();
+            addToCart(product);
+          }}
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill={wished ? '#c9a84c' : 'none'}>
-            <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" stroke={wished ? '#c9a84c' : '#888'} strokeWidth="1.5"/>
-          </svg>
-        </motion.button>
-
-        {/* Add to bag on hover */}
-        <AnimatePresence>
-          {hovered && (
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="absolute bottom-2.5 left-2.5 right-2.5 bg-[#c9a84c] text-black text-[10px] font-semibold tracking-widest uppercase py-2 rounded-xl"
-              onClick={(e) => { e.stopPropagation(); addToCart(product); }}
-            >
-              Add to Bag
-            </motion.button>
-          )}
-        </AnimatePresence>
+          Add to Bag
+        </button>
       </div>
 
       {/* Info */}
-      <div onClick={() => navigate(`/product/${product.id}`)}>
-        <p className="text-[10px] text-[#888] tracking-widest uppercase mb-0.5">{product.category}</p>
-        <p className="font-serif text-sm font-medium text-[#b8b3ac] leading-tight mb-1">{product.name}</p>
-        <p className="text-sm text-[#b8b3ac] font-medium">${product.price}</p>
+      <div className="min-w-0 max-w-full px-0.5" onClick={() => navigate(`/product/${product.id}`)}>
+        <p className={`mb-0.5 truncate text-[10px] uppercase tracking-widest ${metaClass}`}>{product.category}</p>
+        <p className={`mb-1 line-clamp-2 font-serif text-sm font-medium leading-tight ${titleClass}`}>{product.name}</p>
+        <p className={`text-sm font-medium ${priceClass}`}>${product.price}</p>
       </div>
     </motion.div>
   );

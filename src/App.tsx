@@ -10,6 +10,7 @@ import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import CollectionPage from './pages/CollectionPage';
+import AdminPage from './pages/AdminPage';
 
 const CHROME_ROUTES = ['/', '/cart', '/checkout', '/collection'];
 
@@ -26,7 +27,8 @@ function ScrollToTop() {
 export default function App() {
   const location = useLocation();
   const showChrome =
-    CHROME_ROUTES.includes(location.pathname) || location.pathname.startsWith('/product');
+    !location.pathname.startsWith('/ladmin') &&
+    (CHROME_ROUTES.includes(location.pathname) || location.pathname.startsWith('/product'));
 
   return (
     <MobileContainer>
@@ -40,6 +42,7 @@ export default function App() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
+          <Route path="/ladmin" element={<AdminPage />} />
         </Routes>
       </AnimatePresence>
       {showChrome && <Footer />}

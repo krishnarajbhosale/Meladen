@@ -7,4 +7,10 @@ export default defineConfig({
     tailwindcss(),
     react(),
   ],
+  server: {
+    proxy: {
+      '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/ladmin/login': { target: 'http://localhost:8080', changeOrigin: true },
+    },
+  },
 })

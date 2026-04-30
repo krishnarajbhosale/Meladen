@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import { overlayVariants } from '../animations/variants';
 import CartDrawer from './CartDrawer';
 import sparklingLogo from '../assets/Sparkling Logo.mp4';
 import AutoplayVideo from './AutoplayVideo';
+import { apiProductToProduct, fetchCategoriesWithProducts } from '../api/catalog';
+import { products as fallbackProducts, type Product } from '../data/products';
 
 const navLinks = [
   { label: 'Home', path: '/' },
@@ -19,8 +21,12 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchPool, setSearchPool] = useState<Product[]>([]);
   const { count } = useCart();
   const location = useLocation();
+  const navigate = useNavigate();
   const lastScrollY = useRef(0);
 
   useEffect(() => {
@@ -56,7 +62,38 @@ export default function Navbar() {
   useEffect(() => {
     setHeaderVisible(true);
     lastScrollY.current = 0;
+    setSearchQuery('');
+    setMobileSearchOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchCategoriesWithProducts();
+        if (cancelled) return;
+        const fromApi = data.flatMap(section => section.products.map(apiProductToProduct));
+        setSearchPool(fromApi.length > 0 ? fromApi : fallbackProducts);
+      } catch {
+        if (!cancelled) setSearchPool(fallbackProducts);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    const unique = new Map<string, Product>();
+    for (const p of searchPool) {
+      const haystack = [p.name, p.category, p.inspiredBy ?? '', p.searchKeywords ?? ''].join(' ').toLowerCase();
+      if (haystack.includes(q)) unique.set(p.id, p);
+      if (unique.size >= 8) break;
+    }
+    return Array.from(unique.values());
+  }, [searchPool, searchQuery]);
 
   return (
     <>
@@ -80,7 +117,9 @@ export default function Navbar() {
 
           <Link
             to="/"
-            className="absolute left-1/2 flex h-[4.5rem] w-48 -translate-x-1/2 items-center justify-center overflow-hidden lg:static lg:h-20 lg:w-56 lg:translate-x-0 lg:justify-self-start"
+            className={`absolute left-1/2 flex -translate-x-1/2 items-center justify-center overflow-hidden transition-all duration-200 ${
+              mobileSearchOpen ? 'h-12 w-32' : 'h-[4.5rem] w-48'
+            } lg:static lg:h-20 lg:w-56 lg:translate-x-0 lg:justify-self-start`}
             aria-label="Meladen home"
           >
             <AutoplayVideo
@@ -101,7 +140,48 @@ export default function Navbar() {
             ))}
           </nav>
 
-          <div className="flex items-center lg:justify-self-end">
+          <div className="flex items-center gap-2 lg:justify-self-end">
+            <div className="relative hidden lg:block">
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search products"
+                className="w-52 rounded-full border border-brand-beige/80 bg-[#0f0f0f]/80 px-3 py-1.5 text-[11px] text-brand-dark outline-none transition-colors placeholder:text-brand-gray focus:border-brand-dark"
+              />
+              {searchQuery.trim() && (
+                <div className="absolute right-0 top-10 z-50 max-h-80 w-72 overflow-y-auto rounded-xl border border-brand-beige bg-[#111111] p-2 shadow-xl">
+                  {searchResults.length > 0 ? (
+                    searchResults.map(item => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery('');
+                          navigate(`/product/${item.id}`);
+                        }}
+                        className="mb-1 w-full rounded-lg px-3 py-2 text-left hover:bg-[#1a1a1a]"
+                      >
+                        <p className="text-sm font-medium text-brand-dark">{item.name}</p>
+                        <p className="text-[10px] text-brand-gray">{item.category}</p>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="px-2 py-2 text-xs text-brand-gray">No products found</p>
+                  )}
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen(prev => !prev)}
+              className="flex h-8 w-8 items-center justify-center text-brand-dark transition-colors hover:text-brand-gray lg:hidden"
+              aria-label={mobileSearchOpen ? 'Close search' : 'Open search'}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </button>
             <button
               onClick={() => setCartOpen(true)}
               className="relative flex h-8 w-8 items-center justify-center text-brand-dark transition-colors hover:text-brand-gray"
@@ -125,6 +205,50 @@ export default function Navbar() {
             </button>
           </div>
         </div>
+        <AnimatePresence>
+          {mobileSearchOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="border-t border-brand-beige/40 px-5 pb-3 pt-2 lg:hidden"
+            >
+              <div className="relative">
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search products"
+                  className="w-full rounded-full border border-brand-beige/80 bg-[#0f0f0f]/80 px-3 py-2 text-xs text-brand-dark outline-none transition-colors placeholder:text-brand-gray focus:border-brand-dark"
+                />
+                {searchQuery.trim() && (
+                  <div className="absolute left-0 right-0 top-11 z-50 max-h-80 overflow-y-auto rounded-xl border border-brand-beige bg-[#111111] p-2 shadow-xl">
+                    {searchResults.length > 0 ? (
+                      searchResults.map(item => (
+                        <button
+                          key={`mobile-${item.id}`}
+                          type="button"
+                          onClick={() => {
+                            setSearchQuery('');
+                            setMobileSearchOpen(false);
+                            navigate(`/product/${item.id}`);
+                          }}
+                          className="mb-1 w-full rounded-lg px-3 py-2 text-left hover:bg-[#1a1a1a]"
+                        >
+                          <p className="text-sm font-medium text-brand-dark">{item.name}</p>
+                          <p className="text-[10px] text-brand-gray">{item.category}</p>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="px-2 py-2 text-xs text-brand-gray">No products found</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.header>
 
       <AnimatePresence>

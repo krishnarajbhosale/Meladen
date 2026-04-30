@@ -1,54 +1,50 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { products } from '../data/products';
-import { meladen7, meladen8, meladen9, meladen10, meladen11 } from '../data/meladenImages';
+import { products, type Product } from '../data/products';
+import { meladen9, meladen10, meladen11 } from '../data/meladenImages';
 import bento1 from '../assets/Bento1.png';
 import bento2 from '../assets/BentoPerfumeRight.png';
 import heroVideo from '../assets/HeroVideo.webm';
 import heroVideoMp4 from '../assets/Homepagevideo.mp4';
 import heroPoster from '../assets/hero.png';
+import { apiProductToProduct, fetchCategoriesWithProducts } from '../api/catalog';
 import AutoplayVideo from '../components/AutoplayVideo';
-import CategorySidebar from '../components/CategorySidebar';
-import CategoryStrip from '../components/CategoryStrip';
 import HorizontalProductRail from '../components/HorizontalProductRail';
 import { pageVariants, fadeUp } from '../animations/variants';
-
-const categoryOptions = [
-  'Perfumes',
-  'Room Freshner',
-  'Perfume Gel',
-  'Attars',
-  'Dukhoon',
-  'Gift Sets',
-];
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
-  const [activeCategory, setActiveCategory] = useState(categoryOptions[0]);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchCategoriesWithProducts();
+        if (cancelled) return;
+        const fromApi = data.flatMap(section => section.products.map(apiProductToProduct));
+        setCatalogProducts(fromApi.length > 0 ? fromApi : products);
+      } catch {
+        if (!cancelled) setCatalogProducts(products);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const bestSellers = useMemo(() => {
-    const featured = products.filter(product => product.isNew || product.isBestseller);
-    const source = featured.length ? featured : products;
-    return Array.from({ length: 10 }, (_, index) => source[index % source.length]);
-  }, []);
+    const source = catalogProducts.length > 0 ? catalogProducts : products;
+    return source.filter(product => product.isBestseller);
+  }, [catalogProducts]);
 
   return (
     <motion.div variants={pageVariants} initial="hidden" animate="visible" className="relative isolate overflow-x-clip bg-brand-cream">
-      <div className="mx-auto flex w-full max-w-[1500px] gap-0 px-3 pb-4 pt-3 lg:px-4 lg:pt-4">
-        <CategorySidebar
-          categories={categoryOptions}
-          activeCategory={activeCategory}
-          onSelect={setActiveCategory}
-          mobileOpen={mobileSidebarOpen}
-          onMobileOpen={() => setMobileSidebarOpen(true)}
-          onMobileClose={() => setMobileSidebarOpen(false)}
-        />
-
-        <div className="min-w-0 flex-1">
-          <section className="relative mb-8 h-[480px] overflow-hidden rounded-3xl lg:mb-10 lg:h-[90vh]">
+      <div className="mx-auto w-full max-w-[1500px] px-3 pb-4 pt-3 lg:px-4 lg:pt-4">
+        <div className="min-w-0">
+          <section className="relative -mx-3 mb-8 w-[calc(100%+1.5rem)] max-w-[100vw] overflow-hidden rounded-none max-lg:aspect-[9/18] max-lg:h-auto lg:mx-0 lg:mb-10 lg:aspect-auto lg:h-[96vh] lg:w-full lg:max-w-none lg:rounded-3xl">
             <AutoplayVideo
               sources={[
                 { src: heroVideoMp4, type: 'video/mp4' },
@@ -66,7 +62,7 @@ export default function HomePage() {
                 animate="visible"
                 className="mb-2 text-[9px] uppercase tracking-[0.3em] text-white/60 lg:text-[10px]"
               >
-                {activeCategory}
+                Signature
               </motion.p>
               <motion.h1
                 variants={fadeUp}
@@ -170,14 +166,6 @@ export default function HomePage() {
               </motion.button>
             </motion.div>
           </section>
-
-          <div className="mt-6">
-            <CategoryStrip
-              categories={categoryOptions}
-              activeCategory={activeCategory}
-              onSelect={setActiveCategory}
-            />
-          </div>
 
           <HorizontalProductRail
             title="Best Sellers"
