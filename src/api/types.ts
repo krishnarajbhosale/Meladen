@@ -121,10 +121,34 @@ export interface OrderApi {
   postcode: string;
   country: string;
   subtotal: number;
+  discountAmount?: number;
+  promoCode?: string | null;
   shipping: number;
+  walletDiscount?: number;
   total: number;
   alcoholUsedGm: number;
   status: string;
   createdAt: string;
   items: OrderItemApi[];
+}
+
+export interface PromoCodeRow {
+  id: number;
+  code: string;
+  percentOff: number;
+  minOrderValue: number;
+  maxDiscount: number;
+  active: boolean;
+  createdAt: string | null;
+}
+
+export interface ReturnRequestRow {
+  id: number;
+  customerName: string;
+  contactNumber: string;
+  email: string;
+  orderId: string;
+  issueText: string;
+  createdAt: string | null;
+  hasVideo: boolean;
 }

@@ -1,7 +1,16 @@
+import { Link } from 'react-router-dom';
+
 const footerColumns = [
-  { label: 'Shop', links: ['New Arrivals', 'Collection', 'Bestsellers'] },
-  { label: 'Company', links: ['About', 'Atelier', 'Contact'] },
-  { label: 'Support', links: ['Shipping', 'Returns', 'Privacy'] },
+  { label: 'Shop', links: ['New Arrivals', 'Collection', 'Bestsellers'] as const },
+  { label: 'Company', links: ['About', 'Atelier', 'Contact'] as const },
+  {
+    label: 'Support',
+    links: [
+      { label: 'Shipping', href: '#' },
+      { label: 'Returns', href: '/returns' },
+      { label: 'Privacy', href: '#' },
+    ] as const,
+  },
 ] as const;
 
 export default function Footer() {
@@ -16,11 +25,27 @@ export default function Footer() {
           {footerColumns.map(col => (
             <div key={col.label} className="space-y-3">
               <p className="text-brand-cream/30 text-[9px] mb-2">{col.label}</p>
-              {col.links.map(l => (
-                <p key={l}>
-                  <a href="#" className="hover:text-brand-cream transition-colors">{l}</a>
-                </p>
-              ))}
+              {col.label === 'Support'
+                ? col.links.map(l => (
+                    <p key={l.label}>
+                      {l.href.startsWith('/') ? (
+                        <Link to={l.href} className="hover:text-brand-cream transition-colors">
+                          {l.label}
+                        </Link>
+                      ) : (
+                        <a href={l.href} className="hover:text-brand-cream transition-colors">
+                          {l.label}
+                        </a>
+                      )}
+                    </p>
+                  ))
+                : col.links.map(l => (
+                    <p key={l}>
+                      <a href="#" className="hover:text-brand-cream transition-colors">
+                        {l}
+                      </a>
+                    </p>
+                  ))}
             </div>
           ))}
         </div>

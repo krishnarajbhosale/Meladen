@@ -5,9 +5,12 @@ import type {
   OrderApi,
   ProductAdminApi,
   ProductPublicApi,
+  PromoCodeRow,
+  ReturnRequestRow,
   StockSummaryApi,
 } from './types';
-import { authHeaders, fetchJson } from './client';
+import { ApiError, authHeaders, fetchJson } from './client';
+import { customerAuthHeaders, isCustomerLoggedIn } from './customerAuth';
 import type { Product } from '../data/products';
 import { meladen1 } from '../data/meladenImages';
 import default2 from '../assets/Default 2.jpg';
@@ -172,9 +175,78 @@ export async function adminListOrders(token: string): Promise<OrderApi[]> {
   });
 }
 
+export async function fetchMyOrders(): Promise<OrderApi[]> {
+  return fetchJson<OrderApi[]>('/api/public/orders/me', {
+    headers: { ...customerAuthHeaders() },
+  });
+}
+
 export async function placePublicOrder(body: Record<string, unknown>): Promise<OrderApi> {
+  if (!isCustomerLoggedIn()) {
+    throw new ApiError(401, 'Please sign in to complete your order.');
+  }
   return fetchJson<OrderApi>('/api/public/orders', {
     method: 'POST',
+    headers: { ...customerAuthHeaders() },
     body: JSON.stringify(body),
+  });
+}
+
+export async function adminListPromoCodes(token: string): Promise<PromoCodeRow[]> {
+  return fetchJson<PromoCodeRow[]>('/api/admin/promocodes', {
+    headers: authHeaders(token),
+  });
+}
+
+export async function adminCreatePromoCode(
+  token: string,
+  body: { code: string; percentOff: number; minOrderValue: number; maxDiscount: number },
+): Promise<{ success: boolean; id?: number }> {
+  return fetchJson('/api/admin/promocodes', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function adminDeletePromoCode(token: string, id: number): Promise<void> {
+  await fetchJson(`/api/admin/promocodes/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+}
+
+export async function adminListReturnRequests(token: string): Promise<ReturnRequestRow[]> {
+  return fetchJson<ReturnRequestRow[]>('/api/admin/returns', {
+    headers: authHeaders(token),
+  });
+}
+
+export async function fetchAdminReturnVideoBlobUrl(token: string, id: number): Promise<string | null> {
+  const res = await fetch(`/api/admin/returns/${id}/video`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok) return null;
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
+export async function adminListWalletCustomers(token: string): Promise<string[]> {
+  return fetchJson<string[]>('/api/admin/wallet/customers', {
+    headers: authHeaders(token),
+  });
+}
+
+export async function adminWalletOrdersByEmail(token: string, email: string): Promise<{ id: string; orderNumber: string; totalAmount: number }[]> {
+  return fetchJson(`/api/admin/wallet/orders?email=${encodeURIComponent(email)}`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function adminCreditWallet(token: string, orderId: string, amount: number): Promise<{ success: boolean }> {
+  return fetchJson('/api/admin/wallet/credit', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ orderId, amount }),
   });
 }

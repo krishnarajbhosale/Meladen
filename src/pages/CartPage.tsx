@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { guardCheckout } from '../api/customerAuth';
 import { useCart } from '../context/CartContext';
 import QuantityStepper from '../components/QuantityStepper';
 import Button from '../components/Button';
@@ -203,7 +204,14 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                <Button fullWidth onClick={() => navigate('/checkout')} className="mt-6">
+                <Button
+                  fullWidth
+                  onClick={() => {
+                    if (!guardCheckout(navigate)) return;
+                    navigate('/checkout');
+                  }}
+                  className="mt-6"
+                >
                   Proceed to Checkout
                 </Button>
 

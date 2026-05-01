@@ -7,6 +7,7 @@ import CartDrawer from './CartDrawer';
 import sparklingLogo from '../assets/Sparkling Logo.mp4';
 import AutoplayVideo from './AutoplayVideo';
 import { apiProductToProduct, fetchCategoriesWithProducts } from '../api/catalog';
+import { CUSTOMER_AUTH_CHANGED_EVENT, isCustomerLoggedIn } from '../api/customerAuth';
 import { products as fallbackProducts, type Product } from '../data/products';
 
 const navLinks = [
@@ -28,6 +29,17 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const lastScrollY = useRef(0);
+  const [customerSignedIn, setCustomerSignedIn] = useState(() => isCustomerLoggedIn());
+
+  useEffect(() => {
+    setCustomerSignedIn(isCustomerLoggedIn());
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const sync = () => setCustomerSignedIn(isCustomerLoggedIn());
+    window.addEventListener(CUSTOMER_AUTH_CHANGED_EVENT, sync);
+    return () => window.removeEventListener(CUSTOMER_AUTH_CHANGED_EVENT, sync);
+  }, []);
 
   useEffect(() => {
     const onScroll = () => {
@@ -182,6 +194,21 @@ export default function Navbar() {
                 <path d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
             </button>
+            <Link
+              to={customerSignedIn ? '/account' : '/login'}
+              className="flex h-8 w-8 items-center justify-center text-brand-dark transition-colors hover:text-brand-gray"
+              aria-label={customerSignedIn ? 'My orders' : 'Sign in'}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
             <button
               onClick={() => setCartOpen(true)}
               className="relative flex h-8 w-8 items-center justify-center text-brand-dark transition-colors hover:text-brand-gray"

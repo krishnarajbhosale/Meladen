@@ -37,9 +37,11 @@ public class OrderService {
   private final ProductRepository productRepository;
   private final InventoryStockRepository stockRepository;
   private final CustomerOrderRepository orderRepository;
+  private final PromoCodeService promoCodeService;
+  private final WalletService walletService;
 
   @Transactional
-  public OrderResponse placeOrder(PlaceOrderRequest request) {
+  public OrderResponse placeOrder(PlaceOrderRequest request, Long customerIdOrNull) {
     if (request.items() == null || request.items().isEmpty()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order items are required");
     }
@@ -87,8 +89,26 @@ public class OrderService {
     stock.setAlcoholStockGm(stock.getAlcoholStockGm().subtract(totalAlcoholRequired).setScale(2, RoundingMode.HALF_UP));
     stock.setUpdatedAt(Instant.now());
 
-    BigDecimal shipping = subtotal.compareTo(FREE_SHIPPING_THRESHOLD) >= 0 ? BigDecimal.ZERO : SHIPPING_FEE;
-    BigDecimal total = subtotal.add(shipping).setScale(2, RoundingMode.HALF_UP);
+    BigDecimal discount = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    String appliedPromo = null;
+    if (request.promoCode() != null && !request.promoCode().isBlank()) {
+      var validation = promoCodeService.validate(request.promoCode(), subtotal.setScale(2, RoundingMode.HALF_UP));
+      if (!Boolean.TRUE.equals(validation.get("valid"))) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST, String.valueOf(validation.get("message")));
+      }
+      discount = ((BigDecimal) validation.get("discountAmount")).setScale(2, RoundingMode.HALF_UP);
+      appliedPromo = String.valueOf(validation.get("code"));
+    }
+
+    BigDecimal subtotalAfterDiscount =
+        subtotal.subtract(discount).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+    BigDecimal shipping =
+        subtotalAfterDiscount.compareTo(FREE_SHIPPING_THRESHOLD) >= 0 ? BigDecimal.ZERO : SHIPPING_FEE;
+    BigDecimal preWalletTotal = subtotalAfterDiscount.add(shipping).setScale(2, RoundingMode.HALF_UP);
+    BigDecimal walletUse = resolveWalletDiscount(request, customerIdOrNull, preWalletTotal);
+    BigDecimal finalTotal =
+        preWalletTotal.subtract(walletUse).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
 
     CustomerOrder order = new CustomerOrder();
     order.setId(UUID.randomUUID().toString());
@@ -101,8 +121,14 @@ public class OrderService {
     order.setPostcode(request.postcode().trim());
     order.setCountry(request.country().trim());
     order.setSubtotal(subtotal.setScale(2, RoundingMode.HALF_UP));
+    order.setDiscountAmount(discount);
+    order.setPromoCode(appliedPromo);
+    if (customerIdOrNull != null) {
+      order.setCustomerId(customerIdOrNull);
+    }
     order.setShipping(shipping.setScale(2, RoundingMode.HALF_UP));
-    order.setTotal(total);
+    order.setWalletDiscount(walletUse);
+    order.setTotal(finalTotal);
     order.setAlcoholUsedGm(totalAlcoholRequired.setScale(2, RoundingMode.HALF_UP));
     order.setStatus("PLACED");
     order.setCreatedAt(Instant.now());
@@ -126,12 +152,55 @@ public class OrderService {
     productRepository.saveAll(resolved.stream().map(ResolvedOrderItem::product).toList());
     stockRepository.save(stock);
     CustomerOrder savedOrder = orderRepository.save(order);
+    if (walletUse.compareTo(BigDecimal.ZERO) > 0 && customerIdOrNull != null) {
+      walletService.debitForOrder(customerIdOrNull, savedOrder.getId(), walletUse);
+    }
     return toOrderResponse(savedOrder);
+  }
+
+  private BigDecimal resolveWalletDiscount(
+      PlaceOrderRequest request, Long customerId, BigDecimal preWalletTotal) {
+    BigDecimal requested = request.walletDiscount();
+    if (requested == null || requested.compareTo(BigDecimal.ZERO) <= 0) {
+      return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    }
+    if (customerId == null) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sign in to use wallet balance");
+    }
+    BigDecimal reqScaled = requested.max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+    BigDecimal bal = walletService.getBalance(customerId);
+    BigDecimal capped =
+        reqScaled
+            .min(bal)
+            .min(preWalletTotal)
+            .max(BigDecimal.ZERO)
+            .setScale(2, RoundingMode.HALF_UP);
+    BigDecimal expectedPayable =
+        preWalletTotal.subtract(capped).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+    if (request.clientTotal() != null) {
+      BigDecimal clientTotal = request.clientTotal().setScale(2, RoundingMode.HALF_UP);
+      BigDecimal diff = expectedPayable.subtract(clientTotal).abs();
+      if (diff.compareTo(new BigDecimal("1.01")) > 0) {
+        throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST, "Order total does not match. Refresh and try again.");
+      }
+    }
+    return capped;
   }
 
   @Transactional(readOnly = true)
   public List<OrderResponse> listAdminOrders() {
     return orderRepository.findAllWithItems().stream().map(this::toOrderResponse).toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<OrderResponse> listOrdersForCustomer(Long customerId) {
+    if (customerId == null) {
+      return List.of();
+    }
+    return orderRepository.findByCustomerIdWithItems(customerId).stream()
+        .map(this::toOrderResponse)
+        .toList();
   }
 
   @Transactional(readOnly = true)
@@ -168,6 +237,14 @@ public class OrderService {
   }
 
   private OrderResponse toOrderResponse(CustomerOrder o) {
+    BigDecimal disc =
+        o.getDiscountAmount() != null
+            ? o.getDiscountAmount().setScale(2, RoundingMode.HALF_UP)
+            : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    BigDecimal walletDisc =
+        o.getWalletDiscount() != null
+            ? o.getWalletDiscount().setScale(2, RoundingMode.HALF_UP)
+            : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     return new OrderResponse(
         o.getId(),
         o.getOrderNumber(),
@@ -179,7 +256,10 @@ public class OrderService {
         o.getPostcode(),
         o.getCountry(),
         o.getSubtotal(),
+        disc,
+        o.getPromoCode(),
         o.getShipping(),
+        walletDisc,
         o.getTotal(),
         o.getAlcoholUsedGm(),
         o.getStatus(),

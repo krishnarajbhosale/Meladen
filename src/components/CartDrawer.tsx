@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { guardCheckout } from '../api/customerAuth';
 import { useCart } from '../context/CartContext';
 import { meladen13, meladen14 } from '../data/meladenImages';
 import QuantityStepper from './QuantityStepper';
@@ -23,6 +24,8 @@ export default function CartDrawer({ open, onClose }: Props) {
   const progress = Math.min(100, (total / freeShippingThreshold) * 100);
 
   const handleCheckout = () => {
+    // Close drawer before /login so the overlay does not cover the sign-in screen.
+    if (!guardCheckout(navigate, onClose)) return;
     onClose();
     navigate('/checkout');
   };

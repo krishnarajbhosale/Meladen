@@ -18,7 +18,10 @@ public record PlaceOrderRequest(
     @NotBlank String city,
     @NotBlank String postcode,
     @NotBlank String country,
-    @NotEmpty List<@Valid OrderItemRequest> items) {
+    @NotEmpty List<@Valid OrderItemRequest> items,
+    String promoCode,
+    BigDecimal walletDiscount,
+    BigDecimal clientTotal) {
 
   public record OrderItemRequest(
       @NotBlank String productId,

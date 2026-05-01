@@ -53,8 +53,20 @@ public class CustomerOrder {
   @Column(nullable = false, precision = 14, scale = 2)
   private BigDecimal subtotal;
 
+  @Column(name = "discount_amount", nullable = false, precision = 14, scale = 2)
+  private BigDecimal discountAmount = BigDecimal.ZERO;
+
+  @Column(name = "promo_code", length = 60)
+  private String promoCode;
+
+  @Column(name = "customer_id")
+  private Long customerId;
+
   @Column(nullable = false, precision = 14, scale = 2)
   private BigDecimal shipping;
+
+  @Column(name = "wallet_discount", nullable = false, precision = 14, scale = 2)
+  private BigDecimal walletDiscount = BigDecimal.ZERO;
 
   @Column(nullable = false, precision = 14, scale = 2)
   private BigDecimal total;

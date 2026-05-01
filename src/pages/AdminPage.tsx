@@ -2,18 +2,33 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   adminGetStock,
   adminListOrders,
+  adminCreatePromoCode,
   adminCreateCategory,
   adminCreateProduct,
   adminDeleteCategory,
   adminDeleteProduct,
+  adminDeletePromoCode,
   adminListCategories,
   adminListProducts,
+  adminListPromoCodes,
+  adminListReturnRequests,
+  adminListWalletCustomers,
+  adminWalletOrdersByEmail,
+  adminCreditWallet,
   adminUpdateStock,
   adminUpdateCategory,
   adminUpdateProduct,
+  fetchAdminReturnVideoBlobUrl,
   loginAdmin,
 } from '../api/catalog';
-import type { CategoryResponse, OrderApi, ProductAdminApi, StockSummaryApi } from '../api/types';
+import type {
+  CategoryResponse,
+  OrderApi,
+  ProductAdminApi,
+  PromoCodeRow,
+  ReturnRequestRow,
+  StockSummaryApi,
+} from '../api/types';
 import default2 from '../assets/Default 2.jpg';
 import default3 from '../assets/DEFAULT 3.png';
 import default4 from '../assets/Default 4.png';
@@ -21,7 +36,7 @@ import default4 from '../assets/Default 4.png';
 const TOKEN_KEY = 'meladen_admin_jwt';
 const PRODUCT_MEDIA_DEFAULTS_KEY = 'meladen_product_media_defaults';
 const PRODUCT_TABS = ['Basics', 'Pricing & Notes', 'Media & Flags'] as const;
-const ADMIN_TABS = ['Categories', 'Products', 'Stock', 'Orders'] as const;
+const ADMIN_TABS = ['Categories', 'Products', 'Stock', 'Orders', 'Promo codes', 'Returns', 'Wallet'] as const;
 type ProductTab = (typeof PRODUCT_TABS)[number];
 type AdminTab = (typeof ADMIN_TABS)[number];
 
@@ -104,8 +119,30 @@ export default function AdminPage() {
   const [products, setProducts] = useState<ProductAdminApi[]>([]);
   const [stock, setStock] = useState<StockSummaryApi | null>(null);
   const [orders, setOrders] = useState<OrderApi[]>([]);
+  const [promoRows, setPromoRows] = useState<PromoCodeRow[]>([]);
+  const [returnRows, setReturnRows] = useState<ReturnRequestRow[]>([]);
   const [alcoholStockInput, setAlcoholStockInput] = useState('');
   const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>('Categories');
+
+  const [promoForm, setPromoForm] = useState({
+    code: '',
+    percentOff: '',
+    minOrderValue: '',
+    maxDiscount: '',
+  });
+  const [promoMessage, setPromoMessage] = useState<string | null>(null);
+  const [selectedReturn, setSelectedReturn] = useState<ReturnRequestRow | null>(null);
+  const [returnVideoUrl, setReturnVideoUrl] = useState<string | null>(null);
+
+  const [walletCustomerEmails, setWalletCustomerEmails] = useState<string[]>([]);
+  const [walletEmailInput, setWalletEmailInput] = useState('');
+  const [walletOrdersForEmail, setWalletOrdersForEmail] = useState<
+    { id: string; orderNumber: string; totalAmount: number }[]
+  >([]);
+  const [walletSelectedOrderId, setWalletSelectedOrderId] = useState('');
+  const [walletCreditAmount, setWalletCreditAmount] = useState('');
+  const [walletTabMessage, setWalletTabMessage] = useState<string | null>(null);
+  const [walletTabBusy, setWalletTabBusy] = useState(false);
 
   const [catName, setCatName] = useState('');
   const [catDesc, setCatDesc] = useState('');
@@ -214,6 +251,73 @@ export default function AdminPage() {
   }, [token, refresh]);
 
   useEffect(() => {
+    if (!token || activeAdminTab !== 'Promo codes') return;
+    let cancelled = false;
+    adminListPromoCodes(token)
+      .then(rows => {
+        if (!cancelled) setPromoRows(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setPromoRows([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, activeAdminTab]);
+
+  useEffect(() => {
+    if (!token || activeAdminTab !== 'Returns') return;
+    let cancelled = false;
+    adminListReturnRequests(token)
+      .then(rows => {
+        if (!cancelled) setReturnRows(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setReturnRows([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, activeAdminTab]);
+
+  useEffect(() => {
+    if (!token || activeAdminTab !== 'Wallet') return;
+    let cancelled = false;
+    adminListWalletCustomers(token)
+      .then(emails => {
+        if (!cancelled) setWalletCustomerEmails(emails);
+      })
+      .catch(() => {
+        if (!cancelled) setWalletCustomerEmails([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, activeAdminTab]);
+
+  useEffect(() => {
+    setReturnVideoUrl(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    if (!selectedReturn || !selectedReturn.hasVideo || !token) {
+      return;
+    }
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    void (async () => {
+      const url = await fetchAdminReturnVideoBlobUrl(token, selectedReturn.id);
+      if (cancelled || !url) return;
+      objectUrl = url;
+      setReturnVideoUrl(url);
+    })();
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedReturn, token]);
+
+  useEffect(() => {
     if (editingProductId) return;
     setProductForm(prev => ({
       ...prev,
@@ -243,6 +347,38 @@ export default function AdminPage() {
   const logout = () => {
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
+  };
+
+  const savePromo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    setPromoMessage(null);
+    setBusy(true);
+    try {
+      await adminCreatePromoCode(token, {
+        code: promoForm.code.trim(),
+        percentOff: Number(promoForm.percentOff),
+        minOrderValue: Number(promoForm.minOrderValue),
+        maxDiscount: Number(promoForm.maxDiscount),
+      });
+      setPromoForm({ code: '', percentOff: '', minOrderValue: '', maxDiscount: '' });
+      setPromoMessage('Promo code saved.');
+      setPromoRows(await adminListPromoCodes(token));
+    } catch (err) {
+      setPromoMessage(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removePromo = async (id: number) => {
+    if (!token || !confirm('Delete this promo code?')) return;
+    try {
+      await adminDeletePromoCode(token, id);
+      setPromoRows(await adminListPromoCodes(token));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Delete failed');
+    }
   };
 
   const saveCategory = async (e: React.FormEvent) => {
@@ -552,7 +688,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="mt-8 grid grid-cols-2 gap-2 rounded-lg bg-[#efe4d2] p-1 lg:w-fit lg:grid-cols-4">
+        <div className="mt-8 grid grid-cols-2 gap-2 rounded-lg bg-[#efe4d2] p-1 sm:grid-cols-3 lg:w-fit lg:grid-cols-7">
           {ADMIN_TABS.map(tab => (
             <button
               key={tab}
@@ -1052,6 +1188,14 @@ export default function AdminPage() {
                         </div>
                         <div className="text-right text-xs text-[#6b5c4b]">
                           <p>{new Date(order.createdAt).toLocaleString()}</p>
+                          {order.discountAmount != null && order.discountAmount > 0 && (
+                            <p>
+                              Promo: {order.promoCode ?? '—'} · −{order.discountAmount}
+                            </p>
+                          )}
+                          {(order.walletDiscount ?? 0) > 0 && (
+                            <p>Wallet: −{Number(order.walletDiscount).toFixed(2)}</p>
+                          )}
                           <p className="font-semibold text-[#2f2418]">Total: {order.total}</p>
                           <p>Alcohol used: {order.alcoholUsedGm} gm</p>
                         </div>
@@ -1070,6 +1214,320 @@ export default function AdminPage() {
                       </ul>
                     </article>
                   ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {activeAdminTab === 'Promo codes' && (
+            <section className="max-w-3xl space-y-6">
+              <h2 className="text-lg font-semibold text-[#241d14]">Promo codes</h2>
+              <form
+                onSubmit={savePromo}
+                className="space-y-3 rounded-xl border border-[#dbcdb8] bg-white p-4 shadow-sm"
+              >
+                <p className="text-xs font-semibold uppercase tracking-widest text-[#7a6b57]">Add code</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    placeholder="Code (e.g. MELADEN10)"
+                    value={promoForm.code}
+                    onChange={e => setPromoForm(f => ({ ...f, code: e.target.value }))}
+                    className="rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-3 py-2 text-sm outline-none focus:border-[#8c7458]"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="% off"
+                    min={1}
+                    max={100}
+                    value={promoForm.percentOff}
+                    onChange={e => setPromoForm(f => ({ ...f, percentOff: e.target.value }))}
+                    className="rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-3 py-2 text-sm outline-none focus:border-[#8c7458]"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Min order ($)"
+                    min={0}
+                    step="0.01"
+                    value={promoForm.minOrderValue}
+                    onChange={e => setPromoForm(f => ({ ...f, minOrderValue: e.target.value }))}
+                    className="rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-3 py-2 text-sm outline-none focus:border-[#8c7458]"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max discount ($)"
+                    min={1}
+                    step="0.01"
+                    value={promoForm.maxDiscount}
+                    onChange={e => setPromoForm(f => ({ ...f, maxDiscount: e.target.value }))}
+                    className="rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-3 py-2 text-sm outline-none focus:border-[#8c7458]"
+                    required
+                  />
+                </div>
+                {promoMessage && <p className="text-sm text-[#6b5c4b]">{promoMessage}</p>}
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="rounded-full bg-[#3e2f1f] px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white disabled:opacity-50"
+                >
+                  Save promo
+                </button>
+              </form>
+              {promoRows.length === 0 ? (
+                <p className="text-sm text-[#6b5c4b]">No promo codes yet.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-[#dbcdb8] bg-white shadow-sm">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-[#eadfce] text-xs uppercase tracking-wide text-[#7a6b57]">
+                        <th className="px-3 py-2">Code</th>
+                        <th className="px-3 py-2">%</th>
+                        <th className="px-3 py-2">Min</th>
+                        <th className="px-3 py-2">Max</th>
+                        <th className="px-3 py-2" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {promoRows.map(r => (
+                        <tr key={r.id} className="border-b border-[#f0e8dc]">
+                          <td className="px-3 py-2 font-medium">{r.code}</td>
+                          <td className="px-3 py-2">{r.percentOff}%</td>
+                          <td className="px-3 py-2">{r.minOrderValue}</td>
+                          <td className="px-3 py-2">{r.maxDiscount}</td>
+                          <td className="px-3 py-2 text-right">
+                            <button
+                              type="button"
+                              className="text-xs text-red-700 underline"
+                              onClick={() => removePromo(r.id)}
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
+
+          {activeAdminTab === 'Wallet' && (
+            <section className="max-w-xl space-y-4">
+              <h2 className="text-lg font-semibold text-[#241d14]">Customer wallet</h2>
+              <p className="text-sm text-[#6b5c4b]">
+                Credit store wallet for a customer order (refunds / goodwill). Amount is added to their balance.
+              </p>
+              <form
+                className="space-y-3 rounded-xl border border-[#dbcdb8] bg-white p-4 shadow-sm"
+                onSubmit={async e => {
+                  e.preventDefault();
+                  if (!token || !walletSelectedOrderId.trim()) {
+                    setWalletTabMessage('Select an order.');
+                    return;
+                  }
+                  const amt = Number(walletCreditAmount);
+                  if (!Number.isFinite(amt) || amt <= 0) {
+                    setWalletTabMessage('Enter a positive amount.');
+                    return;
+                  }
+                  setWalletTabBusy(true);
+                  setWalletTabMessage(null);
+                  try {
+                    await adminCreditWallet(token, walletSelectedOrderId.trim(), amt);
+                    setWalletTabMessage(`Credited $${amt.toFixed(2)} to wallet for order ${walletSelectedOrderId.slice(0, 8)}…`);
+                    setWalletCreditAmount('');
+                  } catch (err) {
+                    setWalletTabMessage(readMessage(err));
+                  } finally {
+                    setWalletTabBusy(false);
+                  }
+                }}
+              >
+                <label className="block text-xs font-semibold uppercase tracking-widest text-[#7a6b57]">
+                  Customer email
+                </label>
+                <input
+                  list="wallet-customer-emails"
+                  value={walletEmailInput}
+                  onChange={e => setWalletEmailInput(e.target.value)}
+                  placeholder="customer@example.com"
+                  className="w-full rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-3 py-2 text-sm outline-none focus:border-[#8c7458]"
+                />
+                <datalist id="wallet-customer-emails">
+                  {walletCustomerEmails.map(em => (
+                    <option key={em} value={em} />
+                  ))}
+                </datalist>
+                <button
+                  type="button"
+                  disabled={walletTabBusy || !walletEmailInput.trim()}
+                  onClick={async () => {
+                    if (!token || !walletEmailInput.trim()) return;
+                    setWalletTabBusy(true);
+                    setWalletTabMessage(null);
+                    try {
+                      const rows = await adminWalletOrdersByEmail(token, walletEmailInput.trim());
+                      setWalletOrdersForEmail(rows);
+                      setWalletSelectedOrderId(rows[0]?.id ?? '');
+                    } catch (err) {
+                      setWalletOrdersForEmail([]);
+                      setWalletSelectedOrderId('');
+                      setWalletTabMessage(readMessage(err));
+                    } finally {
+                      setWalletTabBusy(false);
+                    }
+                  }}
+                  className="rounded-lg border border-[#ccbca7] bg-[#f6efe4] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#4b3f32] disabled:opacity-50"
+                >
+                  Load orders
+                </button>
+                {walletOrdersForEmail.length > 0 && (
+                  <>
+                    <label className="mt-2 block text-xs font-semibold uppercase tracking-widest text-[#7a6b57]">
+                      Order
+                    </label>
+                    <select
+                      value={walletSelectedOrderId}
+                      onChange={e => setWalletSelectedOrderId(e.target.value)}
+                      className="w-full rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-3 py-2 text-sm outline-none focus:border-[#8c7458]"
+                    >
+                      {walletOrdersForEmail.map(o => (
+                        <option key={o.id} value={o.id}>
+                          {o.orderNumber} · total {o.totalAmount}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="block text-xs font-semibold uppercase tracking-widest text-[#7a6b57]">
+                      Credit amount ($)
+                    </label>
+                    <input
+                      type="number"
+                      min={0.01}
+                      step={0.01}
+                      value={walletCreditAmount}
+                      onChange={e => setWalletCreditAmount(e.target.value)}
+                      className="w-full rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-3 py-2 text-sm outline-none focus:border-[#8c7458]"
+                    />
+                    <button
+                      type="submit"
+                      disabled={walletTabBusy}
+                      className="w-full rounded-lg bg-[#2f2418] px-4 py-2.5 text-sm font-medium text-[#f8f2e8] disabled:opacity-50"
+                    >
+                      {walletTabBusy ? 'Saving…' : 'Credit wallet'}
+                    </button>
+                  </>
+                )}
+                {walletTabMessage && (
+                  <p className="text-sm text-[#5d4d3b]">{walletTabMessage}</p>
+                )}
+              </form>
+            </section>
+          )}
+
+          {activeAdminTab === 'Returns' && (
+            <section className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold text-[#241d14]">Return requests</h2>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!token) return;
+                    try {
+                      setReturnRows(await adminListReturnRequests(token));
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                  className="rounded-full border border-[#c8b89f] bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#4b3f32]"
+                >
+                  Refresh
+                </button>
+              </div>
+              {returnRows.length === 0 ? (
+                <div className="rounded-xl border border-[#dbcdb8] bg-white p-4 text-sm text-[#6b5c4b] shadow-sm">
+                  No return requests yet.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-[#dbcdb8] bg-white shadow-sm">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-[#eadfce] text-xs uppercase tracking-wide text-[#7a6b57]">
+                        <th className="px-3 py-2">Date</th>
+                        <th className="px-3 py-2">Customer</th>
+                        <th className="px-3 py-2">Order</th>
+                        <th className="px-3 py-2">Video</th>
+                        <th className="px-3 py-2" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {returnRows.map(r => (
+                        <tr key={r.id} className="border-b border-[#f0e8dc]">
+                          <td className="px-3 py-2 text-[#6b5c4b]">
+                            {r.createdAt ? new Date(r.createdAt).toLocaleString() : '—'}
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className="font-medium text-[#241d14]">{r.customerName}</span>
+                            <br />
+                            <span className="text-xs text-[#6b5c4b]">{r.email}</span>
+                          </td>
+                          <td className="px-3 py-2 font-mono text-xs">{r.orderId}</td>
+                          <td className="px-3 py-2">{r.hasVideo ? 'Yes' : '—'}</td>
+                          <td className="px-3 py-2 text-right">
+                            <button
+                              type="button"
+                              className="text-xs font-semibold uppercase tracking-wide text-[#5d4d3b] underline"
+                              onClick={() => setSelectedReturn(r)}
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {selectedReturn && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                  <div className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-2xl border border-[#dbcdb8] bg-[#fffdfa] p-5 shadow-xl">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h3 className="font-serif text-lg text-[#241d14]">
+                        Return #{selectedReturn.id}
+                      </h3>
+                      <button
+                        type="button"
+                        className="text-2xl leading-none text-[#6b5c4b] hover:text-[#241d14]"
+                        onClick={() => setSelectedReturn(null)}
+                        aria-label="Close"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="space-y-2 text-sm text-[#3a2f25]">
+                      <p>
+                        <span className="text-[#7a6b57]">Name:</span> {selectedReturn.customerName}
+                      </p>
+                      <p>
+                        <span className="text-[#7a6b57]">Email:</span> {selectedReturn.email}
+                      </p>
+                      <p>
+                        <span className="text-[#7a6b57]">Contact:</span> {selectedReturn.contactNumber}
+                      </p>
+                      <p>
+                        <span className="text-[#7a6b57]">Order id:</span> {selectedReturn.orderId}
+                      </p>
+                      <p>
+                        <span className="text-[#7a6b57]">Issue:</span> {selectedReturn.issueText}
+                      </p>
+                      {selectedReturn.hasVideo && returnVideoUrl && (
+                        <video src={returnVideoUrl} controls className="mt-4 w-full max-h-[50vh] rounded-lg bg-black" />
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </section>
