@@ -28,6 +28,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
       FilterChain filterChain)
       throws ServletException, IOException {
 
+    if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+      filterChain.doFilter(request, response);
+      return;
+    }
+
     String path = servletRelativePath(request);
 
     // Admin APIs (support nginx/proxy that strips /api so backend sees /admin/... instead of /api/admin/...)

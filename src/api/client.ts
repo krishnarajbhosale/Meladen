@@ -1,4 +1,5 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+/** Base URL for API calls (empty = same origin). Exported for rare raw `fetch` usage. */
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 export class ApiError extends Error {
   status: number;
@@ -10,7 +11,7 @@ export class ApiError extends Error {
 }
 
 export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',

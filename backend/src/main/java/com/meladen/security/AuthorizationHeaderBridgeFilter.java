@@ -6,6 +6,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.List;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -57,6 +60,14 @@ public class AuthorizationHeaderBridgeFilter extends OncePerRequestFilter {
         return authorization;
       }
       return super.getHeader(name);
+    }
+
+    @Override
+    public Enumeration<String> getHeaders(String name) {
+      if ("Authorization".equalsIgnoreCase(name)) {
+        return Collections.enumeration(List.of(authorization));
+      }
+      return super.getHeaders(name);
     }
   }
 }

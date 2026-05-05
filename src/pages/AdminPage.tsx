@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   adminGetStock,
   adminListOrders,
@@ -108,6 +108,8 @@ function emptyProductForm(defaultCategoryId: number, defaults?: ProductMediaDefa
 
 export default function AdminPage() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
+  const tokenRef = useRef<string | null>(token);
+  tokenRef.current = token;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -179,12 +181,18 @@ export default function AdminPage() {
 
   const refresh = useCallback(async () => {
     if (!token) return;
+    const tokenAtStart = token;
     const [catRes, prodRes, stockRes, orderRes] = await Promise.allSettled([
       adminListCategories(token),
       adminListProducts(token),
       adminGetStock(token),
       adminListOrders(token),
     ]);
+
+    // Ignore results from an older token (e.g. invalid JWT in storage + fresh login).
+    if (tokenRef.current !== tokenAtStart) {
+      return;
+    }
 
     const catStatus = catRes.status === 'rejected' ? readStatus(catRes.reason) : null;
     const prodStatus = prodRes.status === 'rejected' ? readStatus(prodRes.reason) : null;

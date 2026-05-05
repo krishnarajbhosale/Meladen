@@ -9,7 +9,7 @@ import type {
   ReturnRequestRow,
   StockSummaryApi,
 } from './types';
-import { ApiError, authHeaders, fetchJson } from './client';
+import { API_BASE_URL, ApiError, authHeaders, fetchJson } from './client';
 import { customerAuthHeaders, isCustomerLoggedIn } from './customerAuth';
 import type { Product } from '../data/products';
 import { meladen1 } from '../data/meladenImages';
@@ -84,10 +84,20 @@ export async function fetchPublicStock(): Promise<StockSummaryApi> {
 }
 
 export async function loginAdmin(email: string, password: string): Promise<JwtLoginResponse> {
-  return fetchJson<JwtLoginResponse>('/ladmin/login', {
+  const data = await fetchJson<JwtLoginResponse & { accessToken?: string }>('/ladmin/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
+  const token = String(data.token ?? data.accessToken ?? '').trim();
+  if (!token) {
+    throw new ApiError(200, 'Login response did not include a token');
+  }
+  return {
+    ...data,
+    token,
+    email: typeof data.email === 'string' ? data.email : '',
+    expiresInSeconds: Number(data.expiresInSeconds) || 0,
+  };
 }
 
 export async function adminListCategories(token: string) {
@@ -223,7 +233,7 @@ export async function adminListReturnRequests(token: string): Promise<ReturnRequ
 }
 
 export async function fetchAdminReturnVideoBlobUrl(token: string, id: number): Promise<string | null> {
-  const res = await fetch(`/api/admin/returns/${id}/video`, {
+  const res = await fetch(`${API_BASE_URL}/api/admin/returns/${id}/video`, {
     headers: authHeaders(token),
   });
   if (!res.ok) return null;
