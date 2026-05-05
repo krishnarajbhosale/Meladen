@@ -38,12 +38,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     String header = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-    if (header == null || !header.startsWith("Bearer ")) {
+    if (header == null || !header.regionMatches(true, 0, "Bearer ", 0, 7)) {
       response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       return;
     }
 
-    String token = header.substring(7);
+    String token = header.substring(7).trim();
+    if (token.isEmpty()) {
+      response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+      return;
+    }
 
     try {
       if (!jwtService.isTokenValid(token)) {

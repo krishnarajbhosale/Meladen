@@ -28,5 +28,10 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
 }
 
 export function authHeaders(token: string): HeadersInit {
-  return { Authorization: `Bearer ${token}` };
+  const bearer = `Bearer ${token.trim()}`;
+  return {
+    Authorization: bearer,
+    // Survives reverse proxies that drop Authorization; backend bridges this in AuthorizationHeaderBridgeFilter.
+    'X-Meladen-Authorization': bearer,
+  };
 }

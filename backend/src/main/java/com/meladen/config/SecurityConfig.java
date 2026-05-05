@@ -1,6 +1,7 @@
 package com.meladen.config;
 
 import com.meladen.security.ApiPathNormalizationFilter;
+import com.meladen.security.AuthorizationHeaderBridgeFilter;
 import com.meladen.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -56,6 +57,7 @@ public class SecurityConfig {
 
         .httpBasic(AbstractHttpConfigurer::disable)
         .addFilterBefore(new ApiPathNormalizationFilter(), JwtAuthFilter.class)
+        .addFilterBefore(new AuthorizationHeaderBridgeFilter(), JwtAuthFilter.class)
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();

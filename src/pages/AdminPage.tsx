@@ -335,8 +335,13 @@ export default function AdminPage() {
     setBusy(true);
     try {
       const res = await loginAdmin(email, password);
-      localStorage.setItem(TOKEN_KEY, res.token);
-      setToken(res.token);
+      const jwt = typeof res.token === 'string' ? res.token.trim() : '';
+      if (!jwt) {
+        setLoginError('Login succeeded but no token was returned. Check API response shape.');
+        return;
+      }
+      localStorage.setItem(TOKEN_KEY, jwt);
+      setToken(jwt);
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Login failed');
     } finally {
