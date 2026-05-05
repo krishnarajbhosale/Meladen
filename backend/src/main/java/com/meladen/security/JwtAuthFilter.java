@@ -12,10 +12,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-@Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
 
@@ -28,31 +26,22 @@ public class JwtAuthFilter extends OncePerRequestFilter {
       FilterChain filterChain)
       throws ServletException, IOException {
 
-    if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-      filterChain.doFilter(request, response);
-      return;
-    }
+    String path = request.getRequestURI();
 
-    String path = servletRelativePath(request);
-
-    // Admin APIs (support nginx/proxy that strips /api so backend sees /admin/... instead of /api/admin/...)
-    if (!isAdminApiPath(path)) {
+    // ONLY protect admin
+    if (!path.startsWith("/api/admin") && !path.startsWith("/admin")) {
       filterChain.doFilter(request, response);
       return;
     }
 
     String header = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-    if (header == null || !header.regionMatches(true, 0, "Bearer ", 0, 7)) {
+    if (header == null || !header.startsWith("Bearer ")) {
       response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       return;
     }
 
-    String token = header.substring(7).trim();
-    if (token.isEmpty()) {
-      response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-      return;
-    }
+    String token = header.substring(7);
 
     try {
       if (!jwtService.isTokenValid(token)) {
@@ -77,25 +66,5 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     filterChain.doFilter(request, response);
-  }
-
-  /** Path inside the servlet context (no context-path prefix). */
-  private static String servletRelativePath(HttpServletRequest request) {
-    String uri = request.getRequestURI();
-    String ctx = request.getContextPath();
-    if (ctx != null && !ctx.isEmpty() && uri.startsWith(ctx)) {
-      uri = uri.substring(ctx.length());
-    }
-    if (uri.isEmpty()) {
-      return "/";
-    }
-    return uri;
-  }
-
-  private static boolean isAdminApiPath(String path) {
-    return path.startsWith("/api/admin/")
-        || "/api/admin".equals(path)
-        || path.startsWith("/admin/")
-        || "/admin".equals(path);
   }
 }

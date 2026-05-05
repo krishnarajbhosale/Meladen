@@ -2,6 +2,7 @@ package com.meladen.config;
 
 import com.meladen.security.JwtAuthFilter;
 import com.meladen.security.PreJwtPipelineFilter;
+import com.meladen.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,8 +21,17 @@ import jakarta.servlet.http.HttpServletResponse;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-  private final JwtAuthFilter jwtAuthFilter;
-  private final PreJwtPipelineFilter preJwtPipelineFilter;
+  private final JwtService jwtService;
+
+  @Bean
+  public JwtAuthFilter jwtAuthFilter() {
+    return new JwtAuthFilter(jwtService);
+  }
+
+  @Bean
+  public PreJwtPipelineFilter preJwtPipelineFilter() {
+    return new PreJwtPipelineFilter();
+  }
 
   @Bean
   PasswordEncoder passwordEncoder() {
@@ -30,6 +40,7 @@ public class SecurityConfig {
 
   @Bean
   SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
     http
         .csrf(AbstractHttpConfigurer::disable)
         .cors(Customizer.withDefaults())
@@ -48,9 +59,9 @@ public class SecurityConfig {
 
         .httpBasic(AbstractHttpConfigurer::disable)
 
-        // ✅ correct order
-        .addFilterBefore(preJwtPipelineFilter, JwtAuthFilter.class)
-        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        // ✅ Correct order
+        .addFilterBefore(preJwtPipelineFilter(), UsernamePasswordAuthenticationFilter.class)
+        .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
   }
