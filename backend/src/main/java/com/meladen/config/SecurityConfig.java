@@ -13,6 +13,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 @RequiredArgsConstructor
@@ -27,38 +29,31 @@ public class SecurityConfig {
 
   @Bean
   SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http.csrf(AbstractHttpConfigurer::disable)
+    http
+        .csrf(AbstractHttpConfigurer::disable)
         .cors(Customizer.withDefaults())
-        .headers(h -> h.frameOptions(fo -> fo.sameOrigin()))
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(
-            auth -> auth.requestMatchers(HttpMethod.OPTIONS, "/**")
-                .permitAll()
-                .requestMatchers(HttpMethod.POST, "/ladmin/login", "/ladmin/login/")
-                .permitAll()
-                .requestMatchers("/ladmin", "/ladmin/")
-                .permitAll()
-                .requestMatchers("/ladmin/**")
-                .permitAll()
-                // Support both direct paths and deployments that run behind a context-path or proxy rewrite.
-                .requestMatchers("/api/auth/**", "/auth/**")
-                .permitAll()
-                .requestMatchers("/api/promocodes/**", "/promocodes/**")
-                .permitAll()
-                .requestMatchers("/api/returns", "/api/returns/**", "/returns", "/returns/**")
-                .permitAll()
-                .requestMatchers("/api/wallet/**", "/wallet/**")
-                .permitAll()
-                .requestMatchers("/api/public/**", "/public/**")
-                .permitAll()
-                .requestMatchers("/error")
-                .permitAll()
-                .requestMatchers("/h2-console/**")
-                .permitAll()
-                .requestMatchers("/api/admin/**", "/admin/**")
-                .authenticated()
-                .anyRequest()
-                .permitAll())
+
+        .authorizeHttpRequests(auth -> auth
+            // Preflight
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+            // Public APIs
+            .requestMatchers("/api/public/**").permitAll()
+            .requestMatchers("/api/auth/**").permitAll()
+
+            // Admin login UI
+            .requestMatchers("/ladmin/**").permitAll()
+
+            // Protected
+            .requestMatchers("/api/admin/**").authenticated()
+
+            // Everything else
+            .anyRequest().permitAll())
+
+        .exceptionHandling(e -> e
+            .authenticationEntryPoint((req, res, ex) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
+
         .httpBasic(AbstractHttpConfigurer::disable)
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

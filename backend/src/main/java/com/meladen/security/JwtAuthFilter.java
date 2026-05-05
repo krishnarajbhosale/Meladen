@@ -23,47 +23,48 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      HttpServletRequest request,
+      HttpServletResponse response,
+      FilterChain filterChain)
       throws ServletException, IOException {
 
     String path = request.getRequestURI();
-    if (path.startsWith("/api/public")
-        || path.startsWith("/public")
-        || path.startsWith("/ladmin")
-        || path.startsWith("/api/auth")) {
-      filterChain.doFilter(request, response);
-      return;
-    }
 
-    if (!(path.startsWith("/api/admin/") || path.startsWith("/admin/"))) {
+    // Only protect admin APIs
+    if (!(path.startsWith("/api/admin"))) {
       filterChain.doFilter(request, response);
       return;
     }
 
     String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+
     if (header == null || !header.startsWith("Bearer ")) {
-      filterChain.doFilter(request, response);
+      response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       return;
     }
 
     String token = header.substring(7);
+
     try {
       if (!jwtService.isTokenValid(token)) {
-        filterChain.doFilter(request, response);
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         return;
       }
+
       String email = jwtService.extractSubject(token);
-      if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-        var auth =
-            new UsernamePasswordAuthenticationToken(
-                email,
-                null,
-                List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
-        auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        SecurityContextHolder.getContext().setAuthentication(auth);
-      }
-    } catch (Exception ignored) {
+
+      var auth = new UsernamePasswordAuthenticationToken(
+          email,
+          null,
+          List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+
+      auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+      SecurityContextHolder.getContext().setAuthentication(auth);
+
+    } catch (Exception e) {
       SecurityContextHolder.clearContext();
+      response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+      return;
     }
 
     filterChain.doFilter(request, response);
