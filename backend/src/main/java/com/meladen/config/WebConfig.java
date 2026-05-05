@@ -29,12 +29,7 @@ public class WebConfig implements WebMvcConfigurer {
 
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
-    registry
-        .addInterceptor(customerAuthInterceptor)
-        .addPathPatterns("/api/admin/**") // ONLY protected routes
-        .excludePathPatterns(
-            "/api/public/**",
-            "/api/auth/**",
-            "/ladmin/**");
+    registry.addInterceptor(customerAuthInterceptor)
+        .addPathPatterns("/**"); // apply globally
   }
 }
