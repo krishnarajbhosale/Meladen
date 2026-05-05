@@ -21,12 +21,6 @@ import jakarta.servlet.http.HttpServletResponse;
 public class SecurityConfig {
 
   private final JwtAuthFilter jwtAuthFilter;
-
-  @Bean
-  public PreJwtPipelineFilter preJwtPipelineFilter() {
-    return new PreJwtPipelineFilter();
-  }
-
   private final PreJwtPipelineFilter preJwtPipelineFilter;
 
   @Bean
@@ -54,7 +48,7 @@ public class SecurityConfig {
 
         .httpBasic(AbstractHttpConfigurer::disable)
 
-        // ✅ FIXED
+        // ✅ correct order
         .addFilterBefore(preJwtPipelineFilter, JwtAuthFilter.class)
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
