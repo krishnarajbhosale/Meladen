@@ -36,6 +36,8 @@ public class SecurityConfig {
                 .permitAll()
                 .requestMatchers(HttpMethod.POST, "/ladmin/login", "/ladmin/login/")
                 .permitAll()
+                .requestMatchers("/ladmin", "/ladmin/")
+                .permitAll()
                 .requestMatchers("/ladmin/**")
                 .permitAll()
                 .requestMatchers("/api/auth/**")
