@@ -23,6 +23,13 @@ public class SecurityConfig {
   private final JwtAuthFilter jwtAuthFilter;
 
   @Bean
+  public PreJwtPipelineFilter preJwtPipelineFilter() {
+    return new PreJwtPipelineFilter();
+  }
+
+  private final PreJwtPipelineFilter preJwtPipelineFilter;
+
+  @Bean
   PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
   }
@@ -35,27 +42,20 @@ public class SecurityConfig {
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
         .authorizeHttpRequests(auth -> auth
-            // Preflight
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-            // Public APIs (and paths when /api is stripped by reverse proxy)
             .requestMatchers("/api/public/**", "/public/**").permitAll()
             .requestMatchers("/api/auth/**", "/auth/**").permitAll()
-
-            // Admin login UI
             .requestMatchers("/ladmin/**").permitAll()
-
-            // Protected (and /admin/** when proxy strips /api)
             .requestMatchers("/api/admin/**", "/admin/**").authenticated()
-
-            // Everything else
             .anyRequest().permitAll())
 
         .exceptionHandling(e -> e
             .authenticationEntryPoint((req, res, ex) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
 
         .httpBasic(AbstractHttpConfigurer::disable)
-        .addFilterBefore(new PreJwtPipelineFilter(), JwtAuthFilter.class)
+
+        // ✅ FIXED
+        .addFilterBefore(preJwtPipelineFilter, JwtAuthFilter.class)
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
