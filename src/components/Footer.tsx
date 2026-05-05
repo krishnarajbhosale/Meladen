@@ -6,9 +6,12 @@ const footerColumns = [
   {
     label: 'Support',
     links: [
-      { label: 'Shipping', href: '#' },
-      { label: 'Returns', href: '/returns' },
-      { label: 'Privacy', href: '#' },
+      { label: 'Terms & Conditions', href: '/policies#terms' },
+      { label: 'Shipping Policy', href: '/policies#shipping' },
+      { label: 'Returns & Refund Policy', href: '/policies#returns' },
+      { label: 'Law of Jurisdiction', href: '/policies#jurisdiction' },
+      { label: 'Return Request', href: '/returns' },
+      { label: 'Contact Support', href: 'mailto:support.meladen@gmail.com' },
     ] as const,
   },
 ] as const;

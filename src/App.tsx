@@ -14,8 +14,9 @@ import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
 import ReturnsPage from './pages/ReturnsPage';
 import AccountOrdersPage from './pages/AccountOrdersPage';
+import PoliciesPage from './pages/PoliciesPage';
 
-const CHROME_ROUTES = ['/', '/cart', '/checkout', '/collection', '/login', '/returns', '/account'];
+const CHROME_ROUTES = ['/', '/cart', '/checkout', '/collection', '/login', '/returns', '/account', '/policies'];
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/account" element={<AccountOrdersPage />} />
           <Route path="/returns" element={<ReturnsPage />} />
+          <Route path="/policies" element={<PoliciesPage />} />
           <Route path="/ladmin" element={<AdminPage />} />
         </Routes>
       </AnimatePresence>

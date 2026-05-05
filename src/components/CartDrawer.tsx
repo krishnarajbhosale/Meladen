@@ -18,10 +18,6 @@ const upsells = [
 export default function CartDrawer({ open, onClose }: Props) {
   const { items, removeFromCart, updateQty, total, count } = useCart();
   const navigate = useNavigate();
-  const shipping = total >= 150 ? 0 : 12;
-  const freeShippingThreshold = 150;
-  const remaining = Math.max(0, freeShippingThreshold - total);
-  const progress = Math.min(100, (total / freeShippingThreshold) * 100);
 
   const handleCheckout = () => {
     // Close drawer before /login so the overlay does not cover the sign-in screen.
@@ -72,24 +68,6 @@ export default function CartDrawer({ open, onClose }: Props) {
                 </button>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-[#2d2418] bg-[#15120d] px-4 py-3">
-                <div className="mb-2 flex items-center justify-between text-[11px] text-brand-gray">
-                  <span>
-                    {remaining > 0
-                      ? `$${remaining.toFixed(0)} away from free shipping`
-                      : 'Complimentary shipping applied'}
-                  </span>
-                  <span>{Math.round(progress)}%</span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-[#242424]">
-                  <motion.div
-                    className="h-full rounded-full bg-[linear-gradient(90deg,#8d7440,#c9a84c)]"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.5, ease: 'easeOut' }}
-                  />
-                </div>
-              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -238,10 +216,6 @@ export default function CartDrawer({ open, onClose }: Props) {
                       <span>Subtotal</span>
                       <span>${total.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-[11px] text-brand-gray">
-                      <span>Shipping</span>
-                      <span>{shipping === 0 ? 'Free' : 'Calculated at checkout'}</span>
-                    </div>
                     <div className="h-px bg-[#262626]" />
                     <div className="flex justify-between text-[15px] font-medium text-brand-dark">
                       <span>Total</span>
@@ -251,7 +225,7 @@ export default function CartDrawer({ open, onClose }: Props) {
                 </div>
 
                 <p className="mb-3 mt-3 text-center text-[9px] leading-relaxed text-brand-gray">
-                  Taxes and shipping calculated at checkout.
+                  Taxes calculated at checkout.
                   <br />
                   Complimentary returns within 30 days.
                 </p>

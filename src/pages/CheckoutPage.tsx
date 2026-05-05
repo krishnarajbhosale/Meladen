@@ -12,9 +12,6 @@ import Button from '../components/Button';
 import Drawer from '../components/Drawer';
 import { pageVariants, fadeUp } from '../animations/variants';
 
-const FREE_SHIPPING_AT = 150;
-const SHIPPING_COST = 12;
-
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { items, total, clearCart } = useCart();
@@ -58,8 +55,7 @@ export default function CheckoutPage() {
 
   const promoDiscount = appliedPromo?.discountAmount ?? 0;
   const subtotalAfterPromo = Math.max(0, total - promoDiscount);
-  const shipping = subtotalAfterPromo >= FREE_SHIPPING_AT ? 0 : SHIPPING_COST;
-  const preWalletTotal = subtotalAfterPromo + shipping;
+  const preWalletTotal = subtotalAfterPromo;
   const maxWalletUse = Math.min(walletBalance, preWalletTotal);
   const parsedWalletUse =
     walletUseInput.trim() === '' ? 0 : Math.max(0, Number(walletUseInput) || 0);
@@ -313,10 +309,6 @@ export default function CheckoutPage() {
                   <span>−${promoDiscount.toFixed(0)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-sm text-brand-gray">
-                <span>Shipping</span>
-                <span>{shipping === 0 ? 'Free' : `$${shipping}`}</span>
-              </div>
               {effectiveWallet > 0 && (
                 <div className="flex justify-between text-sm text-emerald-400/85">
                   <span>Wallet</span>
@@ -364,10 +356,6 @@ export default function CheckoutPage() {
                 <span>−${promoDiscount.toFixed(0)}</span>
               </div>
             )}
-            <div className="flex justify-between">
-              <span>Shipping</span>
-              <span>{shipping === 0 ? 'Free' : `$${shipping}`}</span>
-            </div>
             {effectiveWallet > 0 && (
               <div className="flex justify-between text-emerald-400/85">
                 <span>Wallet</span>

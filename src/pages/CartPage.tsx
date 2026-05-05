@@ -9,9 +9,6 @@ import { pageVariants, fadeUp } from '../animations/variants';
 export default function CartPage() {
   const { items, removeFromCart, updateQty, total, count } = useCart();
   const navigate = useNavigate();
-  const shipping = total >= 150 ? 0 : 12;
-  const freeShippingThreshold = 150;
-  const remaining = Math.max(0, freeShippingThreshold - total);
 
   return (
     <motion.div
@@ -93,24 +90,6 @@ export default function CartPage() {
                   </button>
                 </div>
 
-                <div className="rounded-2xl border border-[#2d2418] bg-[#141414] px-4 py-3">
-                  <div className="mb-2 flex items-center justify-between text-[11px] text-brand-gray">
-                    <span>
-                      {remaining > 0
-                        ? `$${remaining.toFixed(0)} away from free shipping`
-                        : 'Free shipping unlocked'}
-                    </span>
-                    <span>{Math.min(100, Math.round((total / freeShippingThreshold) * 100))}%</span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-[#242424]">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(100, (total / freeShippingThreshold) * 100)}%` }}
-                      transition={{ duration: 0.45, ease: 'easeOut' }}
-                      className="h-full rounded-full bg-[linear-gradient(90deg,#8d7440,#c9a84c)]"
-                    />
-                  </div>
-                </div>
               </div>
 
               <AnimatePresence>
@@ -127,10 +106,14 @@ export default function CartPage() {
                     <div className="flex gap-4 lg:gap-5">
                       <button
                         type="button"
-                        className="h-28 w-24 flex-shrink-0 overflow-hidden rounded-2xl border border-[#262626] bg-brand-light-gray transition-transform hover:scale-[1.02] lg:h-32 lg:w-28"
+                        className="h-28 w-24 flex-shrink-0 overflow-hidden rounded-2xl border border-[#262626] bg-[#121212] transition-transform hover:scale-[1.02] lg:h-32 lg:w-28"
                         onClick={() => navigate(`/product/${item.product.id}`)}
                       >
-                        <img src={item.product.image} alt={item.product.name} className="h-full w-full object-cover" />
+                        <img
+                          src={item.product.image}
+                          alt={item.product.name}
+                          className="h-full w-full object-contain p-1.5"
+                        />
                       </button>
 
                       <div className="min-w-0 flex-1">
@@ -154,7 +137,7 @@ export default function CartPage() {
                         </div>
 
                         <div className="mt-3 flex flex-wrap items-center gap-2">
-                          <span className="rounded-full border border-[#3a3121] bg-[#181512] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-brand-dark">
+                          <span className="rounded-full border border-[#3a3121] bg-[#181512] px-2.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-brand-dark">
                             {item.size}
                           </span>
                           <span className="rounded-full border border-[#2b2b2b] px-3 py-1 text-[11px] text-brand-gray">
@@ -193,14 +176,10 @@ export default function CartPage() {
                     <span>Subtotal</span>
                     <span>${total.toFixed(0)}</span>
                   </div>
-                  <div className="flex justify-between text-sm text-brand-gray">
-                    <span>Shipping</span>
-                    <span>{shipping === 0 ? 'Free' : `$${shipping}`}</span>
-                  </div>
                   <div className="h-px bg-[#262626]" />
                   <div className="flex justify-between text-base font-medium text-brand-dark">
                     <span>Total</span>
-                    <span>${(total + shipping).toFixed(0)}</span>
+                    <span>${total.toFixed(0)}</span>
                   </div>
                 </div>
 
