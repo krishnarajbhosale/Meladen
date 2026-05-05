@@ -108,8 +108,8 @@ function emptyProductForm(defaultCategoryId: number, defaults?: ProductMediaDefa
 
 export default function AdminPage() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
-  const [email, setEmail] = useState('admin@meladen.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
@@ -656,11 +656,6 @@ export default function AdminPage() {
               {busy ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
-          <p className="mt-6 text-[11px] text-brand-gray">
-            Default dev account: <span className="text-brand-dark">admin@meladen.com</span> /{' '}
-            <span className="text-brand-dark">admin123</span> (configure in backend{' '}
-            <code className="rounded bg-brand-beige px-1">application.properties</code>)
-          </p>
         </div>
       </div>
     );

@@ -9,6 +9,6 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "meladen.seed.admin")
 public class SeedProperties {
 
-  private String email = "admin@meladen.com";
-  private String password = "changeMe";
+  private String email = "Meladen@admin";
+  private String password = "Melangesecrets@01";
 }

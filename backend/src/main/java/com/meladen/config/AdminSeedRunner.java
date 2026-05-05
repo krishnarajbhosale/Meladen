@@ -18,12 +18,12 @@ public class AdminSeedRunner implements ApplicationRunner {
 
   @Override
   public void run(ApplicationArguments args) {
-    if (adminUserRepository.findByEmailIgnoreCase(seedProperties.getEmail()).isPresent()) {
-      return;
-    }
-    AdminUser user = new AdminUser();
-    user.setEmail(seedProperties.getEmail());
-    user.setPasswordHash(passwordEncoder.encode(seedProperties.getPassword()));
+    String seedEmail = seedProperties.getEmail();
+    String seedPassword = seedProperties.getPassword();
+
+    AdminUser user = adminUserRepository.findByEmailIgnoreCase(seedEmail).orElseGet(AdminUser::new);
+    user.setEmail(seedEmail);
+    user.setPasswordHash(passwordEncoder.encode(seedPassword));
     adminUserRepository.save(user);
   }
 }
