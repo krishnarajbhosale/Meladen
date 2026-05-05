@@ -28,10 +28,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
       FilterChain filterChain)
       throws ServletException, IOException {
 
-    String path = request.getRequestURI();
+    String path = servletRelativePath(request);
 
-    // Only protect admin APIs
-    if (!(path.startsWith("/api/admin"))) {
+    // Admin APIs (support nginx/proxy that strips /api so backend sees /admin/... instead of /api/admin/...)
+    if (!isAdminApiPath(path)) {
       filterChain.doFilter(request, response);
       return;
     }
@@ -68,5 +68,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     filterChain.doFilter(request, response);
+  }
+
+  /** Path inside the servlet context (no context-path prefix). */
+  private static String servletRelativePath(HttpServletRequest request) {
+    String uri = request.getRequestURI();
+    String ctx = request.getContextPath();
+    if (ctx != null && !ctx.isEmpty() && uri.startsWith(ctx)) {
+      uri = uri.substring(ctx.length());
+    }
+    if (uri.isEmpty()) {
+      return "/";
+    }
+    return uri;
+  }
+
+  private static boolean isAdminApiPath(String path) {
+    return path.startsWith("/api/admin/")
+        || "/api/admin".equals(path)
+        || path.startsWith("/admin/")
+        || "/admin".equals(path);
   }
 }

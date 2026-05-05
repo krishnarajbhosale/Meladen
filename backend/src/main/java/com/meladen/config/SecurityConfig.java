@@ -1,5 +1,6 @@
 package com.meladen.config;
 
+import com.meladen.security.ApiPathNormalizationFilter;
 import com.meladen.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -13,7 +14,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
@@ -38,15 +38,15 @@ public class SecurityConfig {
             // Preflight
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-            // Public APIs
-            .requestMatchers("/api/public/**").permitAll()
-            .requestMatchers("/api/auth/**").permitAll()
+            // Public APIs (and paths when /api is stripped by reverse proxy)
+            .requestMatchers("/api/public/**", "/public/**").permitAll()
+            .requestMatchers("/api/auth/**", "/auth/**").permitAll()
 
             // Admin login UI
             .requestMatchers("/ladmin/**").permitAll()
 
-            // Protected
-            .requestMatchers("/api/admin/**").authenticated()
+            // Protected (and /admin/** when proxy strips /api)
+            .requestMatchers("/api/admin/**", "/admin/**").authenticated()
 
             // Everything else
             .anyRequest().permitAll())
@@ -55,6 +55,7 @@ public class SecurityConfig {
             .authenticationEntryPoint((req, res, ex) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
 
         .httpBasic(AbstractHttpConfigurer::disable)
+        .addFilterBefore(new ApiPathNormalizationFilter(), JwtAuthFilter.class)
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
