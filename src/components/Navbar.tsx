@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import { overlayVariants } from '../animations/variants';
 import CartDrawer from './CartDrawer';
-import sparklingLogo from '../assets/Sparkling Logo.mp4';
+import sparklingLogo from '../assets/Sparkling-Logo-optimized.mp4';
 import AutoplayVideo from './AutoplayVideo';
 import { apiProductToProduct, fetchCategoriesWithProducts } from '../api/catalog';
 import { CUSTOMER_AUTH_CHANGED_EVENT, isCustomerLoggedIn } from '../api/customerAuth';
@@ -136,6 +136,7 @@ export default function Navbar() {
           >
             <AutoplayVideo
               sources={[{ src: sparklingLogo, type: 'video/mp4' }]}
+              preload="none"
               className="pointer-events-none h-full w-full object-contain"
             />
           </Link>
@@ -309,6 +310,7 @@ export default function Navbar() {
               >
                 <AutoplayVideo
                   sources={[{ src: sparklingLogo, type: 'video/mp4' }]}
+                  preload="none"
                   className="pointer-events-none h-full w-full object-contain"
                 />
               </Link>

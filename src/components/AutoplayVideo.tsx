@@ -9,9 +9,10 @@ interface AutoplayVideoProps {
   sources: VideoSource[];
   className?: string;
   poster?: string;
+  preload?: 'none' | 'metadata' | 'auto';
 }
 
-export default function AutoplayVideo({ sources, className, poster }: AutoplayVideoProps) {
+export default function AutoplayVideo({ sources, className, poster, preload = 'metadata' }: AutoplayVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -51,7 +52,7 @@ export default function AutoplayVideo({ sources, className, poster }: AutoplayVi
       muted
       loop
       playsInline
-      preload="auto"
+      preload={preload}
       poster={poster}
       controls={false}
       controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"

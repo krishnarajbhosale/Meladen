@@ -5,8 +5,8 @@ import { products, type Product } from '../data/products';
 import { meladen9, meladen10, meladen11 } from '../data/meladenImages';
 import bento1 from '../assets/Bento1.png';
 import bento2 from '../assets/BentoPerfumeRight.png';
-import heroVideo from '../assets/HeroVideo.webm';
-import heroVideoMp4 from '../assets/Homepagevideo.mp4';
+import heroVideo from '../assets/HeroVideo-optimized.webm';
+import heroVideoMp4 from '../assets/Homepagevideo-optimized.mp4';
 import heroPoster from '../assets/hero.png';
 import { apiProductToProduct, fetchCategoriesWithProducts } from '../api/catalog';
 import AutoplayVideo from '../components/AutoplayVideo';
@@ -47,9 +47,10 @@ export default function HomePage() {
           <section className="relative -mx-3 mb-8 w-[calc(100%+1.5rem)] max-w-[100vw] overflow-hidden rounded-none max-lg:aspect-[9/18] max-lg:h-auto lg:mx-0 lg:mb-10 lg:aspect-auto lg:h-[96vh] lg:w-full lg:max-w-none lg:rounded-3xl">
             <AutoplayVideo
               sources={[
-                { src: heroVideoMp4, type: 'video/mp4' },
                 { src: heroVideo, type: 'video/webm' },
+                { src: heroVideoMp4, type: 'video/mp4' },
               ]}
+              preload="auto"
               poster={heroPoster}
               className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
             />
