@@ -1378,49 +1378,149 @@ export default function AdminPage() {
                           : 'border-[#dbcdb8]'
                       }`}
                     >
-                      <motion.div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#eadfce] pb-3">
+                      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#eadfce] pb-3">
                         <div>
                           <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-[#241d14]">
                             {order.orderNumber}
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${statusTone}`}
+                            >
+                              {statusLabel}
+                            </span>
                             {isNewOrder && (
                               <span className="rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
                                 New
                               </span>
                             )}
                           </p>
-                          <p className="text-xs text-[#6b5c4b]">
-                            {order.customerName} · {order.customerEmail}
+                          <p className="mt-1 text-[10px] text-[#9a8b78]">ID {order.id}</p>
+                        </div>
+                        <p className="text-xs text-[#6b5c4b]">{new Date(order.createdAt).toLocaleString()}</p>
+                      </div>
+
+                      <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="rounded-lg border border-[#eadfce] bg-[#fffdfa] p-3">
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-[#7a6b57]">
+                            Customer
                           </p>
-                          <p className="text-xs text-[#6b5c4b]">
-                            {order.address}, {order.city}, {order.postcode}, {order.country}
+                          <dl className="space-y-1 text-xs text-[#3a2f25]">
+                            <div>
+                              <dt className="text-[#9a8b78]">Name</dt>
+                              <dd className="font-medium">{order.customerName}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-[#9a8b78]">Email</dt>
+                              <dd>
+                                <a href={`mailto:${order.customerEmail}`} className="text-[#5c4a38] underline">
+                                  {order.customerEmail}
+                                </a>
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-[#9a8b78]">Phone</dt>
+                              <dd>{order.customerPhone?.trim() || '—'}</dd>
+                            </div>
+                          </dl>
+                        </div>
+
+                        <div className="rounded-lg border border-[#eadfce] bg-[#fffdfa] p-3">
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-[#7a6b57]">
+                            Shipping address
+                          </p>
+                          <p className="text-xs leading-relaxed text-[#3a2f25]">
+                            {order.address}
+                            <br />
+                            {order.city}, {order.postcode}
+                            <br />
+                            {order.country}
                           </p>
                         </div>
-                        <div className="text-right text-xs text-[#6b5c4b]">
-                          <p>{new Date(order.createdAt).toLocaleString()}</p>
-                          {order.discountAmount != null && order.discountAmount > 0 && (
-                            <p>
-                              Promo: {order.promoCode ?? '—'} · −{order.discountAmount}
-                            </p>
-                          )}
-                          {(order.walletDiscount ?? 0) > 0 && (
-                            <p>Wallet: −{Number(order.walletDiscount).toFixed(2)}</p>
-                          )}
-                          <p className="font-semibold text-[#2f2418]">Total: {order.total}</p>
-                          <p>Alcohol used: {order.alcoholUsedGm} gm</p>
+
+                        <div className="rounded-lg border border-[#eadfce] bg-[#fffdfa] p-3">
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-[#7a6b57]">
+                            Order totals
+                          </p>
+                          <dl className="space-y-1 text-xs text-[#3a2f25]">
+                            <div className="flex justify-between gap-2">
+                              <dt className="text-[#9a8b78]">Subtotal</dt>
+                              <dd>${Number(order.subtotal).toFixed(2)}</dd>
+                            </div>
+                            {(order.discountAmount ?? 0) > 0 && (
+                              <div className="flex justify-between gap-2 text-emerald-700">
+                                <dt>Promo {order.promoCode ? `(${order.promoCode})` : ''}</dt>
+                                <dd>−${Number(order.discountAmount).toFixed(2)}</dd>
+                              </div>
+                            )}
+                            <div className="flex justify-between gap-2">
+                              <dt className="text-[#9a8b78]">Shipping</dt>
+                              <dd>${Number(order.shipping).toFixed(2)}</dd>
+                            </div>
+                            {(order.walletDiscount ?? 0) > 0 && (
+                              <div className="flex justify-between gap-2 text-emerald-700">
+                                <dt>Wallet</dt>
+                                <dd>−${Number(order.walletDiscount).toFixed(2)}</dd>
+                              </div>
+                            )}
+                            <div className="flex justify-between gap-2 border-t border-[#eadfce] pt-1 font-semibold text-[#241d14]">
+                              <dt>Total</dt>
+                              <dd>${Number(order.total).toFixed(2)}</dd>
+                            </div>
+                            <div className="flex justify-between gap-2 pt-1 text-[#6b5c4b]">
+                              <dt>Alcohol used</dt>
+                              <dd>{order.alcoholUsedGm} gm</dd>
+                            </div>
+                          </dl>
                         </div>
                       </div>
-                      <ul className="mt-3 space-y-1 rounded-lg border border-[#eadfce] bg-[#fffdfa] p-3 text-xs text-[#3a2f25]">
-                        {order.items.map(item => (
-                          <li key={`${order.id}-${item.productId}-${item.size}`} className="flex justify-between gap-3">
-                            <span>
-                              {item.productName} · {item.size} · Qty {item.quantity}
-                            </span>
-                            <span>
-                              oil {item.oilUsedGm} gm / alc {item.alcoholUsedGm} gm
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+
+                      {(order.trackingUrl || order.trackingAwb) && (
+                        <div className="mt-3 rounded-lg border border-[#d4e8dc] bg-emerald-50/80 px-3 py-2 text-xs text-emerald-900">
+                          <span className="font-semibold">Tracking: </span>
+                          {order.trackingAwb && <span className="mr-2">AWB {order.trackingAwb}</span>}
+                          {order.trackingUrl && (
+                            <a
+                              href={order.trackingUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline"
+                            >
+                              Track shipment
+                            </a>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="mt-3 overflow-x-auto rounded-lg border border-[#eadfce] bg-[#fffdfa]">
+                        <table className="min-w-full text-xs text-[#3a2f25]">
+                          <thead>
+                            <tr className="border-b border-[#eadfce] text-left text-[10px] uppercase tracking-widest text-[#7a6b57]">
+                              <th className="px-3 py-2 font-semibold">Product</th>
+                              <th className="px-3 py-2 font-semibold">Size</th>
+                              <th className="px-3 py-2 font-semibold">Qty</th>
+                              <th className="px-3 py-2 font-semibold">Unit</th>
+                              <th className="px-3 py-2 font-semibold">Line</th>
+                              <th className="px-3 py-2 font-semibold">Oil / Alc</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {order.items.map(item => (
+                              <tr
+                                key={`${order.id}-${item.productId}-${item.size}`}
+                                className="border-b border-[#f0ebe3] last:border-0"
+                              >
+                                <td className="px-3 py-2 font-medium">{item.productName}</td>
+                                <td className="px-3 py-2">{item.size}</td>
+                                <td className="px-3 py-2">{item.quantity}</td>
+                                <td className="px-3 py-2">${Number(item.unitPrice).toFixed(2)}</td>
+                                <td className="px-3 py-2">${Number(item.lineTotal).toFixed(2)}</td>
+                                <td className="px-3 py-2 text-[#6b5c4b]">
+                                  {item.oilUsedGm} gm / {item.alcoholUsedGm} gm
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </article>
                     );
                   })}
