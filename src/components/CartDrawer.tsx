@@ -2,18 +2,12 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { guardCheckout } from '../api/customerAuth';
 import { useCart } from '../context/CartContext';
-import { meladen13, meladen14 } from '../data/meladenImages';
 import QuantityStepper from './QuantityStepper';
 
 interface Props {
   open: boolean;
   onClose: () => void;
 }
-
-const upsells = [
-  { name: 'Leather Travel Case', price: 85, img: meladen13 },
-  { name: 'Discovery Set', price: 45, img: meladen14 },
-];
 
 export default function CartDrawer({ open, onClose }: Props) {
   const { items, removeFromCart, updateQty, total, count } = useCart();
@@ -177,27 +171,6 @@ export default function CartDrawer({ open, onClose }: Props) {
                       </motion.article>
                     ))}
                   </AnimatePresence>
-
-                  <div className="mt-2 rounded-2xl border border-[#252525] bg-[#141414] p-4">
-                    <p className="mb-3 text-[9px] uppercase tracking-[0.18em] text-brand-gray">You May Also Like</p>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {upsells.map(u => (
-                        <button
-                          type="button"
-                          key={u.name}
-                          className="overflow-hidden rounded-xl border border-[#262626] bg-[#101010] text-left transition-opacity hover:opacity-90"
-                        >
-                          <div className="h-[80px] overflow-hidden">
-                            <img src={u.img} alt={u.name} className="h-full w-full object-cover" />
-                          </div>
-                          <div className="p-2.5">
-                            <p className="text-[10px] font-medium leading-snug text-brand-dark">{u.name}</p>
-                            <p className="mt-0.5 text-[9px] text-brand-gray">${u.price}.00</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
 
                   <button className="mt-1 flex items-center gap-2 text-[10px] text-brand-gray transition-colors hover:text-brand-dark">
                     <span className="flex h-5 w-5 items-center justify-center rounded-full border border-brand-gray/40 text-[10px]">

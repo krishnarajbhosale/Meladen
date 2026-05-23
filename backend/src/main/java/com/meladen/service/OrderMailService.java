@@ -62,7 +62,7 @@ public class OrderMailService {
       mailSender.send(message);
       return true;
     } catch (Exception e) {
-      log.warn("Failed to send email to {}: {}", to, e.getMessage());
+      log.warn("Failed to send email to {}: {}", to, e.getMessage(), e);
       return false;
     }
   }

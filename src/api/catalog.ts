@@ -135,7 +135,7 @@ export async function adminReorderCategories(
   orderedIds: number[],
 ): Promise<CategoryResponse[]> {
   return fetchJson<CategoryResponse[]>('/api/admin/categories/reorder', {
-    method: 'PUT',
+    method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify({ orderedIds }),
   });

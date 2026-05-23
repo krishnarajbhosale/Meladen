@@ -4,7 +4,6 @@ import com.meladen.service.CustomerAuthService;
 import com.meladen.service.OrderMailService;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -75,13 +74,14 @@ public class CustomerAuthController {
     boolean emailed = orderMailService.sendLoginOtpEmail(email, otp);
 
     if (emailed) {
-      Map<String, Object> body = new LinkedHashMap<>();
-      body.put("success", true);
-      body.put("message", "We sent a sign-in code to your email. It expires in 5 minutes.");
-      if (exposeDevOtp) {
-        body.put("devOtp", otp);
-      }
-      return ResponseEntity.ok(body);
+      return ResponseEntity.ok(
+          Map.of(
+              "success",
+              true,
+              "emailSent",
+              true,
+              "message",
+              "We sent a sign-in code to your email. It expires in 5 minutes."));
     }
 
     log.warn("Meladen customer OTP for {}: {} (email not sent; expires in 5 min)", email, otp);
@@ -90,8 +90,10 @@ public class CustomerAuthController {
           Map.of(
               "success",
               true,
+              "emailSent",
+              false,
               "message",
-              "Email could not be sent. Use the dev OTP below (check MELADEN_MAIL_PASSWORD).",
+              "Email could not be sent. Use the dev code below or check your inbox/spam.",
               "devOtp",
               otp));
     }

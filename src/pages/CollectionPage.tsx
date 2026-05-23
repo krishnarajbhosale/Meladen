@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProductSizeAvailability, products } from '../data/products';
 import { meladen12 } from '../data/meladenImages';
@@ -22,9 +22,23 @@ type CatalogSection = {
   items: Product[];
 };
 
+type LocationState = { scrollToCategory?: string };
+
+function resolveCategorySlug(location: ReturnType<typeof useLocation>): string {
+  const params = new URLSearchParams(location.search);
+  const fromQuery = params.get('category');
+  if (fromQuery) return decodeURIComponent(fromQuery).toLowerCase().trim();
+  const fromHash = location.hash.replace(/^#/, '');
+  if (fromHash) return decodeURIComponent(fromHash).toLowerCase().trim();
+  const fromState = (location.state as LocationState | null)?.scrollToCategory;
+  if (fromState) return fromState.toLowerCase().trim();
+  return '';
+}
+
 export default function CollectionPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { addToCart } = useCart();
 
   const [apiCatalog, setApiCatalog] = useState<CategoryWithProductsApi[] | null>(null);
@@ -160,22 +174,22 @@ export default function CollectionPage() {
   }, [selectedConc, selectedFamily, maxPrice, sort, useApiLayout]);
 
   useEffect(() => {
-    const hash = decodeURIComponent(location.hash.replace(/^#/, '')).toLowerCase();
-    if (!hash || catalogLoading || filteredSections.length === 0) return;
+    const target = resolveCategorySlug(location);
+    if (!target || catalogLoading || sections.length === 0) return;
 
-    const match = filteredSections.find(s => slugifyCategoryName(s.title) === hash);
+    const match = sections.find(s => slugifyCategoryName(s.title) === target);
     if (!match) return;
 
     const scrollToSection = () => {
-      const el = document.getElementById(`category-${hash}`);
+      const el = document.getElementById(`category-${target}`);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     };
 
-    const t = window.setTimeout(scrollToSection, 120);
-    return () => window.clearTimeout(t);
-  }, [location.hash, catalogLoading, filteredSections]);
+    const timers = [120, 350, 700].map(ms => window.setTimeout(scrollToSection, ms));
+    return () => timers.forEach(window.clearTimeout);
+  }, [location.pathname, location.search, location.hash, location.state, searchParams, catalogLoading, sections]);
 
   const renderProductCard = (p: Product, i: number) => {
     const availability = getProductSizeAvailability(p, alcoholStockGm);

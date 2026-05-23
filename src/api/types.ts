@@ -102,6 +102,7 @@ export interface StockSummaryApi {
 export interface OrderItemApi {
   productId: string;
   productName: string;
+  productImageUrl?: string | null;
   size: string;
   quantity: number;
   unitPrice: number;

@@ -5,7 +5,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -15,7 +14,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *
  * BEFORE JwtAuthFilter
  */
-@Component
 public class PreJwtPipelineFilter extends OncePerRequestFilter {
 
   private final ApiPathNormalizationFilter pathNormalization = new ApiPathNormalizationFilter();

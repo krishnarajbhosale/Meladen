@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState(() => getCustomerEmail() || '');
   const [otp, setOtp] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+  const [messageTone, setMessageTone] = useState<'success' | 'error' | 'info'>('info');
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -32,9 +33,17 @@ export default function LoginPage() {
     try {
       const data = await requestCustomerOtp(email.trim());
       setStep('otp');
-      setMessage(data.message ?? 'Check your email or use the dev code below.');
+      const emailSent = data.emailSent !== false;
+      setMessageTone(emailSent ? 'success' : 'info');
+      setMessage(
+        data.message ??
+          (emailSent
+            ? 'Check your email for the sign-in code (including spam).'
+            : 'Enter the code below.'),
+      );
       if (data.devOtp) setDevOtp(String(data.devOtp));
     } catch (err) {
+      setMessageTone('error');
       setMessage(err instanceof Error ? err.message : 'Failed to send code');
     } finally {
       setLoading(false);
@@ -56,6 +65,7 @@ export default function LoginPage() {
           : '/account';
       navigate(target, { replace: true });
     } catch (err) {
+      setMessageTone('error');
       setMessage(err instanceof Error ? err.message : 'Invalid code');
     } finally {
       setLoading(false);
@@ -132,8 +142,7 @@ export default function LoginPage() {
           <form onSubmit={onRequestOtp} className="space-y-4">
             <p className="text-[10px] uppercase tracking-[0.2em] text-brand-gray">Sign in with email</p>
             <p className="text-xs text-brand-gray">
-              We send a one-time code. In development the API may return the code in the response and server
-              logs.
+              We&apos;ll email you a one-time sign-in code. It expires in 5 minutes.
             </p>
             <InputField
               label="Email"
@@ -153,11 +162,23 @@ export default function LoginPage() {
             <p className="text-xs text-brand-gray">Sent to {email}</p>
             {devOtp && (
               <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-                Dev OTP: <span className="font-mono">{devOtp}</span>
+                Dev code (email not sent): <span className="font-mono">{devOtp}</span>
               </p>
             )}
             <InputField label="6-digit code" value={otp} onChange={v => setOtp(v)} required />
-            {message && <p className="text-sm text-red-400/90">{message}</p>}
+            {message && (
+              <p
+                className={`text-sm ${
+                  messageTone === 'success'
+                    ? 'text-emerald-400/90'
+                    : messageTone === 'error'
+                      ? 'text-red-400/90'
+                      : 'text-amber-200/90'
+                }`}
+              >
+                {message}
+              </p>
+            )}
             <Button type="submit" fullWidth disabled={loading}>
               {loading ? 'Verifying…' : 'Verify'}
             </Button>

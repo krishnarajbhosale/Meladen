@@ -17,7 +17,7 @@ import ReturnsPage from './pages/ReturnsPage';
 import AccountOrdersPage from './pages/AccountOrdersPage';
 import PoliciesPage from './pages/PoliciesPage';
 
-const CHROME_ROUTES = ['/', '/cart', '/checkout', '/collection', '/login', '/returns', '/account', '/policies'];
+const CHROME_ROUTES = ['/', '/cart', '/checkout', '/collection', '/login', '/returns', '/account', '/policies', '/order-confirmation'];
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -33,7 +33,9 @@ export default function App() {
   const location = useLocation();
   const showChrome =
     !location.pathname.startsWith('/ladmin') &&
-    (CHROME_ROUTES.includes(location.pathname) || location.pathname.startsWith('/product'));
+    (CHROME_ROUTES.includes(location.pathname) ||
+      location.pathname.startsWith('/product') ||
+      location.pathname.startsWith('/order-pending'));
 
   return (
     <MobileContainer>

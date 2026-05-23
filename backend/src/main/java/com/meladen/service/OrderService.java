@@ -433,6 +433,7 @@ public class OrderService {
                     new OrderResponse.OrderItemResponse(
                         i.getProduct().getId(),
                         i.getProductName(),
+                        "/api/public/products/" + i.getProduct().getId() + "/image",
                         i.getSizeLabel(),
                         i.getQuantity(),
                         i.getUnitPrice(),

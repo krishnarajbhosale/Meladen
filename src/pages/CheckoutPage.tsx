@@ -90,6 +90,7 @@ export default function CheckoutPage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
+      const cartSnapshot = [...items];
       const order = await placePublicOrder({
         firstName: form.firstName,
         lastName: form.lastName,
@@ -113,7 +114,7 @@ export default function CheckoutPage() {
       if (order.status === 'PAID' || order.status === 'PLACED') {
         navigate('/order-confirmation', { state: { order } });
       } else {
-        navigate(`/order-pending/${order.id}`, { state: { cartItems: items } });
+        navigate(`/order-pending/${order.id}`, { state: { cartItems: cartSnapshot } });
       }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {

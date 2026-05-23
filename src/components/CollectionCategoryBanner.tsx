@@ -9,8 +9,9 @@ type Props = {
 export default function CollectionCategoryBanner({ collection, index = 0 }: Props) {
   return (
     <Link
-      to={`/collection#${collection.slug}`}
-      className="group relative block overflow-hidden rounded-2xl border border-[#2a2a2a] shadow-[0_12px_40px_rgba(0,0,0,0.35)] transition-transform duration-300 hover:scale-[1.01] lg:rounded-3xl"
+      to={{ pathname: '/collection', search: `?category=${encodeURIComponent(collection.slug)}` }}
+      state={{ scrollToCategory: collection.slug }}
+      className="group relative block w-full cursor-pointer overflow-hidden rounded-2xl border border-[#2a2a2a] shadow-[0_12px_40px_rgba(0,0,0,0.35)] transition-transform duration-300 hover:scale-[1.01] lg:rounded-3xl"
     >
       <img
         src={collection.image}

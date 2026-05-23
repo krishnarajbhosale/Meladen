@@ -34,16 +34,22 @@ public class AdminCategoryController {
   }
 
   @PutMapping("/reorder")
-  public List<CategoryResponse> reorder(@Valid @RequestBody CategoryReorderRequest request) {
+  public List<CategoryResponse> reorderPut(@Valid @RequestBody CategoryReorderRequest request) {
     return categoryService.reorder(request.orderedIds());
   }
 
-  @PutMapping("/{id}")
+  /** POST alias for proxies that block PUT. */
+  @PostMapping("/reorder")
+  public List<CategoryResponse> reorderPost(@Valid @RequestBody CategoryReorderRequest request) {
+    return categoryService.reorder(request.orderedIds());
+  }
+
+  @PutMapping("/{id:\\d+}")
   public CategoryResponse update(@PathVariable Long id, @Valid @RequestBody CategoryRequest request) {
     return categoryService.update(id, request);
   }
 
-  @DeleteMapping("/{id}")
+  @DeleteMapping("/{id:\\d+}")
   public void delete(@PathVariable Long id) {
     categoryService.delete(id);
   }

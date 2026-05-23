@@ -14,6 +14,7 @@ function getToken(): string {
 export async function requestCustomerOtp(email: string): Promise<{
   success?: boolean;
   message?: string;
+  emailSent?: boolean;
   devOtp?: string;
 }> {
   const res = await fetch(`${API_BASE}/request-otp`, {
@@ -31,7 +32,7 @@ export async function requestCustomerOtp(email: string): Promise<{
   if (!res.ok || data.success === false) {
     throw new Error(String(data.message || text || 'Failed to send OTP'));
   }
-  return data as { success?: boolean; message?: string; devOtp?: string };
+  return data as { success?: boolean; message?: string; emailSent?: boolean; devOtp?: string };
 }
 
 export async function verifyCustomerOtp(email: string, otp: string): Promise<void> {

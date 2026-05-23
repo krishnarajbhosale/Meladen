@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { products, getProductSizeAvailability, type Product } from '../data/products';
 import { useCart } from '../context/CartContext';
 import Accordion from '../components/Accordion';
 import Button from '../components/Button';
+import HorizontalProductRail from '../components/HorizontalProductRail';
 import QuantityStepper from '../components/QuantityStepper';
 import { pageVariants, fadeUp } from '../animations/variants';
-import { apiProductToProduct, fetchPublicProduct, fetchPublicStock } from '../api/catalog';
+import { apiProductToProduct, fetchCategoriesWithProducts, fetchPublicProduct, fetchPublicStock } from '../api/catalog';
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +21,7 @@ export default function ProductPage() {
   const [added, setAdded] = useState(false);
   const [selectedSizeLabel, setSelectedSizeLabel] = useState('50ml');
   const [alcoholStockGm, setAlcoholStockGm] = useState<number | null>(null);
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,6 +66,23 @@ export default function ProductPage() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchCategoriesWithProducts();
+        if (cancelled) return;
+        const fromApi = data.flatMap(section => section.products.map(apiProductToProduct));
+        setCatalogProducts(fromApi.length > 0 ? fromApi : products);
+      } catch {
+        if (!cancelled) setCatalogProducts(products);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     setSelectedSizeLabel('50ml');
     setQty(1);
     setActiveImg(0);
@@ -79,6 +98,18 @@ export default function ProductPage() {
       setSelectedSizeLabel(firstAvailable.label);
     }
   }, [product, alcoholStockGm, selectedSizeLabel]);
+
+  const relatedProducts = useMemo(() => {
+    if (!id) return [];
+    const source = catalogProducts.length > 0 ? catalogProducts : products;
+    const sameCategory = source.filter(
+      p => p.id !== id && product != null && p.category === product.category,
+    );
+    const others = source.filter(
+      p => p.id !== id && (product == null || p.category !== product.category),
+    );
+    return [...sameCategory, ...others].slice(0, 10);
+  }, [id, product, catalogProducts]);
 
   if (loading) {
     return (
@@ -323,6 +354,15 @@ export default function ProductPage() {
           </motion.div>
         </div>
       </div>
+
+      {relatedProducts.length > 0 && (
+        <HorizontalProductRail
+          title="You May Also Like"
+          products={relatedProducts}
+          showViewAll={false}
+          tone="dark"
+        />
+      )}
     </motion.div>
   );
 }

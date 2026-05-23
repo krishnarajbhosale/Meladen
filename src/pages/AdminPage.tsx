@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type TouchEvent as ReactTouchEvent } from 'react';
 import {
   adminGetStock,
   adminListOrders,
@@ -515,13 +515,13 @@ export default function AdminPage() {
     setCatOrder(c.sortOrder);
   };
 
-  const handleCategoryReorder = async (toIndex: number) => {
-    if (!token || categoryDragIndex === null || categoryDragIndex === toIndex) {
+  const handleCategoryReorder = useCallback(async (fromIndex: number, toIndex: number) => {
+    if (!token || fromIndex === toIndex || fromIndex < 0 || toIndex < 0) {
       setCategoryDragIndex(null);
       setCategoryDropIndex(null);
       return;
     }
-    const reordered = reorderList(categories, categoryDragIndex, toIndex).map((c, i) => ({
+    const reordered = reorderList(categories, fromIndex, toIndex).map((c, i) => ({
       ...c,
       sortOrder: i,
     }));
@@ -536,13 +536,67 @@ export default function AdminPage() {
         reordered.map(c => c.id),
       );
       setCategories(saved);
-    } catch {
+    } catch (err) {
       setCategories(previous);
-      window.alert('Could not save category order. Try again.');
+      const msg = err instanceof Error ? err.message : 'Could not save category order. Try again.';
+      window.alert(msg);
     } finally {
       setCategoryOrderBusy(false);
     }
+  }, [token, categories]);
+
+  const moveCategoryByStep = (index: number, delta: number) => {
+    const toIndex = index + delta;
+    if (toIndex < 0 || toIndex >= categories.length) return;
+    void handleCategoryReorder(index, toIndex);
   };
+
+  const categoryDragIndexRef = useRef<number | null>(null);
+  const categoryDropIndexRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    categoryDragIndexRef.current = categoryDragIndex;
+  }, [categoryDragIndex]);
+
+  useEffect(() => {
+    categoryDropIndexRef.current = categoryDropIndex;
+  }, [categoryDropIndex]);
+
+  useEffect(() => {
+    if (categoryDragIndex === null) return;
+
+    const onTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      e.preventDefault();
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const row = el?.closest('[data-category-index]');
+      if (!row) return;
+      const idx = Number(row.getAttribute('data-category-index'));
+      if (!Number.isNaN(idx)) {
+        setCategoryDropIndex(idx);
+      }
+    };
+
+    const finishTouchDrag = () => {
+      const from = categoryDragIndexRef.current;
+      const to = categoryDropIndexRef.current;
+      setCategoryDragIndex(null);
+      setCategoryDropIndex(null);
+      if (from !== null && to !== null && from !== to) {
+        void handleCategoryReorder(from, to);
+      }
+    };
+
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', finishTouchDrag);
+    document.addEventListener('touchcancel', finishTouchDrag);
+    return () => {
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', finishTouchDrag);
+      document.removeEventListener('touchcancel', finishTouchDrag);
+    };
+  }, [categoryDragIndex, handleCategoryReorder]);
 
   const removeCategory = async (id: number) => {
     if (!token || !confirm('Delete this category? It must have no products.')) return;
@@ -850,12 +904,13 @@ export default function AdminPage() {
             <section className="max-w-2xl">
             <h2 className="text-lg font-semibold text-[#241d14]">Categories</h2>
             <p className="mt-1 text-xs text-[#7a6b57]">
-              Drag rows to set display order on the collection page (top = first).
+              Drag rows (or use ↑↓ on mobile) to set display order on the collection page.
             </p>
             <ul className="mt-4 max-h-80 space-y-2 overflow-y-auto text-sm">
               {categories.map((c, index) => (
                 <li
                   key={c.id}
+                  data-category-index={index}
                   draggable={!categoryOrderBusy}
                   onDragStart={() => setCategoryDragIndex(index)}
                   onDragEnd={() => {
@@ -871,7 +926,9 @@ export default function AdminPage() {
                   }}
                   onDrop={e => {
                     e.preventDefault();
-                    void handleCategoryReorder(index);
+                    if (categoryDragIndex !== null) {
+                      void handleCategoryReorder(categoryDragIndex, index);
+                    }
                   }}
                   className={`flex items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 text-[#2a2118] shadow-sm transition ${
                     categoryDropIndex === index && categoryDragIndex !== index
@@ -881,9 +938,14 @@ export default function AdminPage() {
                 >
                   <span className="flex min-w-0 flex-1 items-center gap-2">
                     <span
-                      className="flex h-8 w-6 flex-shrink-0 cursor-grab flex-col items-center justify-center text-[#9a8b78] active:cursor-grabbing"
+                      className="flex h-10 w-8 flex-shrink-0 touch-none cursor-grab flex-col items-center justify-center text-[#9a8b78] active:cursor-grabbing"
                       aria-hidden
                       title="Drag to reorder"
+                      onTouchStart={(e: ReactTouchEvent) => {
+                        e.stopPropagation();
+                        setCategoryDragIndex(index);
+                        setCategoryDropIndex(index);
+                      }}
                     >
                       <span className="block h-0.5 w-3 rounded-full bg-current" />
                       <span className="mt-0.5 block h-0.5 w-3 rounded-full bg-current" />
@@ -894,7 +956,27 @@ export default function AdminPage() {
                       <span className="ml-2 text-[10px] text-[#7a6b57]">#{index + 1}</span>
                     </span>
                   </span>
-                  <span className="flex flex-shrink-0 gap-2">
+                  <span className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
+                    <span className="flex flex-col gap-0.5 sm:hidden">
+                      <button
+                        type="button"
+                        aria-label={`Move ${c.name} up`}
+                        disabled={index === 0 || categoryOrderBusy}
+                        onClick={() => moveCategoryByStep(index, -1)}
+                        className="rounded border border-[#dbcdb8] px-2 py-0.5 text-[10px] text-[#5d4d3b] disabled:opacity-30"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Move ${c.name} down`}
+                        disabled={index === categories.length - 1 || categoryOrderBusy}
+                        onClick={() => moveCategoryByStep(index, 1)}
+                        className="rounded border border-[#dbcdb8] px-2 py-0.5 text-[10px] text-[#5d4d3b] disabled:opacity-30"
+                      >
+                        ↓
+                      </button>
+                    </span>
                     <button type="button" className="text-xs font-medium text-[#5d4d3b] underline" onClick={() => editCategory(c)}>
                       Edit
                     </button>

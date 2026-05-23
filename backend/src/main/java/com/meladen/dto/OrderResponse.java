@@ -30,6 +30,7 @@ public record OrderResponse(
   public record OrderItemResponse(
       String productId,
       String productName,
+      String productImageUrl,
       String size,
       Integer quantity,
       BigDecimal unitPrice,
