@@ -7,6 +7,7 @@ import { getMyWallet, type WalletTransactionRow } from '../api/wallet';
 import { ApiError } from '../api/client';
 import { customerLogout, getCustomerEmail, isCustomerLoggedIn } from '../api/customerAuth';
 import { pageVariants, fadeUp } from '../animations/variants';
+import { formatInr, formatInrDiscount } from '../utils/currency';
 
 export default function AccountOrdersPage() {
   const navigate = useNavigate();
@@ -105,7 +106,7 @@ export default function AccountOrdersPage() {
             <p className="text-sm text-amber-400/90">{walletErr}</p>
           ) : walletBalance != null ? (
             <>
-              <p className="font-serif text-2xl font-medium text-gold">${walletBalance.toFixed(2)}</p>
+              <p className="font-serif text-2xl font-medium text-gold">{formatInr(walletBalance)}</p>
               <p className="mt-1 text-xs text-brand-gray">Use your balance at checkout.</p>
               {walletTx.length > 0 && (
                 <ul className="mt-4 space-y-2 border-t border-[#2a2a2a] pt-4 text-xs text-brand-gray">
@@ -114,7 +115,7 @@ export default function AccountOrdersPage() {
                       <span className="font-mono text-[10px] text-brand-dark/80">{t.orderId.slice(0, 8)}…</span>
                       <span className={t.amount >= 0 ? 'text-emerald-400/90' : 'text-brand-dark'}>
                         {t.amount >= 0 ? '+' : ''}
-                        ${Number(t.amount).toFixed(2)}
+                        {formatInr(Number(t.amount))}
                       </span>
                       <span className="text-[10px] text-[#8a8580]">
                         {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '—'}
@@ -182,19 +183,19 @@ export default function AccountOrdersPage() {
                       <div className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/45 bg-emerald-950/50 px-2.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                         <span className="font-mono text-xs font-medium text-emerald-100">{order.promoCode}</span>
                         <span className="text-[11px] font-medium text-emerald-300">
-                          −${Number(order.discountAmount).toFixed(0)}
+                          {formatInrDiscount(Number(order.discountAmount), 0)}
                         </span>
                       </div>
                     </div>
                   )}
                   {(order.walletDiscount ?? 0) > 0 && (
                     <p className="mt-2 text-[11px] text-amber-200/90">
-                      Wallet applied: −${Number(order.walletDiscount).toFixed(2)}
+                      Wallet applied: {formatInrDiscount(Number(order.walletDiscount))}
                     </p>
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium text-brand-dark">${Number(order.total).toFixed(0)}</p>
+                  <p className="text-sm font-medium text-brand-dark">{formatInr(Number(order.total), 0)}</p>
                   <p className="text-[10px] text-brand-gray">
                     {order.items.length} line{order.items.length === 1 ? '' : 's'}
                   </p>
@@ -206,7 +207,7 @@ export default function AccountOrdersPage() {
                     <span className="text-brand-dark/90">
                       {item.productName} · {item.size} × {item.quantity}
                     </span>
-                    <span>${Number(item.lineTotal).toFixed(0)}</span>
+                    <span>{formatInr(Number(item.lineTotal), 0)}</span>
                   </li>
                 ))}
               </ul>

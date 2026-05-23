@@ -33,6 +33,7 @@ import type {
 import default2 from '../assets/Default 2.jpg';
 import default3 from '../assets/DEFAULT 3.png';
 import default4 from '../assets/Default 4.png';
+import { formatInr, formatInrDiscount } from '../utils/currency';
 
 const TOKEN_KEY = 'meladen_admin_jwt';
 const PRODUCT_MEDIA_DEFAULTS_KEY = 'meladen_product_media_defaults';
@@ -1525,27 +1526,27 @@ export default function AdminPage() {
                           <dl className="space-y-1 text-xs text-[#3a2f25]">
                             <div className="flex justify-between gap-2">
                               <dt className="text-[#9a8b78]">Subtotal</dt>
-                              <dd>${Number(order.subtotal).toFixed(2)}</dd>
+                              <dd>{formatInr(Number(order.subtotal))}</dd>
                             </div>
                             {(order.discountAmount ?? 0) > 0 && (
                               <div className="flex justify-between gap-2 text-emerald-700">
                                 <dt>Promo {order.promoCode ? `(${order.promoCode})` : ''}</dt>
-                                <dd>−${Number(order.discountAmount).toFixed(2)}</dd>
+                                <dd>{formatInrDiscount(Number(order.discountAmount))}</dd>
                               </div>
                             )}
                             <div className="flex justify-between gap-2">
                               <dt className="text-[#9a8b78]">Shipping</dt>
-                              <dd>${Number(order.shipping).toFixed(2)}</dd>
+                              <dd>{formatInr(Number(order.shipping))}</dd>
                             </div>
                             {(order.walletDiscount ?? 0) > 0 && (
                               <div className="flex justify-between gap-2 text-emerald-700">
                                 <dt>Wallet</dt>
-                                <dd>−${Number(order.walletDiscount).toFixed(2)}</dd>
+                                <dd>{formatInrDiscount(Number(order.walletDiscount))}</dd>
                               </div>
                             )}
                             <div className="flex justify-between gap-2 border-t border-[#eadfce] pt-1 font-semibold text-[#241d14]">
                               <dt>Total</dt>
-                              <dd>${Number(order.total).toFixed(2)}</dd>
+                              <dd>{formatInr(Number(order.total))}</dd>
                             </div>
                             <div className="flex justify-between gap-2 pt-1 text-[#6b5c4b]">
                               <dt>Alcohol used</dt>
@@ -1593,8 +1594,8 @@ export default function AdminPage() {
                                 <td className="px-3 py-2 font-medium">{item.productName}</td>
                                 <td className="px-3 py-2">{item.size}</td>
                                 <td className="px-3 py-2">{item.quantity}</td>
-                                <td className="px-3 py-2">${Number(item.unitPrice).toFixed(2)}</td>
-                                <td className="px-3 py-2">${Number(item.lineTotal).toFixed(2)}</td>
+                                <td className="px-3 py-2">{formatInr(Number(item.unitPrice))}</td>
+                                <td className="px-3 py-2">{formatInr(Number(item.lineTotal))}</td>
                                 <td className="px-3 py-2 text-[#6b5c4b]">
                                   {item.oilUsedGm} gm / {item.alcoholUsedGm} gm
                                 </td>
@@ -1639,7 +1640,7 @@ export default function AdminPage() {
                   />
                   <input
                     type="number"
-                    placeholder="Min order ($)"
+                    placeholder="Min order (₹)"
                     min={0}
                     step="0.01"
                     value={promoForm.minOrderValue}
@@ -1649,7 +1650,7 @@ export default function AdminPage() {
                   />
                   <input
                     type="number"
-                    placeholder="Max discount ($)"
+                    placeholder="Max discount (₹)"
                     min={1}
                     step="0.01"
                     value={promoForm.maxDiscount}
@@ -1729,7 +1730,7 @@ export default function AdminPage() {
                   setWalletTabMessage(null);
                   try {
                     await adminCreditWallet(token, walletSelectedOrderId.trim(), amt);
-                    setWalletTabMessage(`Credited $${amt.toFixed(2)} to wallet for order ${walletSelectedOrderId.slice(0, 8)}…`);
+                    setWalletTabMessage(`Credited ${formatInr(amt)} to wallet for order ${walletSelectedOrderId.slice(0, 8)}…`);
                     setWalletCreditAmount('');
                   } catch (err) {
                     setWalletTabMessage(readMessage(err));
@@ -1793,7 +1794,7 @@ export default function AdminPage() {
                       ))}
                     </select>
                     <label className="block text-xs font-semibold uppercase tracking-widest text-[#7a6b57]">
-                      Credit amount ($)
+                      Credit amount (₹)
                     </label>
                     <input
                       type="number"

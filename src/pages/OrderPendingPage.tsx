@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { API_BASE_URL, ApiError } from '../api/client';
 import {
   completeWalletOrder,
+  confirmCodOrder,
   createRazorpayCheckout,
   fetchPublicOrder,
   verifyOrderPayment,
@@ -13,8 +14,9 @@ import type { OrderApi } from '../api/types';
 import type { CartItem } from '../context/CartContext';
 import Button from '../components/Button';
 import { pageVariants, fadeUp } from '../animations/variants';
+import { formatInr, formatInrDiscount } from '../utils/currency';
 
-type PaymentMethod = 'razorpay' | 'wallet';
+type PaymentMethod = 'razorpay' | 'wallet' | 'cod';
 
 function loadRazorpayScript(): Promise<boolean> {
   if (window.Razorpay) return Promise.resolve(true);
@@ -54,7 +56,7 @@ export default function OrderPendingPage() {
     void fetchPublicOrder(orderId)
       .then(o => {
         setOrder(o);
-        if (o.status === 'PAID' || o.status === 'PLACED') {
+        if (o.status === 'PAID' || o.status === 'COD') {
           navigate('/order-confirmation', { replace: true, state: { order: o } });
           return;
         }
@@ -72,6 +74,12 @@ export default function OrderPendingPage() {
       if (order.total <= 0 || paymentMethod === 'wallet') {
         const paid = await completeWalletOrder(orderId);
         navigate('/order-confirmation', { state: { order: paid } });
+        return;
+      }
+
+      if (paymentMethod === 'cod') {
+        const confirmed = await confirmCodOrder(orderId);
+        navigate('/order-confirmation', { state: { order: confirmed } });
         return;
       }
 
@@ -220,10 +228,10 @@ export default function OrderPendingPage() {
                     <div className="min-w-0 flex-1">
                       <p className="font-serif text-sm font-medium text-brand-dark">{item.productName}</p>
                       <p className="mt-1 text-xs text-brand-gray">
-                        {item.size} · Qty {item.quantity} · ${Number(item.unitPrice).toFixed(0)} each
+                        {item.size} · Qty {item.quantity} · {formatInr(Number(item.unitPrice), 0)} each
                       </p>
                     </div>
-                    <p className="text-sm font-medium text-brand-dark">${Number(item.lineTotal).toFixed(2)}</p>
+                    <p className="text-sm font-medium text-brand-dark">{formatInr(Number(item.lineTotal))}</p>
                   </div>
                 );
               })}
@@ -243,55 +251,78 @@ export default function OrderPendingPage() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-brand-gray">
                 <span>Subtotal</span>
-                <span>${Number(order.subtotal).toFixed(2)}</span>
+                <span>{formatInr(Number(order.subtotal))}</span>
               </div>
               {(order.discountAmount ?? 0) > 0 && (
                 <div className="flex justify-between text-emerald-400/85">
                   <span>Promo {order.promoCode ? `(${order.promoCode})` : ''}</span>
-                  <span>−${Number(order.discountAmount).toFixed(2)}</span>
+                  <span>{formatInrDiscount(Number(order.discountAmount))}</span>
                 </div>
               )}
               <div className="flex justify-between text-brand-gray">
                 <span>Shipping</span>
-                <span>${Number(order.shipping).toFixed(2)}</span>
+                <span>{formatInr(Number(order.shipping))}</span>
               </div>
               {(order.walletDiscount ?? 0) > 0 && (
                 <div className="flex justify-between text-emerald-400/85">
                   <span>Wallet applied</span>
-                  <span>−${Number(order.walletDiscount).toFixed(2)}</span>
+                  <span>{formatInrDiscount(Number(order.walletDiscount))}</span>
                 </div>
               )}
               <div className="h-px bg-[#262626]" />
               <div className="flex justify-between font-medium text-brand-dark">
                 <span>Total due</span>
-                <span className="text-gold">${due.toFixed(2)}</span>
+                <span className="text-gold">{formatInr(due)}</span>
               </div>
             </div>
 
             <p className="mb-3 mt-6 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Payment method</p>
             <div className="space-y-2">
               {!walletCoversAll && (
-                <label
-                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
-                    paymentMethod === 'razorpay'
-                      ? 'border-gold/50 bg-gold/5'
-                      : 'border-[#333] bg-[#141414]'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="payment"
-                    className="mt-1 accent-[#c9a962]"
-                    checked={paymentMethod === 'razorpay'}
-                    onChange={() => setPaymentMethod('razorpay')}
-                  />
-                  <span>
-                    <span className="block text-sm font-medium text-brand-dark">Pay online — Razorpay</span>
-                    <span className="mt-0.5 block text-[11px] leading-relaxed text-brand-gray">
-                      UPI · Credit / Debit card · Net banking · Wallets
+                <>
+                  <label
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                      paymentMethod === 'razorpay'
+                        ? 'border-gold/50 bg-gold/5'
+                        : 'border-[#333] bg-[#141414]'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="payment"
+                      className="mt-1 accent-[#c9a962]"
+                      checked={paymentMethod === 'razorpay'}
+                      onChange={() => setPaymentMethod('razorpay')}
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-brand-dark">Pay online — Razorpay</span>
+                      <span className="mt-0.5 block text-[11px] leading-relaxed text-brand-gray">
+                        UPI · Credit / Debit card · Net banking · Wallets
+                      </span>
                     </span>
-                  </span>
-                </label>
+                  </label>
+                  <label
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                      paymentMethod === 'cod'
+                        ? 'border-gold/50 bg-gold/5'
+                        : 'border-[#333] bg-[#141414]'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="payment"
+                      className="mt-1 accent-[#c9a962]"
+                      checked={paymentMethod === 'cod'}
+                      onChange={() => setPaymentMethod('cod')}
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-brand-dark">Cash on Delivery</span>
+                      <span className="mt-0.5 block text-[11px] leading-relaxed text-brand-gray">
+                        Pay in cash when your order arrives · Available across India
+                      </span>
+                    </span>
+                  </label>
+                </>
               )}
               {walletCoversAll && (
                 <label className="flex items-start gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
@@ -311,11 +342,15 @@ export default function OrderPendingPage() {
                 ? 'Processing…'
                 : walletCoversAll
                   ? 'Confirm order'
-                  : 'Pay with Razorpay'}
+                  : paymentMethod === 'cod'
+                    ? 'Place order (Cash on Delivery)'
+                    : 'Pay with Razorpay'}
             </Button>
             {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
             <p className="mt-4 text-center text-[10px] leading-relaxed text-brand-gray">
-              After payment, Shiprocket tracking will be emailed when your order ships.
+              {paymentMethod === 'cod'
+                ? 'A confirmation email will be sent and Shiprocket tracking will be shared when your order ships.'
+                : 'After payment, Shiprocket tracking will be emailed when your order ships.'}
             </p>
           </div>
         </motion.aside>

@@ -78,4 +78,13 @@ public class PublicOrderController {
     }
     return orderService.completeOrderWithoutRazorpay(orderId, customerId);
   }
+
+  @PostMapping("/{orderId}/confirm-cod")
+  public OrderResponse confirmCod(@PathVariable String orderId, HttpServletRequest request) {
+    Long customerId = (Long) request.getAttribute("customerId");
+    if (customerId == null) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in required");
+    }
+    return orderService.confirmCashOnDelivery(orderId, customerId);
+  }
 }

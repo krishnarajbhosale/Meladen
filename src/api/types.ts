@@ -129,6 +129,7 @@ export interface OrderApi {
   total: number;
   alcoholUsedGm: number;
   status: string;
+  paymentMethod?: string | null;
   trackingAwb?: string | null;
   trackingUrl?: string | null;
   createdAt: string;

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { guardCheckout } from '../api/customerAuth';
 import { useCart } from '../context/CartContext';
 import QuantityStepper from './QuantityStepper';
+import { formatInr } from '../utils/currency';
 
 interface Props {
   open: boolean;
@@ -149,7 +150,7 @@ export default function CartDrawer({ open, onClose }: Props) {
                                 {item.size}
                               </span>
                               <span className="rounded-full border border-[#2b2b2b] px-2 py-0.5 text-[9px] text-brand-gray">
-                                ${item.unitPrice.toFixed(0)} each
+                                {formatInr(item.unitPrice, 0)} each
                               </span>
                             </div>
 
@@ -162,7 +163,7 @@ export default function CartDrawer({ open, onClose }: Props) {
                               <div className="text-right">
                                 <p className="text-[9px] uppercase tracking-[0.16em] text-brand-gray">Total</p>
                                 <p className="mt-0.5 font-serif text-sm text-brand-dark">
-                                  ${(item.unitPrice * item.quantity).toFixed(2)}
+                                  {formatInr(item.unitPrice * item.quantity)}
                                 </p>
                               </div>
                             </div>
@@ -188,12 +189,12 @@ export default function CartDrawer({ open, onClose }: Props) {
                   <div className="space-y-3">
                     <div className="flex justify-between text-[10px] text-brand-gray">
                       <span>Subtotal</span>
-                      <span>${total.toFixed(2)}</span>
+                      <span>{formatInr(total)}</span>
                     </div>
                     <div className="h-px bg-[#262626]" />
                     <div className="flex justify-between text-xs font-medium text-brand-dark">
                       <span>Total</span>
-                      <span>${total.toFixed(2)}</span>
+                      <span>{formatInr(total)}</span>
                     </div>
                   </div>
                 </div>

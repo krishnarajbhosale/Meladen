@@ -245,6 +245,13 @@ export async function completeWalletOrder(orderId: string): Promise<OrderApi> {
   });
 }
 
+export async function confirmCodOrder(orderId: string): Promise<OrderApi> {
+  return fetchJson<OrderApi>(`/api/public/orders/${orderId}/confirm-cod`, {
+    method: 'POST',
+    headers: { ...customerAuthHeaders() },
+  });
+}
+
 export async function adminListPromoCodes(token: string): Promise<PromoCodeRow[]> {
   return fetchJson<PromoCodeRow[]>('/api/admin/promocodes', {
     headers: authHeaders(token),

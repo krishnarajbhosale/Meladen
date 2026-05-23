@@ -131,7 +131,21 @@ public class OrderService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid payment signature");
     }
     order.setRazorpayPaymentId(body.razorpayPaymentId());
-    return finalizePaidOrder(order, customerId);
+    order.setPaymentMethod("RAZORPAY");
+    return finalizeConfirmedOrder(order, customerId, "PAID");
+  }
+
+  @Transactional
+  public OrderResponse confirmCashOnDelivery(String orderId, Long customerId) {
+    CustomerOrder order = loadOwnedOrder(orderId, customerId);
+    if ("PAID".equals(order.getStatus()) || "COD".equals(order.getStatus())) {
+      return toOrderResponse(order);
+    }
+    if (!"PAYMENT_PENDING".equals(order.getStatus())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order cannot be confirmed");
+    }
+    order.setPaymentMethod("COD");
+    return finalizeConfirmedOrder(order, customerId, "COD");
   }
 
   @Transactional
@@ -146,10 +160,11 @@ public class OrderService {
     if (order.getTotal().compareTo(BigDecimal.ZERO) > 0) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment is required");
     }
-    return finalizePaidOrder(order, customerId);
+    order.setPaymentMethod("WALLET");
+    return finalizeConfirmedOrder(order, customerId, "PAID");
   }
 
-  private OrderResponse finalizePaidOrder(CustomerOrder order, Long customerId) {
+  private OrderResponse finalizeConfirmedOrder(CustomerOrder order, Long customerId, String status) {
     PlaceOrderRequest snapshot = orderToSnapshotRequest(order);
     ComputedOrder computed = computeOrder(snapshot, customerId);
     applyInventory(computed);
@@ -158,7 +173,7 @@ public class OrderService {
       walletService.debitForOrder(customerId, order.getId(), computed.walletUse());
     }
 
-    order.setStatus("PAID");
+    order.setStatus(status);
     shiprocketService.createShipmentForOrder(order);
     CustomerOrder saved = orderRepository.save(order);
     orderMailService.sendOrderConfirmedEmail(saved);
@@ -424,6 +439,7 @@ public class OrderService {
         o.getTotal(),
         o.getAlcoholUsedGm(),
         o.getStatus(),
+        o.getPaymentMethod(),
         o.getTrackingAwb(),
         o.getTrackingUrl(),
         o.getCreatedAt(),

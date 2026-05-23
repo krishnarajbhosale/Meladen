@@ -99,7 +99,11 @@ public class ShiprocketService {
     payload.put("billing_email", order.getCustomerEmail());
     payload.put("billing_phone", phoneOrDefault(order.getCustomerPhone()));
     payload.put("shipping_is_billing", true);
-    payload.put("payment_method", "Prepaid");
+    payload.put(
+        "payment_method",
+        order.getPaymentMethod() != null && "COD".equalsIgnoreCase(order.getPaymentMethod())
+            ? "COD"
+            : "Prepaid");
     payload.put("sub_total", order.getTotal());
     payload.put("length", 10);
     payload.put("breadth", 10);

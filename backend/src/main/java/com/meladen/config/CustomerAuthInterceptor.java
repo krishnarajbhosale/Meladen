@@ -119,8 +119,10 @@ public class CustomerAuthInterceptor implements HandlerInterceptor {
     return path.matches("/api/public/orders/[^/]+/razorpay-checkout/?")
       || path.matches("/api/public/orders/[^/]+/verify-payment/?")
       || path.matches("/api/public/orders/[^/]+/complete-wallet/?")
+      || path.matches("/api/public/orders/[^/]+/confirm-cod/?")
       || path.matches("/public/orders/[^/]+/razorpay-checkout/?")
       || path.matches("/public/orders/[^/]+/verify-payment/?")
-      || path.matches("/public/orders/[^/]+/complete-wallet/?");
+      || path.matches("/public/orders/[^/]+/complete-wallet/?")
+      || path.matches("/public/orders/[^/]+/confirm-cod/?");
   }
 }

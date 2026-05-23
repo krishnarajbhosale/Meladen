@@ -11,6 +11,7 @@ import InputField from '../components/InputField';
 import Button from '../components/Button';
 import Drawer from '../components/Drawer';
 import { pageVariants, fadeUp } from '../animations/variants';
+import { formatInr, formatInrDiscount } from '../utils/currency';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -220,7 +221,7 @@ export default function CheckoutPage() {
                     <p className="truncate font-serif text-sm font-medium text-brand-dark">{item.product.name}</p>
                     <p className="text-xs text-brand-gray">{item.size} · Qty: {item.quantity}</p>
                   </div>
-                  <p className="text-sm font-medium text-brand-dark">${(item.unitPrice * item.quantity).toFixed(0)}</p>
+                  <p className="text-sm font-medium text-brand-dark">{formatInr(item.unitPrice * item.quantity, 0)}</p>
                 </div>
               ))}
             </div>
@@ -246,7 +247,7 @@ export default function CheckoutPage() {
               {promoError && <p className="text-xs text-red-400">{promoError}</p>}
               {appliedPromo && (
                 <p className="text-xs text-emerald-400/90">
-                  {appliedPromo.code} · −${appliedPromo.discountAmount.toFixed(0)}
+                  {appliedPromo.code} · {formatInrDiscount(appliedPromo.discountAmount, 0)}
                 </p>
               )}
             </div>
@@ -255,12 +256,12 @@ export default function CheckoutPage() {
               <p className="text-[10px] uppercase tracking-[0.2em] text-brand-gray">Store wallet</p>
               <div className="flex justify-between text-sm text-[#e8e4dc]">
                 <span>Balance</span>
-                <span className="font-medium text-gold">${walletBalance.toFixed(2)}</span>
+                <span className="font-medium text-gold">{formatInr(walletBalance)}</span>
               </div>
               {walletBalance > 0 && preWalletTotal > 0 && (
                 <>
                   <label htmlFor="wallet-use" className="sr-only">
-                    Use from wallet ($)
+                    Use from wallet (₹)
                   </label>
                   <input
                     id="wallet-use"
@@ -273,7 +274,7 @@ export default function CheckoutPage() {
                     className="w-full rounded-xl border border-[#333] bg-[#0c0c0c] px-3 py-2 text-sm text-brand-dark outline-none"
                   />
                   <p className="text-[10px] text-[#8a8580]">
-                    Up to ${maxWalletUse.toFixed(2)} can be applied to this order.
+                    Up to {formatInr(maxWalletUse)} can be applied to this order.
                   </p>
                 </>
               )}
@@ -282,24 +283,24 @@ export default function CheckoutPage() {
             <div className="mb-6 space-y-2 rounded-2xl border border-[#252525] bg-[#141414] p-5">
               <div className="flex justify-between text-sm text-brand-gray">
                 <span>Subtotal</span>
-                <span>${total.toFixed(0)}</span>
+                <span>{formatInr(total, 0)}</span>
               </div>
               {promoDiscount > 0 && (
                 <div className="flex justify-between text-sm text-emerald-400/80">
                   <span>Discount</span>
-                  <span>−${promoDiscount.toFixed(0)}</span>
+                  <span>{formatInrDiscount(promoDiscount, 0)}</span>
                 </div>
               )}
               {effectiveWallet > 0 && (
                 <div className="flex justify-between text-sm text-emerald-400/85">
                   <span>Wallet</span>
-                  <span>−${effectiveWallet.toFixed(2)}</span>
+                  <span>{formatInrDiscount(effectiveWallet)}</span>
                 </div>
               )}
               <div className="h-px bg-[#262626]" />
               <div className="flex justify-between font-medium text-brand-dark">
                 <span>{payableTotal <= 0 ? 'Due' : 'Total'}</span>
-                <span>${payableTotal.toFixed(2)}</span>
+                <span>{formatInr(payableTotal)}</span>
               </div>
             </div>
 
@@ -322,31 +323,31 @@ export default function CheckoutPage() {
                 <p className="font-serif text-sm font-medium text-brand-dark">{item.product.name}</p>
                 <p className="text-xs text-brand-gray">{item.size} · Qty: {item.quantity}</p>
               </div>
-              <p className="text-sm font-medium text-brand-dark">${(item.unitPrice * item.quantity).toFixed(0)}</p>
+              <p className="text-sm font-medium text-brand-dark">{formatInr(item.unitPrice * item.quantity, 0)}</p>
             </div>
           ))}
           <div className="h-px bg-brand-beige" />
           <div className="space-y-1 text-sm text-brand-gray">
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span>${total.toFixed(0)}</span>
+              <span>{formatInr(total, 0)}</span>
             </div>
             {promoDiscount > 0 && (
               <div className="flex justify-between text-emerald-400/80">
                 <span>Discount</span>
-                <span>−${promoDiscount.toFixed(0)}</span>
+                <span>{formatInrDiscount(promoDiscount, 0)}</span>
               </div>
             )}
             {effectiveWallet > 0 && (
               <div className="flex justify-between text-emerald-400/85">
                 <span>Wallet</span>
-                <span>−${effectiveWallet.toFixed(2)}</span>
+                <span>{formatInrDiscount(effectiveWallet)}</span>
               </div>
             )}
           </div>
           <div className="flex justify-between font-medium text-brand-dark">
             <span>Due</span>
-            <span>${payableTotal.toFixed(2)}</span>
+            <span>{formatInr(payableTotal)}</span>
           </div>
         </div>
       </Drawer>

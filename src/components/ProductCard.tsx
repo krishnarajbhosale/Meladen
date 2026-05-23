@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Product } from '../data/products';
 import { useCart } from '../context/CartContext';
 import { fadeUp } from '../animations/variants';
+import { formatInr } from '../utils/currency';
 
 function inspiredByBadgeLabel(inspiredBy: string): string {
   const value = inspiredBy.trim();
@@ -90,7 +91,7 @@ export default function ProductCard({
       <div className="min-w-0 max-w-full px-0.5" onClick={() => navigate(`/product/${product.id}`)}>
         <p className={`mb-0.5 truncate text-[10px] uppercase tracking-widest ${metaClass}`}>{product.category}</p>
         <p className={`mb-1 line-clamp-2 font-serif text-sm font-medium leading-tight ${titleClass}`}>{product.name}</p>
-        <p className={`text-sm font-medium ${priceClass}`}>${product.price}</p>
+        <p className={`text-sm font-medium ${priceClass}`}>{formatInr(product.price, 0)}</p>
       </div>
     </motion.div>
   );

@@ -4,13 +4,16 @@ import type { HomeCollection } from '../data/collections';
 type Props = {
   collection: HomeCollection;
   index?: number;
+  /** Resolved slug from API — falls back to collection.slug */
+  categorySlug?: string;
 };
 
-export default function CollectionCategoryBanner({ collection, index = 0 }: Props) {
+export default function CollectionCategoryBanner({ collection, index = 0, categorySlug }: Props) {
+  const slug = categorySlug ?? collection.slug;
   return (
     <Link
-      to={{ pathname: '/collection', search: `?category=${encodeURIComponent(collection.slug)}` }}
-      state={{ scrollToCategory: collection.slug }}
+      to={{ pathname: '/collection', search: `?category=${encodeURIComponent(slug)}` }}
+      state={{ scrollToCategory: slug }}
       className="group relative block w-full cursor-pointer overflow-hidden rounded-2xl border border-[#2a2a2a] shadow-[0_12px_40px_rgba(0,0,0,0.35)] transition-transform duration-300 hover:scale-[1.01] lg:rounded-3xl"
     >
       <img

@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import QuantityStepper from '../components/QuantityStepper';
 import Button from '../components/Button';
 import { pageVariants, fadeUp } from '../animations/variants';
+import { formatInr } from '../utils/currency';
 
 export default function CartPage() {
   const { items, removeFromCart, updateQty, total, count } = useCart();
@@ -141,7 +142,7 @@ export default function CartPage() {
                             {item.size}
                           </span>
                           <span className="rounded-full border border-[#2b2b2b] px-2 py-0.5 text-[9px] text-brand-gray">
-                            ${item.unitPrice.toFixed(0)} each
+                            {formatInr(item.unitPrice, 0)} each
                           </span>
                         </div>
 
@@ -157,7 +158,7 @@ export default function CartPage() {
                           <div className="text-left sm:text-right">
                             <p className="text-[9px] uppercase tracking-[0.16em] text-brand-gray">Item Total</p>
                             <p className="mt-0.5 font-serif text-lg text-brand-dark">
-                              ${(item.unitPrice * item.quantity).toFixed(0)}
+                              {formatInr(item.unitPrice * item.quantity, 0)}
                             </p>
                           </div>
                         </div>
@@ -175,12 +176,12 @@ export default function CartPage() {
                 <div className="mt-4 space-y-3 rounded-2xl border border-[#262626] bg-[#141414] p-4">
                   <div className="flex justify-between text-xs text-brand-gray">
                     <span>Subtotal</span>
-                    <span>${total.toFixed(0)}</span>
+                    <span>{formatInr(total, 0)}</span>
                   </div>
                   <div className="h-px bg-[#262626]" />
                   <div className="flex justify-between text-sm font-medium text-brand-dark">
                     <span>Total</span>
-                    <span>${total.toFixed(0)}</span>
+                    <span>{formatInr(total, 0)}</span>
                   </div>
                 </div>
 

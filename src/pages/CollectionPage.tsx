@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProductSizeAvailability, products } from '../data/products';
 import { meladen12 } from '../data/meladenImages';
@@ -8,7 +8,8 @@ import { pageVariants, fadeUp } from '../animations/variants';
 import { apiProductToProduct, fetchCategoriesWithProducts, fetchPublicStock } from '../api/catalog';
 import type { CategoryWithProductsApi } from '../api/types';
 import type { Product } from '../data/products';
-import { slugifyCategoryName } from '../data/collections';
+import { slugifyCategoryName, categorySlugMatches } from '../data/collections';
+import { formatInr } from '../utils/currency';
 
 const CONCENTRATIONS = ['Eau de Parfum', 'Extrait de Parfum', 'Eau de Toilette'];
 const FAMILIES = ['Woody', 'Floral', 'Citrus', 'Oriental'];
@@ -17,6 +18,7 @@ const PER_PAGE = 6;
 
 type CatalogSection = {
   key: string;
+  slug: string;
   title: string;
   description: string | null;
   items: Product[];
@@ -99,6 +101,7 @@ export default function CollectionPage() {
     if (apiCatalog != null && apiCatalog.length > 0) {
       return apiCatalog.map(row => ({
         key: String(row.category.id),
+        slug: row.category.slug,
         title: row.category.name,
         description: row.category.description,
         items: row.products.map(apiProductToProduct),
@@ -112,6 +115,7 @@ export default function CollectionPage() {
     }
     return Array.from(grouped.entries()).map(([title, items], idx) => ({
       key: `static-${idx}-${title}`,
+      slug: slugifyCategoryName(title),
       title,
       description: null,
       items,
@@ -128,6 +132,13 @@ export default function CollectionPage() {
   useEffect(() => {
     setMaxPrice(prev => (prev < priceCap ? priceCap : prev));
   }, [priceCap]);
+
+  const activeCategorySlug = useMemo(() => resolveCategorySlug(location), [
+    location.pathname,
+    location.search,
+    location.hash,
+    location.state,
+  ]);
 
   const toggle = (arr: string[], val: string) =>
     arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val];
@@ -162,7 +173,14 @@ export default function CollectionPage() {
       .filter(s => s.items.length > 0);
   }, [sections, selectedConc, maxPrice, selectedFamily, sort]);
 
-  const filteredFlat = useMemo(() => filteredSections.flatMap(s => s.items), [filteredSections]);
+  const visibleSections = useMemo(() => {
+    if (!activeCategorySlug) return filteredSections;
+    return filteredSections.filter(s => categorySlugMatches(activeCategorySlug, s.slug, s.title));
+  }, [filteredSections, activeCategorySlug]);
+
+  const activeSectionTitle = visibleSections.length === 1 ? visibleSections[0].title : null;
+
+  const filteredFlat = useMemo(() => visibleSections.flatMap(s => s.items), [visibleSections]);
 
   const totalPages = Math.ceil(filteredFlat.length / PER_PAGE);
   const paginatedFlat = useApiLayout
@@ -174,12 +192,9 @@ export default function CollectionPage() {
   }, [selectedConc, selectedFamily, maxPrice, sort, useApiLayout]);
 
   useEffect(() => {
-    const target = resolveCategorySlug(location);
-    if (!target || catalogLoading || sections.length === 0) return;
+    if (!activeCategorySlug || catalogLoading || visibleSections.length === 0) return;
 
-    const match = sections.find(s => slugifyCategoryName(s.title) === target);
-    if (!match) return;
-
+    const target = visibleSections[0].slug;
     const scrollToSection = () => {
       const el = document.getElementById(`category-${target}`);
       if (el) {
@@ -189,7 +204,7 @@ export default function CollectionPage() {
 
     const timers = [120, 350, 700].map(ms => window.setTimeout(scrollToSection, ms));
     return () => timers.forEach(window.clearTimeout);
-  }, [location.pathname, location.search, location.hash, location.state, searchParams, catalogLoading, sections]);
+  }, [activeCategorySlug, catalogLoading, visibleSections, searchParams]);
 
   const renderProductCard = (p: Product, i: number) => {
     const availability = getProductSizeAvailability(p, alcoholStockGm);
@@ -249,7 +264,7 @@ export default function CollectionPage() {
         <p className="text-[9px] text-[#888] tracking-[0.2em] uppercase mb-1">{p.category}</p>
         <p className="font-serif text-sm lg:text-base font-medium text-brand-dark mb-1">{p.name}</p>
         <p className="text-[10px] text-brand-gray mb-2 truncate">{p.notes.top.join(', ')}</p>
-        <p className="text-sm font-medium text-brand-dark">${p.price}.00</p>
+        <p className="text-sm font-medium text-brand-dark">{formatInr(p.price, 0)}</p>
         {isOutOfStock && <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-red-700">Out of stock</p>}
       </div>
     </motion.div>
@@ -277,6 +292,27 @@ export default function CollectionPage() {
         >
           Signature Collection
         </motion.h1>
+        {activeSectionTitle && (
+          <motion.p
+            variants={fadeUp}
+            custom={1.5}
+            initial="hidden"
+            animate="visible"
+            className="mt-2 font-serif text-xl text-brand-sage lg:text-2xl"
+          >
+            {activeSectionTitle}
+          </motion.p>
+        )}
+        {activeCategorySlug && (
+          <motion.div variants={fadeUp} custom={1.6} initial="hidden" animate="visible" className="mt-4">
+            <Link
+              to="/collection"
+              className="text-[10px] font-medium uppercase tracking-[0.18em] text-brand-gray underline-offset-4 hover:text-brand-dark hover:underline"
+            >
+              View all categories
+            </Link>
+          </motion.div>
+        )}
         <motion.p
           variants={fadeUp}
           custom={2}
@@ -343,8 +379,8 @@ export default function CollectionPage() {
           <p className="text-[11px] text-brand-gray mb-2">{filteredFlat.length} products</p>
 
           {useApiLayout
-            ? filteredSections.map(section => {
-                const sectionSlug = slugifyCategoryName(section.title);
+            ? visibleSections.map(section => {
+                const sectionSlug = section.slug;
                 return (
                 <section key={section.key} id={`category-${sectionSlug}`} className="scroll-mt-28">
                   <div className="mb-6 border-b border-brand-beige pb-4">
@@ -361,8 +397,8 @@ export default function CollectionPage() {
                 </section>
                 );
               })
-            : filteredSections.map(section => {
-                const sectionSlug = slugifyCategoryName(section.title);
+            : visibleSections.map(section => {
+                const sectionSlug = section.slug;
                 return (
                 <section key={section.key} id={`category-${sectionSlug}`} className="scroll-mt-28">
                   <div className="mb-6 border-b border-brand-beige pb-4">
@@ -432,7 +468,7 @@ export default function CollectionPage() {
               onClick={() => navigate('/product/1')}
               className="self-start bg-brand-dark text-brand-cream text-[10px] font-medium tracking-[0.15em] uppercase px-6 py-3 rounded-sm hover:bg-brand-dark/85 transition-colors"
             >
-              Shop Discovery Set · $45
+              Shop Discovery Set · {formatInr(45, 0)}
             </button>
           </div>
           <div className="h-[220px] lg:h-auto overflow-hidden">

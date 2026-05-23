@@ -92,6 +92,10 @@ public class CustomerOrder {
   @Column(name = "tracking_url", length = 512)
   private String trackingUrl;
 
+  /** RAZORPAY, COD, or WALLET */
+  @Column(name = "payment_method", length = 32)
+  private String paymentMethod;
+
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 

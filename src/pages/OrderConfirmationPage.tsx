@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { API_BASE_URL } from '../api/client';
 import Button from '../components/Button';
 import type { OrderApi } from '../api/types';
+import { formatInr } from '../utils/currency';
 
 type LocationState = { order?: OrderApi };
 
@@ -15,6 +16,7 @@ export default function OrderConfirmationPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const order = (location.state as LocationState | null)?.order;
+  const isCod = order?.paymentMethod === 'COD' || order?.status === 'COD';
 
   return (
     <motion.div
@@ -44,10 +46,15 @@ export default function OrderConfirmationPage() {
           </svg>
         </motion.div>
 
-        <p className="mb-2 text-[10px] uppercase tracking-[0.25em] text-brand-gray">Payment successful</p>
+        <p className="mb-2 text-[10px] uppercase tracking-[0.25em] text-brand-gray">
+          {isCod ? 'Order confirmed' : 'Payment successful'}
+        </p>
         <h1 className="font-serif text-3xl font-medium text-brand-dark">Thank you</h1>
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-brand-gray">
-          Your order is confirmed. A receipt was emailed
+          {isCod
+            ? 'Your Cash on Delivery order is confirmed. Pay when your package arrives.'
+            : 'Your order is confirmed.'}{' '}
+          A receipt was emailed
           {order?.customerEmail ? ` to ${order.customerEmail}` : ''}.
         </p>
         {order?.orderNumber && (
@@ -89,7 +96,7 @@ export default function OrderConfirmationPage() {
                         {item.size} · Qty {item.quantity}
                       </p>
                     </div>
-                    <p className="text-sm text-brand-dark">${Number(item.lineTotal).toFixed(2)}</p>
+                    <p className="text-sm text-brand-dark">{formatInr(Number(item.lineTotal))}</p>
                   </div>
                 );
               })}
@@ -98,8 +105,8 @@ export default function OrderConfirmationPage() {
 
           <section className="rounded-xl border border-[#252525] bg-[#141414] p-4 text-sm">
             <div className="flex justify-between text-brand-gray">
-              <span>Total paid</span>
-              <span className="font-medium text-gold">${Number(order.total).toFixed(2)}</span>
+              <span>{isCod ? 'Total due on delivery' : 'Total paid'}</span>
+              <span className="font-medium text-gold">{formatInr(Number(order.total))}</span>
             </div>
           </section>
 

@@ -21,13 +21,21 @@ public class OrderMailService {
 
   public void sendOrderPendingEmail(CustomerOrder order) {
     String subject = "Meladen — Order pending payment · " + order.getOrderNumber();
-    String html = buildOrderHtml(order, "Your order is pending payment", true);
+    String html = buildOrderHtml(order, "Your order is pending payment", true, false);
     send(order.getCustomerEmail(), subject, html);
   }
 
   public void sendOrderConfirmedEmail(CustomerOrder order) {
-    String subject = "Meladen — Order confirmed · " + order.getOrderNumber();
-    String html = buildOrderHtml(order, "Thank you — your payment was received", false);
+    boolean cod = order.getPaymentMethod() != null && "COD".equalsIgnoreCase(order.getPaymentMethod());
+    String subject =
+        cod
+            ? "Meladen — Order confirmed (Cash on Delivery) · " + order.getOrderNumber()
+            : "Meladen — Order confirmed · " + order.getOrderNumber();
+    String headline =
+        cod
+            ? "Your Cash on Delivery order is confirmed"
+            : "Thank you — your payment was received";
+    String html = buildOrderHtml(order, headline, false, cod);
     send(order.getCustomerEmail(), subject, html);
   }
 
@@ -67,7 +75,7 @@ public class OrderMailService {
     }
   }
 
-  private static String buildOrderHtml(CustomerOrder order, String headline, boolean pending) {
+  private static String buildOrderHtml(CustomerOrder order, String headline, boolean pending, boolean cod) {
     StringBuilder items = new StringBuilder();
     for (CustomerOrderItem i : order.getItems()) {
       items.append("<tr><td style=\"padding:8px 0;border-bottom:1px solid #333;\">")
@@ -76,7 +84,7 @@ public class OrderMailService {
           .append(escape(i.getSizeLabel()))
           .append(" × ")
           .append(i.getQuantity())
-          .append("</td><td style=\"padding:8px 0;border-bottom:1px solid #333;text-align:right;\">$")
+          .append("</td><td style=\"padding:8px 0;border-bottom:1px solid #333;text-align:right;\">₹")
           .append(money(i.getLineTotal()))
           .append("</td></tr>");
     }
@@ -91,7 +99,9 @@ public class OrderMailService {
     String cta =
         pending
             ? "<p style=\"color:#aaa;\">Complete payment on the Meladen website to confirm your order.</p>"
-            : "<p style=\"color:#aaa;\">We are preparing your order with care.</p>";
+            : cod
+                ? "<p style=\"color:#aaa;\">Pay in cash when your order is delivered. We are preparing your shipment.</p>"
+                : "<p style=\"color:#aaa;\">We are preparing your order with care.</p>";
 
     return """
         <!DOCTYPE html><html><body style="margin:0;background:#0a0a0a;color:#e8e4dc;font-family:Georgia,serif;">
@@ -104,10 +114,10 @@ public class OrderMailService {
         <thead><tr><th style="text-align:left;color:#888;font-size:11px;text-transform:uppercase;">Items</th>
         <th style="text-align:right;color:#888;font-size:11px;text-transform:uppercase;">Amount</th></tr></thead>
         <tbody>%s</tbody></table>
-        <p style="font-size:14px;"><strong>Subtotal:</strong> $%s</p>
+        <p style="font-size:14px;"><strong>Subtotal:</strong> ₹%s</p>
         %s
         %s
-        <p style="font-size:14px;"><strong>Total:</strong> <span style="color:#c9a962;">$%s</span></p>
+        <p style="font-size:14px;"><strong>Total:</strong> <span style="color:#c9a962;">₹%s</span></p>
         <hr style="border:none;border-top:1px solid #333;margin:24px 0;">
         <p style="font-size:13px;color:#888;">%s<br>%s, %s %s<br>%s</p>
         %s
@@ -135,7 +145,7 @@ public class OrderMailService {
         && order.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
       return "<p style=\"font-size:14px;\"><strong>Discount"
           + (order.getPromoCode() != null ? " (" + escape(order.getPromoCode()) + ")" : "")
-          + ":</strong> −$"
+          + ":</strong> −₹"
           + money(order.getDiscountAmount())
           + "</p>";
     }
@@ -145,7 +155,7 @@ public class OrderMailService {
   private static String walletLine(CustomerOrder order) {
     if (order.getWalletDiscount() != null
         && order.getWalletDiscount().compareTo(BigDecimal.ZERO) > 0) {
-      return "<p style=\"font-size:14px;\"><strong>Wallet:</strong> −$" + money(order.getWalletDiscount()) + "</p>";
+      return "<p style=\"font-size:14px;\"><strong>Wallet:</strong> −₹" + money(order.getWalletDiscount()) + "</p>";
     }
     return "";
   }

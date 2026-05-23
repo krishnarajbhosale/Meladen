@@ -9,6 +9,7 @@ import HorizontalProductRail from '../components/HorizontalProductRail';
 import QuantityStepper from '../components/QuantityStepper';
 import { pageVariants, fadeUp } from '../animations/variants';
 import { apiProductToProduct, fetchCategoriesWithProducts, fetchPublicProduct, fetchPublicStock } from '../api/catalog';
+import { formatInr } from '../utils/currency';
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
@@ -237,7 +238,7 @@ export default function ProductPage() {
             animate="visible"
             className="mb-5 text-xl font-medium text-brand-dark lg:text-2xl"
           >
-            ${selectedSize.price}
+            {formatInr(selectedSize.price, 0)}
             <span className="ml-2 text-sm font-normal text-brand-gray">{selectedSize.label}</span>
           </motion.p>
           <motion.p
@@ -284,7 +285,7 @@ export default function ProductPage() {
                     )}
                     {!badge && <span className="mb-[18px] block" aria-hidden="true" />}
                     <span className="block w-full text-center text-sm font-medium">{option.label}</span>
-                    <span className="mt-1 block w-full text-center text-xs">${option.price}</span>
+                    <span className="mt-1 block w-full text-center text-xs">{formatInr(option.price, 0)}</span>
                     {!option.available && (
                       <span className="mt-1 block text-[10px] font-semibold uppercase tracking-wide text-red-700">
                         Out of stock
