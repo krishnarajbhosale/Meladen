@@ -1362,6 +1362,13 @@ export default function AdminPage() {
                 <div className="space-y-3">
                   {orders.map(order => {
                     const isNewOrder = unseenOrderIds.has(order.id);
+                    const statusLabel = order.status.replace(/_/g, ' ');
+                    const statusTone =
+                      order.status === 'PAID' || order.status === 'PLACED'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        : order.status === 'PAYMENT_PENDING'
+                          ? 'bg-amber-100 text-amber-900 border-amber-200'
+                          : 'bg-[#f0ebe3] text-[#5c4f40] border-[#dbcdb8]';
                     return (
                     <article
                       key={order.id}
@@ -1371,7 +1378,7 @@ export default function AdminPage() {
                           : 'border-[#dbcdb8]'
                       }`}
                     >
-                      <div className="flex flex-wrap items-start justify-between gap-2">
+                      <motion.div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#eadfce] pb-3">
                         <div>
                           <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-[#241d14]">
                             {order.orderNumber}
