@@ -3,6 +3,7 @@ import type {
   CategoryWithProductsApi,
   JwtLoginResponse,
   OrderApi,
+  RazorpayCheckoutApi,
   ProductAdminApi,
   ProductPublicApi,
   PromoCodeRow,
@@ -129,6 +130,17 @@ export async function adminUpdateCategory(
   });
 }
 
+export async function adminReorderCategories(
+  token: string,
+  orderedIds: number[],
+): Promise<CategoryResponse[]> {
+  return fetchJson<CategoryResponse[]>('/api/admin/categories/reorder', {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: JSON.stringify({ orderedIds }),
+  });
+}
+
 export async function adminDeleteCategory(token: string, id: number) {
   return fetchJson(`/api/admin/categories/${id}`, {
     method: 'DELETE',
@@ -199,6 +211,37 @@ export async function placePublicOrder(body: Record<string, unknown>): Promise<O
     method: 'POST',
     headers: { ...customerAuthHeaders() },
     body: JSON.stringify(body),
+  });
+}
+
+export async function fetchPublicOrder(orderId: string): Promise<OrderApi> {
+  return fetchJson<OrderApi>(`/api/public/orders/${orderId}`, {
+    headers: { ...customerAuthHeaders() },
+  });
+}
+
+export async function createRazorpayCheckout(orderId: string): Promise<RazorpayCheckoutApi> {
+  return fetchJson(`/api/public/orders/${orderId}/razorpay-checkout`, {
+    method: 'POST',
+    headers: { ...customerAuthHeaders() },
+  });
+}
+
+export async function verifyOrderPayment(
+  orderId: string,
+  body: { razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string },
+): Promise<OrderApi> {
+  return fetchJson<OrderApi>(`/api/public/orders/${orderId}/verify-payment`, {
+    method: 'POST',
+    headers: { ...customerAuthHeaders() },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function completeWalletOrder(orderId: string): Promise<OrderApi> {
+  return fetchJson<OrderApi>(`/api/public/orders/${orderId}/complete-wallet`, {
+    method: 'POST',
+    headers: { ...customerAuthHeaders() },
   });
 }
 

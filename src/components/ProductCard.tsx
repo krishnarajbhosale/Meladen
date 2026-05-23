@@ -5,6 +5,13 @@ import { Product } from '../data/products';
 import { useCart } from '../context/CartContext';
 import { fadeUp } from '../animations/variants';
 
+function inspiredByBadgeLabel(inspiredBy: string): string {
+  const value = inspiredBy.trim();
+  if (!value) return '';
+  if (/^inspired\s+by\b/i.test(value)) return value;
+  return `Inspired by ${value}`;
+}
+
 interface ProductCardProps {
   product: Product;
   index?: number;
@@ -59,10 +66,10 @@ export default function ProductCard({
 
         {product.inspiredBy && (
           <span
-            className="absolute left-2.5 top-2.5 max-w-[calc(100%-1.25rem)] truncate rounded-full bg-[#c9a84c] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-black shadow-sm"
-            title={product.inspiredBy}
+            className="absolute left-2 top-2 block max-w-[calc(100%-1rem)] overflow-hidden text-ellipsis whitespace-nowrap rounded-full bg-[#c9a84c] px-1.5 py-0.5 text-[7px] font-semibold uppercase leading-none tracking-[0.08em] text-black shadow-sm lg:left-2.5 lg:top-2.5 lg:px-2 lg:text-[8px]"
+            title={inspiredByBadgeLabel(product.inspiredBy)}
           >
-            {product.inspiredBy}
+            {inspiredByBadgeLabel(product.inspiredBy)}
           </span>
         )}
 

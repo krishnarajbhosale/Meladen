@@ -11,6 +11,7 @@ import heroPoster from '../assets/hero.png';
 import { apiProductToProduct, fetchCategoriesWithProducts } from '../api/catalog';
 import AutoplayVideo from '../components/AutoplayVideo';
 import HorizontalProductRail from '../components/HorizontalProductRail';
+import HomeCollectionsSection from '../components/HomeCollectionsSection';
 import { pageVariants, fadeUp } from '../animations/variants';
 
 export default function HomePage() {
@@ -167,6 +168,8 @@ export default function HomePage() {
               </motion.button>
             </motion.div>
           </section>
+
+          <HomeCollectionsSection />
 
           <HorizontalProductRail
             title="Best Sellers"

@@ -6,6 +6,7 @@ import {
   adminCreateCategory,
   adminCreateProduct,
   adminDeleteCategory,
+  adminReorderCategories,
   adminDeleteProduct,
   adminDeletePromoCode,
   adminListCategories,
@@ -35,6 +36,33 @@ import default4 from '../assets/Default 4.png';
 
 const TOKEN_KEY = 'meladen_admin_jwt';
 const PRODUCT_MEDIA_DEFAULTS_KEY = 'meladen_product_media_defaults';
+const ORDERS_SEEN_AT_KEY = 'meladen_admin_orders_seen_at';
+const ORDERS_POLL_MS = 30_000;
+
+function getOrdersSeenAtMs(): number | null {
+  const raw = localStorage.getItem(ORDERS_SEEN_AT_KEY);
+  if (!raw) return null;
+  const t = Date.parse(raw);
+  return Number.isFinite(t) ? t : null;
+}
+
+function setOrdersSeenWatermark(orders: OrderApi[]) {
+  const max = orders.reduce((m, o) => {
+    const t = Date.parse(o.createdAt);
+    return Number.isFinite(t) ? Math.max(m, t) : m;
+  }, 0);
+  localStorage.setItem(ORDERS_SEEN_AT_KEY, new Date(max || Date.now()).toISOString());
+}
+
+function collectUnseenOrderIds(orders: OrderApi[], seenAtMs: number | null): Set<string> {
+  if (seenAtMs === null) return new Set();
+  const unseen = new Set<string>();
+  for (const o of orders) {
+    const t = Date.parse(o.createdAt);
+    if (Number.isFinite(t) && t > seenAtMs) unseen.add(o.id);
+  }
+  return unseen;
+}
 const PRODUCT_TABS = ['Basics', 'Pricing & Notes', 'Media & Flags'] as const;
 const ADMIN_TABS = ['Categories', 'Products', 'Stock', 'Orders', 'Promo codes', 'Returns', 'Wallet'] as const;
 type ProductTab = (typeof PRODUCT_TABS)[number];
@@ -72,6 +100,14 @@ type ProductFormState = {
 };
 
 type ProductMediaDefaults = Pick<ProductFormState, 'galleryImage1' | 'galleryImage2' | 'galleryImage3'>;
+
+function reorderList<T>(list: T[], fromIndex: number, toIndex: number): T[] {
+  if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return list;
+  const next = [...list];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next;
+}
 
 function emptyProductForm(defaultCategoryId: number, defaults?: ProductMediaDefaults): ProductFormState {
   return {
@@ -121,10 +157,13 @@ export default function AdminPage() {
   const [products, setProducts] = useState<ProductAdminApi[]>([]);
   const [stock, setStock] = useState<StockSummaryApi | null>(null);
   const [orders, setOrders] = useState<OrderApi[]>([]);
+  const [unseenOrderIds, setUnseenOrderIds] = useState<Set<string>>(() => new Set());
   const [promoRows, setPromoRows] = useState<PromoCodeRow[]>([]);
   const [returnRows, setReturnRows] = useState<ReturnRequestRow[]>([]);
   const [alcoholStockInput, setAlcoholStockInput] = useState('');
   const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>('Categories');
+  const activeAdminTabRef = useRef<AdminTab>('Categories');
+  activeAdminTabRef.current = activeAdminTab;
 
   const [promoForm, setPromoForm] = useState({
     code: '',
@@ -150,6 +189,9 @@ export default function AdminPage() {
   const [catDesc, setCatDesc] = useState('');
   const [catOrder, setCatOrder] = useState(0);
   const [editingCatId, setEditingCatId] = useState<number | null>(null);
+  const [categoryDragIndex, setCategoryDragIndex] = useState<number | null>(null);
+  const [categoryDropIndex, setCategoryDropIndex] = useState<number | null>(null);
+  const [categoryOrderBusy, setCategoryOrderBusy] = useState(false);
 
   const [productForm, setProductForm] = useState<ProductFormState>(() => emptyProductForm(0));
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -178,6 +220,28 @@ export default function AdminPage() {
     if (err instanceof Error) return err.message;
     return 'Unknown error';
   };
+
+  const syncOrdersNotification = useCallback((list: OrderApi[], tab: AdminTab) => {
+    if (tab === 'Orders') {
+      setOrdersSeenWatermark(list);
+      setUnseenOrderIds(new Set());
+      return;
+    }
+    let seenAt = getOrdersSeenAtMs();
+    if (seenAt === null) {
+      setOrdersSeenWatermark(list);
+      seenAt = getOrdersSeenAtMs();
+    }
+    setUnseenOrderIds(collectUnseenOrderIds(list, seenAt));
+  }, []);
+
+  const applyOrdersFromServer = useCallback(
+    (list: OrderApi[]) => {
+      setOrders(list);
+      syncOrdersNotification(list, activeAdminTabRef.current);
+    },
+    [syncOrdersNotification],
+  );
 
   const refresh = useCallback(async () => {
     if (!token) return;
@@ -228,7 +292,7 @@ export default function AdminPage() {
       setAlcoholStockInput(String(stockRes.value.alcoholStockGm ?? ''));
     }
     if (orderRes.status === 'fulfilled') {
-      setOrders(orderRes.value);
+      applyOrdersFromServer(orderRes.value);
     }
 
     setSessionError(null);
@@ -249,7 +313,7 @@ export default function AdminPage() {
     } else {
       setAdminLoadError(null);
     }
-  }, [token]);
+  }, [token, applyOrdersFromServer]);
 
   useEffect(() => {
     if (!token) return;
@@ -257,6 +321,29 @@ export default function AdminPage() {
       // Non-auth errors are surfaced through action handlers.
     });
   }, [token, refresh]);
+
+  useEffect(() => {
+    if (!token) return;
+    const pollOrders = async () => {
+      try {
+        const list = await adminListOrders(token);
+        if (tokenRef.current !== token) return;
+        applyOrdersFromServer(list);
+      } catch {
+        // Ignore background poll errors; full refresh surfaces failures.
+      }
+    };
+    const id = window.setInterval(pollOrders, ORDERS_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [token, applyOrdersFromServer]);
+
+  useEffect(() => {
+    if (activeAdminTab === 'Orders' && orders.length >= 0) {
+      syncOrdersNotification(orders, 'Orders');
+    }
+  }, [activeAdminTab, orders, syncOrdersNotification]);
+
+  const hasNewOrders = unseenOrderIds.size > 0;
 
   useEffect(() => {
     if (!token || activeAdminTab !== 'Promo codes') return;
@@ -399,7 +486,11 @@ export default function AdminPage() {
     if (!token) return;
     setBusy(true);
     try {
-      const body = { name: catName, description: catDesc || '', sortOrder: Number(catOrder) || 0 };
+      const sortOrder =
+        editingCatId != null
+          ? (categories.find(c => c.id === editingCatId)?.sortOrder ?? (Number(catOrder) || 0))
+          : categories.length;
+      const body = { name: catName, description: catDesc || '', sortOrder };
       if (editingCatId != null) {
         await adminUpdateCategory(token, editingCatId, body);
       } else {
@@ -422,6 +513,35 @@ export default function AdminPage() {
     setCatName(c.name);
     setCatDesc(c.description ?? '');
     setCatOrder(c.sortOrder);
+  };
+
+  const handleCategoryReorder = async (toIndex: number) => {
+    if (!token || categoryDragIndex === null || categoryDragIndex === toIndex) {
+      setCategoryDragIndex(null);
+      setCategoryDropIndex(null);
+      return;
+    }
+    const reordered = reorderList(categories, categoryDragIndex, toIndex).map((c, i) => ({
+      ...c,
+      sortOrder: i,
+    }));
+    const previous = categories;
+    setCategories(reordered);
+    setCategoryDragIndex(null);
+    setCategoryDropIndex(null);
+    setCategoryOrderBusy(true);
+    try {
+      const saved = await adminReorderCategories(
+        token,
+        reordered.map(c => c.id),
+      );
+      setCategories(saved);
+    } catch {
+      setCategories(previous);
+      window.alert('Could not save category order. Try again.');
+    } finally {
+      setCategoryOrderBusy(false);
+    }
   };
 
   const removeCategory = async (id: number) => {
@@ -697,35 +817,84 @@ export default function AdminPage() {
         )}
 
         <div className="mt-8 grid grid-cols-2 gap-2 rounded-lg bg-[#efe4d2] p-1 sm:grid-cols-3 lg:w-fit lg:grid-cols-7">
-          {ADMIN_TABS.map(tab => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveAdminTab(tab)}
-              className={`rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wide transition ${
-                activeAdminTab === tab ? 'bg-white text-[#3e2f1f] shadow-sm' : 'text-[#7a6b57] hover:bg-white/60'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+          {ADMIN_TABS.map(tab => {
+            const isOrdersTab = tab === 'Orders';
+            const showOrderAlert = isOrdersTab && hasNewOrders;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveAdminTab(tab)}
+                className={`relative rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wide transition ${
+                  activeAdminTab === tab ? 'bg-white text-[#3e2f1f] shadow-sm' : 'text-[#7a6b57] hover:bg-white/60'
+                } ${
+                  showOrderAlert
+                    ? 'shadow-[0_0_16px_rgba(239,68,68,0.55)] ring-2 ring-red-500/70'
+                    : ''
+                }`}
+              >
+                {tab}
+                {showOrderAlert && (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white"
+                    aria-hidden
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
 
         <div className="mt-6">
           {activeAdminTab === 'Categories' && (
             <section className="max-w-2xl">
             <h2 className="text-lg font-semibold text-[#241d14]">Categories</h2>
-            <ul className="mt-4 max-h-64 space-y-2 overflow-y-auto text-sm">
-              {categories.map(c => (
+            <p className="mt-1 text-xs text-[#7a6b57]">
+              Drag rows to set display order on the collection page (top = first).
+            </p>
+            <ul className="mt-4 max-h-80 space-y-2 overflow-y-auto text-sm">
+              {categories.map((c, index) => (
                 <li
                   key={c.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-[#dbcdb8] bg-white px-3 py-2 text-[#2a2118] shadow-sm"
+                  draggable={!categoryOrderBusy}
+                  onDragStart={() => setCategoryDragIndex(index)}
+                  onDragEnd={() => {
+                    setCategoryDragIndex(null);
+                    setCategoryDropIndex(null);
+                  }}
+                  onDragOver={e => {
+                    e.preventDefault();
+                    setCategoryDropIndex(index);
+                  }}
+                  onDragLeave={() => {
+                    setCategoryDropIndex(prev => (prev === index ? null : prev));
+                  }}
+                  onDrop={e => {
+                    e.preventDefault();
+                    void handleCategoryReorder(index);
+                  }}
+                  className={`flex items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 text-[#2a2118] shadow-sm transition ${
+                    categoryDropIndex === index && categoryDragIndex !== index
+                      ? 'border-[#8c7458] ring-2 ring-[#d7c4aa]'
+                      : 'border-[#dbcdb8]'
+                  } ${categoryDragIndex === index ? 'opacity-50' : ''} ${categoryOrderBusy ? 'pointer-events-none opacity-70' : ''}`}
                 >
-                  <span>
-                    <span className="font-medium">{c.name}</span>
-                    <span className="ml-2 text-[#7a6b57]">order {c.sortOrder}</span>
+                  <span className="flex min-w-0 flex-1 items-center gap-2">
+                    <span
+                      className="flex h-8 w-6 flex-shrink-0 cursor-grab flex-col items-center justify-center text-[#9a8b78] active:cursor-grabbing"
+                      aria-hidden
+                      title="Drag to reorder"
+                    >
+                      <span className="block h-0.5 w-3 rounded-full bg-current" />
+                      <span className="mt-0.5 block h-0.5 w-3 rounded-full bg-current" />
+                      <span className="mt-0.5 block h-0.5 w-3 rounded-full bg-current" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="font-medium">{c.name}</span>
+                      <span className="ml-2 text-[10px] text-[#7a6b57]">#{index + 1}</span>
+                    </span>
                   </span>
-                  <span className="flex gap-2">
+                  <span className="flex flex-shrink-0 gap-2">
                     <button type="button" className="text-xs font-medium text-[#5d4d3b] underline" onClick={() => editCategory(c)}>
                       Edit
                     </button>
@@ -736,6 +905,9 @@ export default function AdminPage() {
                 </li>
               ))}
             </ul>
+            {categoryOrderBusy && (
+              <p className="mt-2 text-xs text-[#7a6b57]">Saving order…</p>
+            )}
             <form onSubmit={saveCategory} className="mt-6 space-y-3 rounded-xl border border-[#dbcdb8] bg-white p-4 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-widest text-[#7a6b57]">
                 {editingCatId != null ? 'Update category' : 'New category'}
@@ -754,13 +926,12 @@ export default function AdminPage() {
                 className="w-full rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-3 py-2 text-sm text-[#251d15] outline-none focus:border-[#8c7458] focus:ring-1 focus:ring-[#d7c4aa]"
                 rows={2}
               />
-              <input
-                type="number"
-                placeholder="Sort order"
-                value={catOrder}
-                onChange={e => setCatOrder(Number(e.target.value))}
-                className="w-full rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-3 py-2 text-sm text-[#251d15] outline-none focus:border-[#8c7458] focus:ring-1 focus:ring-[#d7c4aa]"
-              />
+              {editingCatId != null && (
+                <p className="text-xs text-[#7a6b57]">
+                  Position on collection page: drag this category in the list above, or it stays at #
+                  {(categories.find(c => c.id === editingCatId)?.sortOrder ?? 0) + 1}.
+                </p>
+              )}
               <div className="flex gap-2">
                 <button
                   type="submit"
@@ -1175,18 +1346,41 @@ export default function AdminPage() {
 
           {activeAdminTab === 'Orders' && (
             <section className="space-y-4">
-              <h2 className="text-lg font-semibold text-[#241d14]">Customer Orders</h2>
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="text-lg font-semibold text-[#241d14]">Customer Orders</h2>
+                {hasNewOrders && (
+                  <span className="rounded-full bg-red-500 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-[0_0_12px_rgba(239,68,68,0.5)]">
+                    {unseenOrderIds.size} new
+                  </span>
+                )}
+              </div>
               {orders.length === 0 ? (
                 <div className="rounded-xl border border-[#dbcdb8] bg-white p-4 text-sm text-[#6b5c4b] shadow-sm">
                   No orders yet.
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {orders.map(order => (
-                    <article key={order.id} className="rounded-xl border border-[#dbcdb8] bg-white p-4 shadow-sm">
+                  {orders.map(order => {
+                    const isNewOrder = unseenOrderIds.has(order.id);
+                    return (
+                    <article
+                      key={order.id}
+                      className={`rounded-xl border bg-white p-4 shadow-sm ${
+                        isNewOrder
+                          ? 'border-red-400 shadow-[0_0_20px_rgba(239,68,68,0.2)] ring-2 ring-red-400/40'
+                          : 'border-[#dbcdb8]'
+                      }`}
+                    >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
-                          <p className="text-sm font-semibold text-[#241d14]">{order.orderNumber}</p>
+                          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-[#241d14]">
+                            {order.orderNumber}
+                            {isNewOrder && (
+                              <span className="rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
+                                New
+                              </span>
+                            )}
+                          </p>
                           <p className="text-xs text-[#6b5c4b]">
                             {order.customerName} · {order.customerEmail}
                           </p>
@@ -1221,7 +1415,8 @@ export default function AdminPage() {
                         ))}
                       </ul>
                     </article>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </section>

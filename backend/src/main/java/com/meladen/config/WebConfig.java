@@ -32,11 +32,9 @@ public class WebConfig implements WebMvcConfigurer {
     registry
         .addInterceptor(customerAuthInterceptor)
         .addPathPatterns(
-            "/api/public/orders/me",
-            "/api/public/orders",
+            "/api/public/orders/**",
             "/api/wallet/me",
-            "/public/orders/me",
-            "/public/orders",
+            "/public/orders/**",
             "/wallet/me");
   }
 }

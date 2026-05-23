@@ -2,6 +2,7 @@ package com.meladen.repository;
 
 import com.meladen.entity.CustomerOrder;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,4 +17,8 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, St
   List<CustomerOrder> findByCustomerIdWithItems(@Param("customerId") Long customerId);
 
   List<CustomerOrder> findByCustomerEmailIgnoreCaseOrderByCreatedAtDesc(String email);
+
+  @Query(
+      "SELECT DISTINCT o FROM CustomerOrder o LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.product WHERE o.id = :id")
+  Optional<CustomerOrder> findByIdWithItems(@Param("id") String id);
 }

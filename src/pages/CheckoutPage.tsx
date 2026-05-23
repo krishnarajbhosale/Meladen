@@ -34,9 +34,6 @@ export default function CheckoutPage() {
     city: '',
     postcode: '',
     country: '',
-    card: '',
-    expiry: '',
-    cvv: '',
   });
 
   const set = (key: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [key]: v }));
@@ -93,7 +90,7 @@ export default function CheckoutPage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await placePublicOrder({
+      const order = await placePublicOrder({
         firstName: form.firstName,
         lastName: form.lastName,
         email: form.email,
@@ -113,7 +110,11 @@ export default function CheckoutPage() {
         })),
       });
       clearCart();
-      navigate('/order-confirmation');
+      if (order.status === 'PAID' || order.status === 'PLACED') {
+        navigate('/order-confirmation', { state: { order } });
+      } else {
+        navigate(`/order-pending/${order.id}`, { state: { cartItems: items } });
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         navigate('/login', { state: { from: '/checkout' } });
@@ -188,27 +189,6 @@ export default function CheckoutPage() {
               </div>
               <InputField label="Country" value={form.country} onChange={set('country')} required />
             </div>
-          </motion.div>
-
-          <motion.div
-            variants={fadeUp}
-            custom={2}
-            initial="hidden"
-            animate="visible"
-            className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#101010)] p-5 lg:p-6"
-          >
-            <p className="mb-4 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Payment</p>
-            {payableTotal <= 0 ? (
-              <p className="text-sm text-emerald-400/90">Order fully covered by wallet — no card charge.</p>
-            ) : (
-              <div className="space-y-3">
-                <InputField label="Card Number" value={form.card} onChange={set('card')} required />
-                <div className="grid grid-cols-2 gap-3">
-                  <InputField label="MM / YY" value={form.expiry} onChange={set('expiry')} required />
-                  <InputField label="CVV" value={form.cvv} onChange={set('cvv')} required />
-                </div>
-              </div>
-            )}
           </motion.div>
 
           <div className="lg:hidden">

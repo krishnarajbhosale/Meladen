@@ -6,8 +6,13 @@ import com.meladen.dto.CategoryWithProductsResponse;
 import com.meladen.entity.Category;
 import com.meladen.repository.CategoryRepository;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -72,6 +77,26 @@ public class CategoryService {
     c.setSortOrder(request.sortOrder());
     c.setSlug(ensureUniqueSlug(slugify(c.getName()), c.getId()));
     return toResponse(categoryRepository.save(c));
+  }
+
+  @Transactional
+  public List<CategoryResponse> reorder(List<Long> orderedIds) {
+    List<Category> all = categoryRepository.findAllByOrderBySortOrderAscNameAsc();
+    if (orderedIds.size() != all.size()) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "orderedIds must include every category exactly once");
+    }
+    Set<Long> existing = all.stream().map(Category::getId).collect(Collectors.toSet());
+    if (!existing.equals(new HashSet<>(orderedIds))) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid category ids in orderedIds");
+    }
+    Map<Long, Category> byId =
+        all.stream().collect(Collectors.toMap(Category::getId, Function.identity()));
+    for (int i = 0; i < orderedIds.size(); i++) {
+      byId.get(orderedIds.get(i)).setSortOrder(i);
+    }
+    categoryRepository.saveAll(all);
+    return listAll();
   }
 
   @Transactional

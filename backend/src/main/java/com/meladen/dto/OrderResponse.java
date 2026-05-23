@@ -22,6 +22,8 @@ public record OrderResponse(
     BigDecimal total,
     BigDecimal alcoholUsedGm,
     String status,
+    String trackingAwb,
+    String trackingUrl,
     Instant createdAt,
     List<OrderItemResponse> items) {
 

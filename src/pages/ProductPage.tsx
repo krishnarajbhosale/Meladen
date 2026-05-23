@@ -5,10 +5,9 @@ import { products, getProductSizeAvailability, type Product } from '../data/prod
 import { useCart } from '../context/CartContext';
 import Accordion from '../components/Accordion';
 import Button from '../components/Button';
-import HorizontalProductRail from '../components/HorizontalProductRail';
 import QuantityStepper from '../components/QuantityStepper';
 import { pageVariants, fadeUp } from '../animations/variants';
-import { apiProductToProduct, fetchCategoriesWithProducts, fetchPublicProduct, fetchPublicStock } from '../api/catalog';
+import { apiProductToProduct, fetchPublicProduct, fetchPublicStock } from '../api/catalog';
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +20,6 @@ export default function ProductPage() {
   const [added, setAdded] = useState(false);
   const [selectedSizeLabel, setSelectedSizeLabel] = useState('50ml');
   const [alcoholStockGm, setAlcoholStockGm] = useState<number | null>(null);
-  const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,23 +56,6 @@ export default function ProductPage() {
         if (!cancelled) setAlcoholStockGm(stock.alcoholStockGm);
       } catch {
         if (!cancelled) setAlcoholStockGm(null);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await fetchCategoriesWithProducts();
-        if (cancelled) return;
-        const fromApi = data.flatMap(section => section.products.map(apiProductToProduct));
-        setCatalogProducts(fromApi.length > 0 ? fromApi : products);
-      } catch {
-        if (!cancelled) setCatalogProducts(products);
       }
     })();
     return () => {
@@ -134,15 +115,6 @@ export default function ProductPage() {
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
-
-  const sourceProducts = catalogProducts.length > 0 ? catalogProducts : products;
-  const normalizedCategory2 = (product.category2 ?? '').trim().toLowerCase();
-  const relatedProducts = sourceProducts
-    .filter(p => p.id !== id)
-    .filter(p => {
-      if (!normalizedCategory2) return false;
-      return (p.category2 ?? '').trim().toLowerCase() === normalizedCategory2;
-    });
 
   return (
     <motion.div variants={pageVariants} initial="hidden" animate="visible">
@@ -330,34 +302,27 @@ export default function ProductPage() {
                 15cm from skin and spray 2-3 times. Layer with our matching body lotion for longer wear.
               </p>
             </Accordion>
-            <Accordion title="Ingredients & Safety">
-              <p>
-                All Meladen fragrances are IFRA compliant and dermatologically tested. Free from
-                parabens, phthalates, and artificial colorants. Full ingredient list available on request.
-              </p>
-            </Accordion>
-            <Accordion title="Shipping & Returns">
-              <p>
-                Free shipping on orders over $150. Standard delivery takes 3-5 business days. Returns
-                accepted within 30 days of purchase for unopened items.
-              </p>
+            <Accordion title="More Information">
+              {product.moreInformation?.trim() ? (
+                <ul className="space-y-2 text-sm leading-relaxed text-brand-gray">
+                  {product.moreInformation
+                    .split(/\r?\n|,/)
+                    .map(part => part.trim())
+                    .filter(Boolean)
+                    .map(line => (
+                      <li key={line} className="flex gap-2">
+                        <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-brand-sage" aria-hidden />
+                        <span>{line}</span>
+                      </li>
+                    ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-brand-gray">No additional information available for this fragrance.</p>
+              )}
             </Accordion>
           </motion.div>
         </div>
       </div>
-
-      {relatedProducts.length > 0 && (
-        <div className="px-0 pb-16 pt-4 lg:px-12 xl:px-16">
-          <HorizontalProductRail
-            title="You May Also Like"
-            subtitle="More from the same line."
-            products={relatedProducts}
-            showViewAll={false}
-            maxProducts={50}
-            tone="dark"
-          />
-        </div>
-      )}
     </motion.div>
   );
 }

@@ -128,8 +128,22 @@ export interface OrderApi {
   total: number;
   alcoholUsedGm: number;
   status: string;
+  trackingAwb?: string | null;
+  trackingUrl?: string | null;
   createdAt: string;
   items: OrderItemApi[];
+}
+
+export interface RazorpayCheckoutApi {
+  keyId: string;
+  razorpayOrderId: string;
+  amount: number;
+  currency: string;
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string | null;
 }
 
 export interface PromoCodeRow {

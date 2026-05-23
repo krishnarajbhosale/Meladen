@@ -77,6 +77,21 @@ public class CustomerOrder {
   @Column(nullable = false, length = 64)
   private String status;
 
+  @Column(name = "razorpay_order_id", length = 128)
+  private String razorpayOrderId;
+
+  @Column(name = "razorpay_payment_id", length = 128)
+  private String razorpayPaymentId;
+
+  @Column(name = "shiprocket_order_id", length = 128)
+  private String shiprocketOrderId;
+
+  @Column(name = "tracking_awb", length = 128)
+  private String trackingAwb;
+
+  @Column(name = "tracking_url", length = 512)
+  private String trackingUrl;
+
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 

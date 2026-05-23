@@ -75,12 +75,12 @@ export default function CartPage() {
           </motion.div>
         ) : (
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-10">
-            <section className="space-y-4">
-              <div className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#101010)] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.24)]">
-                <div className="mb-4 flex items-start justify-between gap-4">
+            <section className="space-y-5">
+              <div className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#101010)] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.24)] lg:p-6">
+                <div className="mb-2 flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-brand-gray">Shopping Bag</p>
-                    <h1 className="mt-2 font-serif text-3xl text-brand-dark lg:text-4xl">Review Your Selection</h1>
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-brand-gray">Shopping Bag</p>
+                    <h1 className="mt-2 font-serif text-2xl text-brand-dark lg:text-3xl">Review Your Selection</h1>
                   </div>
                   <button
                     onClick={() => navigate('/collection')}
@@ -101,12 +101,12 @@ export default function CartPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
                     transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1], delay: i * 0.04 }}
-                    className="rounded-[1.75rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#101010)] p-4 shadow-[0_20px_40px_rgba(0,0,0,0.18)] lg:p-5"
+                    className="rounded-[1.75rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#101010)] p-5 shadow-[0_20px_40px_rgba(0,0,0,0.18)] lg:p-6"
                   >
                     <div className="flex gap-4 lg:gap-5">
                       <button
                         type="button"
-                        className="h-28 w-24 flex-shrink-0 overflow-hidden rounded-2xl border border-[#262626] bg-[#121212] transition-transform hover:scale-[1.02] lg:h-32 lg:w-28"
+                        className="h-24 w-20 flex-shrink-0 overflow-hidden rounded-xl border border-[#262626] bg-[#121212] transition-transform hover:scale-[1.02] lg:h-28 lg:w-24"
                         onClick={() => navigate(`/product/${item.product.id}`)}
                       >
                         <img
@@ -118,11 +118,11 @@ export default function CartPage() {
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="mb-1 text-[10px] uppercase tracking-[0.2em] text-brand-gray">
+                          <div className="min-w-0">
+                            <p className="mb-1 text-[9px] uppercase tracking-[0.18em] text-brand-gray">
                               {item.product.category}
                             </p>
-                            <p className="font-serif text-lg leading-tight text-brand-dark">{item.product.name}</p>
+                            <p className="font-serif text-sm leading-snug text-brand-dark lg:text-base">{item.product.name}</p>
                           </div>
                           <button
                             type="button"
@@ -136,26 +136,27 @@ export default function CartPage() {
                           </button>
                         </div>
 
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                          <span className="rounded-full border border-[#3a3121] bg-[#181512] px-2.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-brand-dark">
+                        <div className="mt-4 flex flex-wrap items-center gap-1.5">
+                          <span className="rounded-full border border-[#3a3121] bg-[#181512] px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-brand-dark">
                             {item.size}
                           </span>
-                          <span className="rounded-full border border-[#2b2b2b] px-3 py-1 text-[11px] text-brand-gray">
+                          <span className="rounded-full border border-[#2b2b2b] px-2 py-0.5 text-[9px] text-brand-gray">
                             ${item.unitPrice.toFixed(0)} each
                           </span>
                         </div>
 
                         <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                           <div>
-                            <p className="mb-2 text-[10px] uppercase tracking-[0.18em] text-brand-gray">Quantity</p>
+                            <p className="mb-2 text-[9px] uppercase tracking-[0.16em] text-brand-gray">Quantity</p>
                             <QuantityStepper
+                              compact
                               value={item.quantity}
                               onChange={v => updateQty(item.product.id, item.size, v)}
                             />
                           </div>
                           <div className="text-left sm:text-right">
-                            <p className="text-[10px] uppercase tracking-[0.18em] text-brand-gray">Item Total</p>
-                            <p className="mt-1 font-serif text-2xl text-brand-dark">
+                            <p className="text-[9px] uppercase tracking-[0.16em] text-brand-gray">Item Total</p>
+                            <p className="mt-0.5 font-serif text-lg text-brand-dark">
                               ${(item.unitPrice * item.quantity).toFixed(0)}
                             </p>
                           </div>
@@ -168,16 +169,16 @@ export default function CartPage() {
             </section>
 
             <aside className="lg:sticky lg:top-24 lg:self-start">
-              <div className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#0f0f0f)] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.24)]">
-                <p className="text-[10px] uppercase tracking-[0.22em] text-brand-gray">Order Summary</p>
+              <div className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#0f0f0f)] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.24)] lg:p-6">
+                <p className="text-[9px] uppercase tracking-[0.2em] text-brand-gray">Order Summary</p>
 
-                <div className="mt-5 space-y-4 rounded-2xl border border-[#262626] bg-[#141414] p-4">
-                  <div className="flex justify-between text-sm text-brand-gray">
+                <div className="mt-4 space-y-3 rounded-2xl border border-[#262626] bg-[#141414] p-4">
+                  <div className="flex justify-between text-xs text-brand-gray">
                     <span>Subtotal</span>
                     <span>${total.toFixed(0)}</span>
                   </div>
                   <div className="h-px bg-[#262626]" />
-                  <div className="flex justify-between text-base font-medium text-brand-dark">
+                  <div className="flex justify-between text-sm font-medium text-brand-dark">
                     <span>Total</span>
                     <span>${total.toFixed(0)}</span>
                   </div>

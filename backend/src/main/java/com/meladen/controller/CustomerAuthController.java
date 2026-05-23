@@ -1,8 +1,10 @@
 package com.meladen.controller;
 
 import com.meladen.service.CustomerAuthService;
+import com.meladen.service.OrderMailService;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -23,6 +25,7 @@ public class CustomerAuthController {
   private static final Logger log = LoggerFactory.getLogger(CustomerAuthController.class);
 
   private final CustomerAuthService customerAuthService;
+  private final OrderMailService orderMailService;
 
   @Value("${meladen.auth.expose-dev-otp:true}")
   private boolean exposeDevOtp;
@@ -67,24 +70,38 @@ public class CustomerAuthController {
       return ResponseEntity.badRequest()
           .body(Map.of("success", false, "message", "Email is required"));
     }
-    String otp = customerAuthService.createAndStoreOtp(request.getEmail());
-    log.warn("Meladen customer OTP for {}: {} (expires in 5 min)", request.getEmail().trim(), otp);
+    String email = request.getEmail().trim();
+    String otp = customerAuthService.createAndStoreOtp(email);
+    boolean emailed = orderMailService.sendLoginOtpEmail(email, otp);
+
+    if (emailed) {
+      Map<String, Object> body = new LinkedHashMap<>();
+      body.put("success", true);
+      body.put("message", "We sent a sign-in code to your email. It expires in 5 minutes.");
+      if (exposeDevOtp) {
+        body.put("devOtp", otp);
+      }
+      return ResponseEntity.ok(body);
+    }
+
+    log.warn("Meladen customer OTP for {}: {} (email not sent; expires in 5 min)", email, otp);
     if (exposeDevOtp) {
       return ResponseEntity.ok(
           Map.of(
               "success",
               true,
               "message",
-              "Use the dev OTP below. Configure SMTP later for production.",
+              "Email could not be sent. Use the dev OTP below (check MELADEN_MAIL_PASSWORD).",
               "devOtp",
               otp));
     }
-    return ResponseEntity.ok(
-        Map.of(
-            "success",
-            true,
-            "message",
-            "If email delivery is configured, a code was sent. Otherwise check server logs for OTP."));
+    return ResponseEntity.status(503)
+        .body(
+            Map.of(
+                "success",
+                false,
+                "message",
+                "Could not send sign-in code. Please try again in a moment."));
   }
 
   @PostMapping("/verify-otp")

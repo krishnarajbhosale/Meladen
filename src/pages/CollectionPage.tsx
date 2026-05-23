@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProductSizeAvailability, products } from '../data/products';
 import { meladen12 } from '../data/meladenImages';
@@ -8,6 +8,7 @@ import { pageVariants, fadeUp } from '../animations/variants';
 import { apiProductToProduct, fetchCategoriesWithProducts, fetchPublicStock } from '../api/catalog';
 import type { CategoryWithProductsApi } from '../api/types';
 import type { Product } from '../data/products';
+import { slugifyCategoryName } from '../data/collections';
 
 const CONCENTRATIONS = ['Eau de Parfum', 'Extrait de Parfum', 'Eau de Toilette'];
 const FAMILIES = ['Woody', 'Floral', 'Citrus', 'Oriental'];
@@ -23,6 +24,7 @@ type CatalogSection = {
 
 export default function CollectionPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { addToCart } = useCart();
 
   const [apiCatalog, setApiCatalog] = useState<CategoryWithProductsApi[] | null>(null);
@@ -157,6 +159,24 @@ export default function CollectionPage() {
     setPage(1);
   }, [selectedConc, selectedFamily, maxPrice, sort, useApiLayout]);
 
+  useEffect(() => {
+    const hash = decodeURIComponent(location.hash.replace(/^#/, '')).toLowerCase();
+    if (!hash || catalogLoading || filteredSections.length === 0) return;
+
+    const match = filteredSections.find(s => slugifyCategoryName(s.title) === hash);
+    if (!match) return;
+
+    const scrollToSection = () => {
+      const el = document.getElementById(`category-${hash}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+
+    const t = window.setTimeout(scrollToSection, 120);
+    return () => window.clearTimeout(t);
+  }, [location.hash, catalogLoading, filteredSections]);
+
   const renderProductCard = (p: Product, i: number) => {
     const availability = getProductSizeAvailability(p, alcoholStockGm);
     const firstAvailable = availability.find(size => size.available);
@@ -263,7 +283,7 @@ export default function CollectionPage() {
         )}
       </div>
 
-      <div className="sticky top-16 z-30 bg-brand-cream/95 backdrop-blur-sm border-b border-brand-beige px-5 lg:px-10 xl:px-16 py-3 flex items-center justify-between gap-4">
+      <div className="border-b border-brand-beige bg-brand-cream px-5 py-3 lg:px-10 xl:px-16 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-wrap">
           {selectedConc.map(c => (
             <span key={c} className="flex items-center gap-1 text-[10px] bg-brand-dark text-brand-cream rounded-full px-3 py-1">
@@ -309,8 +329,10 @@ export default function CollectionPage() {
           <p className="text-[11px] text-brand-gray mb-2">{filteredFlat.length} products</p>
 
           {useApiLayout
-            ? filteredSections.map(section => (
-                <section key={section.key}>
+            ? filteredSections.map(section => {
+                const sectionSlug = slugifyCategoryName(section.title);
+                return (
+                <section key={section.key} id={`category-${sectionSlug}`} className="scroll-mt-28">
                   <div className="mb-6 border-b border-brand-beige pb-4">
                     <h2 className="font-serif text-2xl lg:text-3xl font-medium text-brand-dark">{section.title}</h2>
                     {section.description && (
@@ -323,9 +345,12 @@ export default function CollectionPage() {
                     </AnimatePresence>
                   </motion.div>
                 </section>
-              ))
-            : filteredSections.map(section => (
-                <section key={section.key}>
+                );
+              })
+            : filteredSections.map(section => {
+                const sectionSlug = slugifyCategoryName(section.title);
+                return (
+                <section key={section.key} id={`category-${sectionSlug}`} className="scroll-mt-28">
                   <div className="mb-6 border-b border-brand-beige pb-4">
                     <h2 className="font-serif text-2xl lg:text-3xl font-medium text-brand-dark">{section.title}</h2>
                   </div>
@@ -337,7 +362,8 @@ export default function CollectionPage() {
                     </AnimatePresence>
                   </motion.div>
                 </section>
-              ))}
+                );
+              })}
 
           {!useApiLayout && totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-12">

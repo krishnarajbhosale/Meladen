@@ -78,6 +78,9 @@ public class CustomerAuthInterceptor implements HandlerInterceptor {
           || path.equals("/public/orders/me/")) {
         return true;
       }
+      if (isCustomerOrderDetailPath(path)) {
+        return true;
+      }
       if (path.equals("/api/wallet/me")
           || path.equals("/api/wallet/me/")
           || path.equals("/wallet/me")
@@ -92,7 +95,32 @@ public class CustomerAuthInterceptor implements HandlerInterceptor {
           || path.equals("/public/orders/")) {
         return true;
       }
+      if (isCustomerOrderPaymentPath(path)) {
+        return true;
+      }
     }
     return false;
+  }
+
+  /** GET /api/public/orders/{uuid} — not /me */
+  private static boolean isCustomerOrderDetailPath(String path) {
+    if (path.startsWith("/api/public/orders/")) {
+      String rest = path.substring("/api/public/orders/".length()).replaceAll("/$", "");
+      return !rest.isEmpty() && !rest.equals("me") && !rest.contains("/");
+    }
+    if (path.startsWith("/public/orders/")) {
+      String rest = path.substring("/public/orders/".length()).replaceAll("/$", "");
+      return !rest.isEmpty() && !rest.equals("me") && !rest.contains("/");
+    }
+    return false;
+  }
+
+  private static boolean isCustomerOrderPaymentPath(String path) {
+    return path.matches("/api/public/orders/[^/]+/razorpay-checkout/?")
+      || path.matches("/api/public/orders/[^/]+/verify-payment/?")
+      || path.matches("/api/public/orders/[^/]+/complete-wallet/?")
+      || path.matches("/public/orders/[^/]+/razorpay-checkout/?")
+      || path.matches("/public/orders/[^/]+/verify-payment/?")
+      || path.matches("/public/orders/[^/]+/complete-wallet/?");
   }
 }

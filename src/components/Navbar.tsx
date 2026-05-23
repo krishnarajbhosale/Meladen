@@ -110,8 +110,8 @@ export default function Navbar() {
   return (
     <>
       <motion.header
-        className={`sticky top-0 z-50 transition-all duration-400 ${
-          scrolled ? 'bg-[#0a0a0a]/95 backdrop-blur-md shadow-[0_1px_12px_rgba(0,0,0,0.4)]' : 'bg-[#0f0f0f]/90 backdrop-blur-sm'
+        className={`sticky top-0 z-50 bg-black transition-all duration-400 ${
+          scrolled ? 'shadow-[0_1px_12px_rgba(0,0,0,0.5)]' : ''
         }`}
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: headerVisible ? 1 : 0.98, y: headerVisible ? 0 : -108 }}
@@ -240,7 +240,7 @@ export default function Navbar() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
-              className="border-t border-brand-beige/40 px-5 pb-3 pt-2 lg:hidden"
+              className="border-t border-brand-beige/30 bg-black px-5 pb-3 pt-2 lg:hidden"
             >
               <div className="relative">
                 <input
@@ -295,7 +295,7 @@ export default function Navbar() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ duration: 0.35, ease: 'easeOut' }}
-              className="fixed left-0 top-0 z-50 flex h-full w-[75%] max-w-[300px] flex-col bg-[#111111] px-8 py-10 lg:hidden"
+              className="fixed left-0 top-0 z-50 flex h-full w-[75%] max-w-[300px] flex-col bg-black px-8 py-10 lg:hidden"
             >
               <button className="mb-10 self-end text-brand-gray" onClick={() => setMenuOpen(false)} aria-label="Close menu">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">

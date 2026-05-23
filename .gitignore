@@ -26,3 +26,5 @@ dist-ssr
 # Java / Spring (local H2 + Maven output)
 backend/target
 backend/data
+backend/application-local.properties
+backend/application.properties

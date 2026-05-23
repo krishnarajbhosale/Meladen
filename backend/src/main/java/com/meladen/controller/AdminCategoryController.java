@@ -1,5 +1,6 @@
 package com.meladen.controller;
 
+import com.meladen.dto.CategoryReorderRequest;
 import com.meladen.dto.CategoryRequest;
 import com.meladen.dto.CategoryResponse;
 import com.meladen.service.CategoryService;
@@ -30,6 +31,11 @@ public class AdminCategoryController {
   @PostMapping
   public CategoryResponse create(@Valid @RequestBody CategoryRequest request) {
     return categoryService.create(request);
+  }
+
+  @PutMapping("/reorder")
+  public List<CategoryResponse> reorder(@Valid @RequestBody CategoryReorderRequest request) {
+    return categoryService.reorder(request.orderedIds());
   }
 
   @PutMapping("/{id}")

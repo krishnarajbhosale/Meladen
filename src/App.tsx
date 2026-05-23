@@ -9,6 +9,7 @@ import ProductPage from './pages/ProductPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
+import OrderPendingPage from './pages/OrderPendingPage';
 import CollectionPage from './pages/CollectionPage';
 import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="/product/:id" element={<ProductPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/order-pending/:orderId" element={<OrderPendingPage />} />
           <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/account" element={<AccountOrdersPage />} />

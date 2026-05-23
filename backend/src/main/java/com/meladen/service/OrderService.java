@@ -1,7 +1,9 @@
 package com.meladen.service;
 
 import com.meladen.dto.OrderResponse;
+import com.meladen.dto.PaymentVerifyRequest;
 import com.meladen.dto.PlaceOrderRequest;
+import com.meladen.dto.RazorpayCheckoutResponse;
 import com.meladen.dto.StockSummaryResponse;
 import com.meladen.dto.StockUpdateRequest;
 import com.meladen.entity.CustomerOrder;
@@ -39,9 +41,144 @@ public class OrderService {
   private final CustomerOrderRepository orderRepository;
   private final PromoCodeService promoCodeService;
   private final WalletService walletService;
+  private final OrderMailService orderMailService;
+  private final RazorpayService razorpayService;
+  private final ShiprocketService shiprocketService;
 
   @Transactional
   public OrderResponse placeOrder(PlaceOrderRequest request, Long customerIdOrNull) {
+    if (request.items() == null || request.items().isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order items are required");
+    }
+
+    ComputedOrder computed = computeOrder(request, customerIdOrNull);
+    List<ResolvedOrderItem> resolved = computed.resolved();
+    BigDecimal totalAlcoholRequired = computed.totalAlcoholRequired();
+
+    CustomerOrder order = buildOrderEntity(request, customerIdOrNull, computed);
+    List<CustomerOrderItem> items = new ArrayList<>();
+    for (ResolvedOrderItem row : resolved) {
+      CustomerOrderItem oi = new CustomerOrderItem();
+      oi.setOrder(order);
+      oi.setProduct(row.product());
+      oi.setProductName(row.product().getMeladenFragrance());
+      oi.setSizeLabel(row.recipe().label());
+      oi.setQuantity(row.item().quantity());
+      oi.setUnitPrice(row.item().unitPrice().setScale(2, RoundingMode.HALF_UP));
+      oi.setLineTotal(row.lineTotal());
+      oi.setOilUsedGm(row.oilUsedGm().setScale(2, RoundingMode.HALF_UP));
+      oi.setAlcoholUsedGm(row.alcoholUsedGm().setScale(2, RoundingMode.HALF_UP));
+      items.add(oi);
+    }
+    order.setItems(items);
+    order.setAlcoholUsedGm(totalAlcoholRequired.setScale(2, RoundingMode.HALF_UP));
+    order.setStatus("PAYMENT_PENDING");
+
+    CustomerOrder savedOrder = orderRepository.save(order);
+    orderMailService.sendOrderPendingEmail(savedOrder);
+
+    if (computed.finalTotal().compareTo(BigDecimal.ZERO) <= 0) {
+      return completeOrderWithoutRazorpay(savedOrder.getId(), customerIdOrNull);
+    }
+    return toOrderResponse(savedOrder);
+  }
+
+  @Transactional(readOnly = true)
+  public OrderResponse getOrderForCustomer(String orderId, Long customerId) {
+    CustomerOrder order = loadOwnedOrder(orderId, customerId);
+    return toOrderResponse(order);
+  }
+
+  @Transactional
+  public RazorpayCheckoutResponse createRazorpayCheckout(String orderId, Long customerId) {
+    CustomerOrder order = loadOwnedOrder(orderId, customerId);
+    if (!"PAYMENT_PENDING".equals(order.getStatus())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order is not awaiting payment");
+    }
+    if (order.getTotal().compareTo(BigDecimal.ZERO) <= 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No payment required for this order");
+    }
+    String razorpayOrderId = razorpayService.createOrder(order.getOrderNumber(), order.getTotal());
+    order.setRazorpayOrderId(razorpayOrderId);
+    orderRepository.save(order);
+    return new RazorpayCheckoutResponse(
+        razorpayService.getKeyId(),
+        razorpayOrderId,
+        order.getTotal(),
+        "INR",
+        order.getId(),
+        order.getOrderNumber(),
+        order.getCustomerName(),
+        order.getCustomerEmail(),
+        order.getCustomerPhone());
+  }
+
+  @Transactional
+  public OrderResponse verifyPayment(String orderId, Long customerId, PaymentVerifyRequest body) {
+    CustomerOrder order = loadOwnedOrder(orderId, customerId);
+    if ("PAID".equals(order.getStatus()) || "PLACED".equals(order.getStatus())) {
+      return toOrderResponse(order);
+    }
+    if (!"PAYMENT_PENDING".equals(order.getStatus())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order cannot be paid");
+    }
+    if (order.getRazorpayOrderId() == null
+        || !order.getRazorpayOrderId().equals(body.razorpayOrderId())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment order mismatch");
+    }
+    if (!razorpayService.verifySignature(
+        body.razorpayOrderId(), body.razorpayPaymentId(), body.razorpaySignature())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid payment signature");
+    }
+    order.setRazorpayPaymentId(body.razorpayPaymentId());
+    return finalizePaidOrder(order, customerId);
+  }
+
+  @Transactional
+  public OrderResponse completeOrderWithoutRazorpay(String orderId, Long customerId) {
+    CustomerOrder order = loadOwnedOrder(orderId, customerId);
+    if ("PAID".equals(order.getStatus()) || "PLACED".equals(order.getStatus())) {
+      return toOrderResponse(order);
+    }
+    if (!"PAYMENT_PENDING".equals(order.getStatus())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order cannot be completed");
+    }
+    if (order.getTotal().compareTo(BigDecimal.ZERO) > 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment is required");
+    }
+    return finalizePaidOrder(order, customerId);
+  }
+
+  private OrderResponse finalizePaidOrder(CustomerOrder order, Long customerId) {
+    PlaceOrderRequest snapshot = orderToSnapshotRequest(order);
+    ComputedOrder computed = computeOrder(snapshot, customerId);
+    applyInventory(computed);
+
+    if (computed.walletUse().compareTo(BigDecimal.ZERO) > 0 && customerId != null) {
+      walletService.debitForOrder(customerId, order.getId(), computed.walletUse());
+    }
+
+    order.setStatus("PAID");
+    shiprocketService.createShipmentForOrder(order);
+    CustomerOrder saved = orderRepository.save(order);
+    orderMailService.sendOrderConfirmedEmail(saved);
+    return toOrderResponse(saved);
+  }
+
+  private void applyInventory(ComputedOrder computed) {
+    InventoryStock stock = getOrCreateStock();
+    for (ResolvedOrderItem row : computed.resolved()) {
+      Product p = row.product();
+      p.setProductOil(p.getProductOil().subtract(row.oilUsedGm()).setScale(2, RoundingMode.HALF_UP));
+    }
+    stock.setAlcoholStockGm(
+        stock.getAlcoholStockGm().subtract(computed.totalAlcoholRequired()).setScale(2, RoundingMode.HALF_UP));
+    stock.setUpdatedAt(Instant.now());
+    productRepository.saveAll(computed.resolved().stream().map(ResolvedOrderItem::product).toList());
+    stockRepository.save(stock);
+  }
+
+  private ComputedOrder computeOrder(PlaceOrderRequest request, Long customerIdOrNull) {
     if (request.items() == null || request.items().isEmpty()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order items are required");
     }
@@ -82,13 +219,6 @@ public class OrderService {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient alcohol stock");
     }
 
-    for (ResolvedOrderItem row : resolved) {
-      Product p = row.product();
-      p.setProductOil(p.getProductOil().subtract(row.oilUsedGm()).setScale(2, RoundingMode.HALF_UP));
-    }
-    stock.setAlcoholStockGm(stock.getAlcoholStockGm().subtract(totalAlcoholRequired).setScale(2, RoundingMode.HALF_UP));
-    stock.setUpdatedAt(Instant.now());
-
     BigDecimal discount = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     String appliedPromo = null;
     if (request.promoCode() != null && !request.promoCode().isBlank()) {
@@ -110,6 +240,19 @@ public class OrderService {
     BigDecimal finalTotal =
         preWalletTotal.subtract(walletUse).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
 
+    return new ComputedOrder(
+        resolved,
+        subtotal.setScale(2, RoundingMode.HALF_UP),
+        discount,
+        appliedPromo,
+        shipping.setScale(2, RoundingMode.HALF_UP),
+        walletUse,
+        finalTotal,
+        totalAlcoholRequired.setScale(2, RoundingMode.HALF_UP));
+  }
+
+  private CustomerOrder buildOrderEntity(
+      PlaceOrderRequest request, Long customerIdOrNull, ComputedOrder computed) {
     CustomerOrder order = new CustomerOrder();
     order.setId(UUID.randomUUID().toString());
     order.setOrderNumber("MLD-" + System.currentTimeMillis());
@@ -120,42 +263,60 @@ public class OrderService {
     order.setCity(request.city().trim());
     order.setPostcode(request.postcode().trim());
     order.setCountry(request.country().trim());
-    order.setSubtotal(subtotal.setScale(2, RoundingMode.HALF_UP));
-    order.setDiscountAmount(discount);
-    order.setPromoCode(appliedPromo);
+    order.setSubtotal(computed.subtotal());
+    order.setDiscountAmount(computed.discount());
+    order.setPromoCode(computed.promoCode());
     if (customerIdOrNull != null) {
       order.setCustomerId(customerIdOrNull);
     }
-    order.setShipping(shipping.setScale(2, RoundingMode.HALF_UP));
-    order.setWalletDiscount(walletUse);
-    order.setTotal(finalTotal);
-    order.setAlcoholUsedGm(totalAlcoholRequired.setScale(2, RoundingMode.HALF_UP));
-    order.setStatus("PLACED");
+    order.setShipping(computed.shipping());
+    order.setWalletDiscount(computed.walletUse());
+    order.setTotal(computed.finalTotal());
     order.setCreatedAt(Instant.now());
+    return order;
+  }
 
-    List<CustomerOrderItem> items = new ArrayList<>();
-    for (ResolvedOrderItem row : resolved) {
-      CustomerOrderItem oi = new CustomerOrderItem();
-      oi.setOrder(order);
-      oi.setProduct(row.product());
-      oi.setProductName(row.product().getMeladenFragrance());
-      oi.setSizeLabel(row.recipe().label());
-      oi.setQuantity(row.item().quantity());
-      oi.setUnitPrice(row.item().unitPrice().setScale(2, RoundingMode.HALF_UP));
-      oi.setLineTotal(row.lineTotal());
-      oi.setOilUsedGm(row.oilUsedGm().setScale(2, RoundingMode.HALF_UP));
-      oi.setAlcoholUsedGm(row.alcoholUsedGm().setScale(2, RoundingMode.HALF_UP));
-      items.add(oi);
+  private CustomerOrder loadOwnedOrder(String orderId, Long customerId) {
+    if (customerId == null) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in required");
     }
-    order.setItems(items);
+    CustomerOrder order =
+        orderRepository
+            .findByIdWithItems(orderId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+    if (order.getCustomerId() == null || !order.getCustomerId().equals(customerId)) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your order");
+    }
+    return order;
+  }
 
-    productRepository.saveAll(resolved.stream().map(ResolvedOrderItem::product).toList());
-    stockRepository.save(stock);
-    CustomerOrder savedOrder = orderRepository.save(order);
-    if (walletUse.compareTo(BigDecimal.ZERO) > 0 && customerIdOrNull != null) {
-      walletService.debitForOrder(customerIdOrNull, savedOrder.getId(), walletUse);
-    }
-    return toOrderResponse(savedOrder);
+  private static PlaceOrderRequest orderToSnapshotRequest(CustomerOrder order) {
+    List<PlaceOrderRequest.OrderItemRequest> items =
+        order.getItems().stream()
+            .map(
+                i ->
+                    new PlaceOrderRequest.OrderItemRequest(
+                        i.getProduct().getId(),
+                        i.getSizeLabel(),
+                        i.getQuantity(),
+                        i.getUnitPrice()))
+            .toList();
+    String[] parts = order.getCustomerName().split(" ", 2);
+    String first = parts.length > 0 ? parts[0] : order.getCustomerName();
+    String last = parts.length > 1 ? parts[1] : "";
+    return new PlaceOrderRequest(
+        first,
+        last,
+        order.getCustomerEmail(),
+        order.getCustomerPhone(),
+        order.getAddress(),
+        order.getCity(),
+        order.getPostcode(),
+        order.getCountry(),
+        items,
+        order.getPromoCode(),
+        order.getWalletDiscount(),
+        order.getTotal());
   }
 
   private BigDecimal resolveWalletDiscount(
@@ -263,6 +424,8 @@ public class OrderService {
         o.getTotal(),
         o.getAlcoholUsedGm(),
         o.getStatus(),
+        o.getTrackingAwb(),
+        o.getTrackingUrl(),
         o.getCreatedAt(),
         o.getItems().stream()
             .map(
@@ -315,4 +478,14 @@ public class OrderService {
       BigDecimal lineTotal,
       BigDecimal oilUsedGm,
       BigDecimal alcoholUsedGm) {}
+
+  private record ComputedOrder(
+      List<ResolvedOrderItem> resolved,
+      BigDecimal subtotal,
+      BigDecimal discount,
+      String promoCode,
+      BigDecimal shipping,
+      BigDecimal walletUse,
+      BigDecimal finalTotal,
+      BigDecimal totalAlcoholRequired) {}
 }
