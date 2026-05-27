@@ -110,14 +110,14 @@ export default function Navbar() {
   return (
     <>
       <motion.header
-        className={`sticky top-0 z-50 bg-black transition-all duration-400 ${
-          scrolled ? 'shadow-[0_1px_12px_rgba(0,0,0,0.5)]' : ''
-        }`}
+        className={`sticky top-0 z-50 overflow-visible bg-black transition-all duration-400 ${
+          mobileSearchOpen ? 'z-[100]' : ''
+        } ${scrolled ? 'shadow-[0_1px_12px_rgba(0,0,0,0.5)]' : ''}`}
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: headerVisible ? 1 : 0.98, y: headerVisible ? 0 : -108 }}
         transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:grid lg:grid-cols-[auto_1fr_auto] lg:gap-8 lg:px-10">
+        <div className="mx-auto grid h-16 max-w-7xl grid-cols-[2.5rem_1fr_auto] items-center gap-2 px-5 lg:grid-cols-[auto_1fr_auto] lg:gap-8 lg:px-10">
           <button
             className="flex h-8 w-8 flex-col items-center justify-center gap-1.5 lg:hidden"
             onClick={() => setMenuOpen(true)}
@@ -129,9 +129,9 @@ export default function Navbar() {
 
           <Link
             to="/"
-            className={`absolute left-1/2 flex -translate-x-1/2 items-center justify-center overflow-hidden transition-all duration-200 ${
-              mobileSearchOpen ? 'h-12 w-32' : 'h-[4.5rem] w-48'
-            } lg:static lg:h-20 lg:w-56 lg:translate-x-0 lg:justify-self-start`}
+            className={`col-start-2 row-start-1 flex items-center justify-center justify-self-center overflow-hidden transition-all duration-200 ${
+              mobileSearchOpen ? 'h-10 w-28' : 'h-12 w-32'
+            } lg:col-start-1 lg:row-start-1 lg:h-20 lg:w-56 lg:justify-self-start`}
             aria-label="Meladen home"
           >
             <AutoplayVideo
@@ -141,7 +141,7 @@ export default function Navbar() {
             />
           </Link>
 
-          <nav className="hidden items-center justify-center gap-9 lg:flex">
+          <nav className="col-span-3 hidden items-center justify-center gap-9 lg:col-span-1 lg:col-start-2 lg:flex">
             {navLinks.map(link => (
               <Link
                 key={link.label}
@@ -153,7 +153,7 @@ export default function Navbar() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2 lg:justify-self-end">
+          <div className="relative z-30 col-start-3 row-start-1 flex items-center gap-2 lg:justify-self-end">
             <div className="relative hidden lg:block">
               <input
                 type="search"
@@ -240,7 +240,7 @@ export default function Navbar() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
-              className="border-t border-brand-beige/30 bg-black px-5 pb-3 pt-2 lg:hidden"
+              className="relative z-[60] border-t border-brand-beige/30 bg-black px-5 pb-3 pt-2 lg:hidden"
             >
               <div className="relative">
                 <input
@@ -251,7 +251,7 @@ export default function Navbar() {
                   className="w-full rounded-full border border-brand-beige/80 bg-[#0f0f0f]/80 px-3 py-2 text-xs text-brand-dark outline-none transition-colors placeholder:text-brand-gray focus:border-brand-dark"
                 />
                 {searchQuery.trim() && (
-                  <div className="absolute left-0 right-0 top-11 z-50 max-h-80 overflow-y-auto rounded-xl border border-brand-beige bg-[#111111] p-2 shadow-xl">
+                  <div className="fixed inset-x-4 top-[7.25rem] z-[100] max-h-[min(20rem,calc(100vh-8rem))] overflow-y-auto rounded-xl border border-brand-beige bg-[#111111] p-2 shadow-xl">
                     {searchResults.length > 0 ? (
                       searchResults.map(item => (
                         <button

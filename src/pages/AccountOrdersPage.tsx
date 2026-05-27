@@ -219,6 +219,21 @@ export default function AccountOrdersPage() {
                   Return or exchange
                 </Link>
                 <Link
+                  to={order.trackingUrl ? `/track/${encodeURIComponent(order.id)}` : '#'}
+                  onClick={e => {
+                    if (!order.trackingUrl) e.preventDefault();
+                  }}
+                  aria-disabled={!order.trackingUrl}
+                  className={`inline-flex min-h-[44px] items-center justify-center rounded-full border-2 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+                    order.trackingUrl
+                      ? 'border-emerald-500/55 text-emerald-200 hover:border-emerald-300 hover:text-emerald-100'
+                      : 'border-[#2a2a2a] text-brand-gray opacity-60'
+                  }`}
+                  title={order.trackingUrl ? 'Track on Shiprocket' : 'Tracking not available yet'}
+                >
+                  Track order
+                </Link>
+                <Link
                   to="/collection"
                   className="inline-flex min-h-[44px] items-center justify-center rounded-full border-2 border-[#b8b3ac]/50 bg-transparent px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e8e4dc] transition-colors hover:border-gold hover:text-gold"
                 >

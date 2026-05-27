@@ -83,6 +83,7 @@ export interface ProductAdminApi {
   tag: string | null;
   isNew: boolean;
   isBestseller: boolean;
+  archived: boolean;
 }
 
 export interface StockLowOilProductApi {

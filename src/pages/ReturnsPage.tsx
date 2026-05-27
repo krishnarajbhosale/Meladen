@@ -176,11 +176,11 @@ export default function ReturnsPage() {
         animate="visible"
         className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#101010)] p-5 lg:p-6"
       >
-        <p className="mb-4 text-[10px] uppercase tracking-[0.2em] text-brand-gray">
+        <p className="mb-4 text-[10px] uppercase tracking-[0.2em] text-white">
           Return or exchange
         </p>
-        <p className="mb-6 text-xs text-brand-gray">
-          The order id must match an order placed with the same email. A <strong className="text-[#c9a84c]">video</strong>{' '}
+        <p className="mb-6 text-xs text-white">
+          The order id must match an order placed with the same email. A <strong className="font-semibold text-white">video</strong>{' '}
           showing the problem is required—we cannot process a return without it. Sign in to pre-fill recent orders.
         </p>
 

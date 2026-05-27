@@ -5,8 +5,13 @@ import com.meladen.entity.CustomerOrder;
 import com.meladen.entity.CustomerOrderItem;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -16,57 +21,91 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class OrderMailService {
 
+  private static final DateTimeFormatter ORDER_DATE_FMT =
+      DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH).withZone(ZoneId.of("Asia/Kolkata"));
+
   private final JavaMailSender mailSender;
   private final MeladenProperties properties;
+  private final InvoicePdfService invoicePdfService;
 
   public void sendOrderPendingEmail(CustomerOrder order) {
-    String subject = "Meladen — Order pending payment · " + order.getOrderNumber();
-    String html = buildOrderHtml(order, "Your order is pending payment", true, false);
-    send(order.getCustomerEmail(), subject, html);
+    String subject = "Meladen — Complete your order · " + order.getOrderNumber();
+    String html =
+        buildProfessionalEmail(
+            order,
+            "Your order is reserved",
+            "Complete payment on the Méladen website to confirm your order. Once paid, we will send your invoice and begin preparing your shipment.",
+            true,
+            false,
+            false);
+    send(order.getCustomerEmail(), subject, html, null, null);
   }
 
   public void sendOrderConfirmedEmail(CustomerOrder order) {
     boolean cod = order.getPaymentMethod() != null && "COD".equalsIgnoreCase(order.getPaymentMethod());
     String subject =
         cod
-            ? "Meladen — Order confirmed (Cash on Delivery) · " + order.getOrderNumber()
-            : "Meladen — Order confirmed · " + order.getOrderNumber();
+            ? "Meladen — Order confirmed · Invoice attached · " + order.getOrderNumber()
+            : "Meladen — Order confirmed · Invoice attached · " + order.getOrderNumber();
     String headline =
+        cod ? "Your Cash on Delivery order is confirmed" : "Thank you — your order is confirmed";
+    String message =
         cod
-            ? "Your Cash on Delivery order is confirmed"
-            : "Thank you — your payment was received";
-    String html = buildOrderHtml(order, headline, false, cod);
-    send(order.getCustomerEmail(), subject, html);
+            ? "Pay in cash when your order is delivered. Your tax invoice is attached to this email for your records."
+            : "Your payment was received successfully. Your tax invoice is attached to this email for your records.";
+    String html = buildProfessionalEmail(order, headline, message, false, cod, true);
+
+    byte[] invoice = null;
+    String invoiceName = null;
+    try {
+      invoice = invoicePdfService.generateInvoice(order);
+      invoiceName = invoicePdfService.invoiceFileName(order);
+    } catch (Exception e) {
+      log.warn("Invoice PDF generation failed for order {}: {}", order.getOrderNumber(), e.getMessage());
+    }
+
+    send(order.getCustomerEmail(), subject, html, invoice, invoiceName);
   }
 
   public boolean sendLoginOtpEmail(String to, String otp) {
     String subject = "Meladen — Your sign-in code";
     String html =
         """
-        <!DOCTYPE html><html><body style="margin:0;background:#0a0a0a;color:#e8e4dc;font-family:Georgia,serif;">
-        <div style="max-width:480px;margin:0 auto;padding:32px 24px;">
-        <p style="letter-spacing:0.2em;font-size:11px;color:#888;text-transform:uppercase;">Meladen</p>
-        <h1 style="font-weight:500;font-size:22px;color:#e8e4dc;">Sign in to your account</h1>
-        <p style="color:#aaa;font-size:14px;line-height:1.6;">Use this one-time code to sign in. It expires in <strong>5 minutes</strong>.</p>
-        <p style="margin:28px 0;font-size:32px;letter-spacing:0.35em;color:#c9a962;font-weight:500;">%s</p>
-        <p style="color:#666;font-size:12px;">If you did not request this code, you can ignore this email.</p>
-        </div></body></html>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+        <body style="margin:0;padding:0;background:#0d0d0d;font-family:Georgia,'Times New Roman',serif;">
+        <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="background:#0d0d0d;">
+        <tr><td align="center" style="padding:40px 16px;">
+        <table role="presentation" width="100%%" style="max-width:480px;background:#141414;border:1px solid #2a2a2a;border-radius:16px;">
+        <tr><td style="padding:32px 28px;">
+        <p style="margin:0 0 8px;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#888;">Méladen</p>
+        <h1 style="margin:0 0 16px;font-size:22px;font-weight:500;color:#f5f0e8;">Sign in to your account</h1>
+        <p style="margin:0 0 24px;font-size:14px;line-height:1.65;color:#b8b3ac;">Use this one-time code to sign in. It expires in <strong style="color:#e8e4dc;">5 minutes</strong>.</p>
+        <p style="margin:0 0 24px;font-size:32px;letter-spacing:0.3em;color:#c9a84c;font-weight:500;">%s</p>
+        <p style="margin:0;font-size:12px;color:#666;">If you did not request this code, you can ignore this email.</p>
+        </td></tr></table>
+        </td></tr></table>
+        </body></html>
         """
             .formatted(escape(otp));
-    return send(to, subject, html);
+    return send(to, subject, html, null, null);
   }
 
-  private boolean send(String to, String subject, String html) {
+  private boolean send(String to, String subject, String html, byte[] attachment, String attachmentName) {
     if (to == null || to.isBlank()) {
       return false;
     }
     try {
       var message = mailSender.createMimeMessage();
       var helper = new MimeMessageHelper(message, true, "UTF-8");
-      helper.setFrom(properties.getMail().getFrom());
+      helper.setFrom(properties.getMail().getFrom(), "Méladen");
       helper.setTo(to.trim());
       helper.setSubject(subject);
       helper.setText(html, true);
+      if (attachment != null && attachment.length > 0 && attachmentName != null) {
+        helper.addAttachment(attachmentName, new ByteArrayResource(attachment), "application/pdf");
+      }
       mailSender.send(message);
       return true;
     } catch (Exception e) {
@@ -75,89 +114,236 @@ public class OrderMailService {
     }
   }
 
-  private static String buildOrderHtml(CustomerOrder order, String headline, boolean pending, boolean cod) {
-    StringBuilder items = new StringBuilder();
+  private String buildProfessionalEmail(
+      CustomerOrder order,
+      String headline,
+      String intro,
+      boolean pending,
+      boolean cod,
+      boolean invoiceAttached) {
+    StringBuilder itemRows = new StringBuilder();
     for (CustomerOrderItem i : order.getItems()) {
-      items.append("<tr><td style=\"padding:8px 0;border-bottom:1px solid #333;\">")
-          .append(escape(i.getProductName()))
-          .append(" · ")
-          .append(escape(i.getSizeLabel()))
-          .append(" × ")
-          .append(i.getQuantity())
-          .append("</td><td style=\"padding:8px 0;border-bottom:1px solid #333;text-align:right;\">₹")
-          .append(money(i.getLineTotal()))
-          .append("</td></tr>");
+      itemRows.append(
+          """
+          <tr>
+            <td style="padding:14px 0;border-bottom:1px solid #2a2a2a;font-size:14px;color:#e8e4dc;">
+              <strong style="font-weight:500;">%s</strong><br>
+              <span style="font-size:12px;color:#888;">%s · Qty %d</span>
+            </td>
+            <td style="padding:14px 0;border-bottom:1px solid #2a2a2a;font-size:14px;color:#c9a84c;text-align:right;vertical-align:top;">₹%s</td>
+          </tr>
+          """
+              .formatted(
+                  escape(i.getProductName()),
+                  escape(i.getSizeLabel()),
+                  i.getQuantity(),
+                  money(i.getLineTotal())));
     }
-    String tracking =
-        order.getTrackingUrl() != null && !order.getTrackingUrl().isBlank()
-            ? "<p style=\"color:#c9a962;\">Track shipment: <a href=\""
-                + escape(order.getTrackingUrl())
-                + "\" style=\"color:#c9a962;\">"
-                + escape(order.getTrackingUrl())
-                + "</a></p>"
-            : "";
-    String cta =
+
+    String statusBadge =
         pending
-            ? "<p style=\"color:#aaa;\">Complete payment on the Meladen website to confirm your order.</p>"
+            ? badge("Payment pending", "#3d3420", "#c9a84c")
             : cod
-                ? "<p style=\"color:#aaa;\">Pay in cash when your order is delivered. We are preparing your shipment.</p>"
-                : "<p style=\"color:#aaa;\">We are preparing your order with care.</p>";
+                ? badge("Cash on Delivery", "#1e2e24", "#6fcf97")
+                : badge("Confirmed", "#1e2e24", "#6fcf97");
+
+    String paymentLine =
+        "<tr><td style=\"padding:6px 0;font-size:13px;color:#888;\">Payment</td>"
+            + "<td style=\"padding:6px 0;font-size:13px;color:#e8e4dc;text-align:right;\">"
+            + escape(paymentLabel(order))
+            + "</td></tr>";
+
+    String invoiceNote =
+        invoiceAttached
+            ? """
+            <tr><td colspan="2" style="padding:16px 0 0;">
+              <table role="presentation" width="100%%" style="background:#1a1812;border:1px solid #3d3420;border-radius:10px;">
+              <tr><td style="padding:14px 16px;font-size:13px;line-height:1.6;color:#d4c4a0;">
+              📎 Your tax invoice is attached as a PDF to this email.
+              </td></tr></table>
+            </td></tr>
+            """
+            : "";
+
+    String trackingBlock = "";
+    if (!pending
+        && order.getTrackingUrl() != null
+        && !order.getTrackingUrl().isBlank()) {
+      trackingBlock =
+          """
+          <p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#b8b3ac;">
+          Track your shipment:
+          <a href="%s" style="color:#c9a84c;text-decoration:none;border-bottom:1px solid #c9a84c;">View tracking</a>
+          </p>
+          """
+              .formatted(escape(order.getTrackingUrl()));
+      if (order.getTrackingAwb() != null && !order.getTrackingAwb().isBlank()) {
+        trackingBlock =
+            trackingBlock.replace(
+                "Track your shipment:",
+                "AWB " + escape(order.getTrackingAwb()) + " — Track your shipment:");
+      }
+    }
 
     return """
-        <!DOCTYPE html><html><body style="margin:0;background:#0a0a0a;color:#e8e4dc;font-family:Georgia,serif;">
-        <div style="max-width:560px;margin:0 auto;padding:32px 24px;">
-        <p style="letter-spacing:0.2em;font-size:11px;color:#888;text-transform:uppercase;">Meladen</p>
-        <h1 style="font-weight:500;font-size:22px;color:#e8e4dc;">%s</h1>
-        <p style="color:#aaa;font-size:14px;">Order <strong style="color:#c9a962;">%s</strong></p>
-        %s
-        <table style="width:100%%;margin:24px 0;font-size:14px;border-collapse:collapse;">
-        <thead><tr><th style="text-align:left;color:#888;font-size:11px;text-transform:uppercase;">Items</th>
-        <th style="text-align:right;color:#888;font-size:11px;text-transform:uppercase;">Amount</th></tr></thead>
-        <tbody>%s</tbody></table>
-        <p style="font-size:14px;"><strong>Subtotal:</strong> ₹%s</p>
-        %s
-        %s
-        <p style="font-size:14px;"><strong>Total:</strong> <span style="color:#c9a962;">₹%s</span></p>
-        <hr style="border:none;border-top:1px solid #333;margin:24px 0;">
-        <p style="font-size:13px;color:#888;">%s<br>%s, %s %s<br>%s</p>
-        %s
-        </div></body></html>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>Méladen Order</title>
+        </head>
+        <body style="margin:0;padding:0;background:#0a0a0a;font-family:Georgia,'Times New Roman',serif;">
+        <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;">
+        <tr><td align="center" style="padding:32px 16px 48px;">
+        <table role="presentation" width="100%%" style="max-width:600px;border-collapse:collapse;">
+
+        <tr><td style="padding:0 0 24px;text-align:center;">
+          <p style="margin:0;font-size:11px;letter-spacing:0.32em;text-transform:uppercase;color:#888;">Méladen</p>
+          <p style="margin:4px 0 0;font-size:12px;color:#666;">Luxury Fragrances</p>
+        </td></tr>
+
+        <tr><td style="background:#111111;border:1px solid #2a2a2a;border-radius:16px 16px 0 0;padding:28px 28px 20px;">
+          <table role="presentation" width="100%%"><tr>
+          <td style="vertical-align:top;">
+            <h1 style="margin:0 0 10px;font-size:24px;font-weight:500;line-height:1.3;color:#f5f0e8;">%s</h1>
+            <p style="margin:0;font-size:14px;line-height:1.65;color:#b8b3ac;">%s</p>
+          </td>
+          <td style="vertical-align:top;text-align:right;width:120px;">%s</td>
+          </tr></table>
+        </td></tr>
+
+        <tr><td style="background:#111111;border-left:1px solid #2a2a2a;border-right:1px solid #2a2a2a;padding:0 28px 20px;">
+          <table role="presentation" width="100%%" style="background:#0d0d0d;border:1px solid #252525;border-radius:10px;">
+          <tr><td style="padding:16px 18px;">
+            <p style="margin:0 0 4px;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#888;">Order</p>
+            <p style="margin:0;font-size:18px;font-weight:500;color:#c9a84c;">%s</p>
+            <p style="margin:6px 0 0;font-size:12px;color:#666;">%s</p>
+          </td></tr></table>
+        </td></tr>
+
+        <tr><td style="background:#111111;border-left:1px solid #2a2a2a;border-right:1px solid #2a2a2a;padding:8px 28px 24px;">
+          <p style="margin:0 0 12px;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#888;">Order summary</p>
+          <table role="presentation" width="100%%" cellpadding="0" cellspacing="0">
+          <thead><tr>
+            <th style="padding:0 0 8px;font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#666;text-align:left;">Item</th>
+            <th style="padding:0 0 8px;font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#666;text-align:right;">Amount</th>
+          </tr></thead>
+          <tbody>%s</tbody>
+          </table>
+        </td></tr>
+
+        <tr><td style="background:#111111;border-left:1px solid #2a2a2a;border-right:1px solid #2a2a2a;padding:0 28px 24px;">
+          <table role="presentation" width="100%%" cellpadding="0" cellspacing="0">
+          <tr><td style="padding:6px 0;font-size:13px;color:#888;">Subtotal</td>
+          <td style="padding:6px 0;font-size:13px;color:#e8e4dc;text-align:right;">₹%s</td></tr>
+          %s
+          %s
+          <tr><td style="padding:6px 0;font-size:13px;color:#888;">Shipping</td>
+          <td style="padding:6px 0;font-size:13px;color:#e8e4dc;text-align:right;">₹%s</td></tr>
+          %s
+          %s
+          <tr><td style="padding:14px 0 0;font-size:15px;font-weight:600;color:#f5f0e8;border-top:1px solid #2a2a2a;">Total</td>
+          <td style="padding:14px 0 0;font-size:15px;font-weight:600;color:#c9a84c;text-align:right;border-top:1px solid #2a2a2a;">₹%s</td></tr>
+          %s
+          </table>
+        </td></tr>
+
+        <tr><td style="background:#111111;border-left:1px solid #2a2a2a;border-right:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;border-radius:0 0 16px 16px;padding:0 28px 28px;">
+          <p style="margin:0 0 8px;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#888;">Shipping to</p>
+          <p style="margin:0;font-size:14px;line-height:1.7;color:#e8e4dc;">
+            %s<br>%s<br>%s, %s<br>%s
+          </p>
+          %s
+        </td></tr>
+
+        <tr><td style="padding:28px 8px 0;text-align:center;">
+          <p style="margin:0 0 6px;font-size:12px;color:#666;">Questions? Reply to this email or contact</p>
+          <p style="margin:0;font-size:12px;"><a href="mailto:team.meladenperfumes@gmail.com" style="color:#c9a84c;text-decoration:none;">team.meladenperfumes@gmail.com</a></p>
+          <p style="margin:16px 0 0;font-size:11px;color:#444;">© Méladen Luxury Fragrances</p>
+        </td></tr>
+
+        </table>
+        </td></tr></table>
+        </body></html>
         """
         .formatted(
             escape(headline),
+            escape(intro),
+            statusBadge,
             escape(order.getOrderNumber()),
-            cta,
-            items,
+            formatOrderDate(order.getCreatedAt()),
+            itemRows,
             money(order.getSubtotal()),
-            discountLine(order),
-            walletLine(order),
+            discountRow(order),
+            paymentLine,
+            money(order.getShipping()),
+            walletRow(order),
+            "",
             money(order.getTotal()),
+            invoiceNote,
             escape(order.getCustomerName()),
+            escape(order.getCustomerEmail()),
             escape(order.getAddress()),
             escape(order.getCity()),
             escape(order.getPostcode()),
             escape(order.getCountry()),
-            tracking);
+            trackingBlock);
   }
 
-  private static String discountLine(CustomerOrder order) {
+  private static String badge(String text, String bg, String color) {
+    return "<span style=\"display:inline-block;padding:6px 12px;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:"
+        + color
+        + ";background:"
+        + bg
+        + ";border-radius:999px;\">"
+        + escape(text)
+        + "</span>";
+  }
+
+  private static String discountRow(CustomerOrder order) {
     if (order.getDiscountAmount() != null
         && order.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
-      return "<p style=\"font-size:14px;\"><strong>Discount"
-          + (order.getPromoCode() != null ? " (" + escape(order.getPromoCode()) + ")" : "")
-          + ":</strong> −₹"
+      String promo =
+          order.getPromoCode() != null ? " (" + escape(order.getPromoCode()) + ")" : "";
+      return "<tr><td style=\"padding:6px 0;font-size:13px;color:#6fcf97;\">Discount"
+          + promo
+          + "</td><td style=\"padding:6px 0;font-size:13px;color:#6fcf97;text-align:right;\">−₹"
           + money(order.getDiscountAmount())
-          + "</p>";
+          + "</td></tr>";
     }
     return "";
   }
 
-  private static String walletLine(CustomerOrder order) {
+  private static String walletRow(CustomerOrder order) {
     if (order.getWalletDiscount() != null
         && order.getWalletDiscount().compareTo(BigDecimal.ZERO) > 0) {
-      return "<p style=\"font-size:14px;\"><strong>Wallet:</strong> −₹" + money(order.getWalletDiscount()) + "</p>";
+      return "<tr><td style=\"padding:6px 0;font-size:13px;color:#6fcf97;\">Wallet</td>"
+          + "<td style=\"padding:6px 0;font-size:13px;color:#6fcf97;text-align:right;\">−₹"
+          + money(order.getWalletDiscount())
+          + "</td></tr>";
     }
     return "";
+  }
+
+  private static String paymentLabel(CustomerOrder order) {
+    String method = order.getPaymentMethod();
+    if (method == null) {
+      return order.getStatus() != null ? order.getStatus().replace('_', ' ') : "—";
+    }
+    return switch (method.toUpperCase(Locale.ROOT)) {
+      case "RAZORPAY" -> "Online (Razorpay)";
+      case "COD" -> "Cash on Delivery";
+      case "WALLET" -> "Wallet";
+      default -> method;
+    };
+  }
+
+  private static String formatOrderDate(Instant instant) {
+    if (instant == null) {
+      return "";
+    }
+    return ORDER_DATE_FMT.format(instant);
   }
 
   private static String money(BigDecimal v) {

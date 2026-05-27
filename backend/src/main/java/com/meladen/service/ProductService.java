@@ -6,6 +6,7 @@ import com.meladen.dto.ProductRequest;
 import com.meladen.entity.Category;
 import com.meladen.entity.Product;
 import com.meladen.repository.CategoryRepository;
+import com.meladen.repository.CustomerOrderRepository;
 import com.meladen.repository.ProductRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -29,6 +30,7 @@ public class ProductService {
 
   private final ProductRepository productRepository;
   private final CategoryRepository categoryRepository;
+  private final CustomerOrderRepository orderRepository;
 
   @Transactional(readOnly = true)
   public List<ProductAdminResponse> listForAdmin() {
@@ -58,6 +60,9 @@ public class ProductService {
         productRepository
             .findDetailById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    if (p.isArchived()) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
+    }
     return toPublic(p);
   }
 
@@ -110,6 +115,12 @@ public class ProductService {
         productRepository
             .findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    long usedInOrders = orderRepository.countItemsByProductId(id);
+    if (usedInOrders > 0) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "Cannot delete this product because it is used in existing customer orders.");
+    }
     productRepository.delete(p);
   }
 
@@ -202,7 +213,8 @@ public class ProductService {
         p.getGalleryImage3(),
         p.getTag(),
         p.isNew(),
-        p.isBestseller());
+        p.isBestseller(),
+        p.isArchived());
   }
 
   private void apply(Product p, ProductRequest r, Category category) {
@@ -242,6 +254,7 @@ public class ProductService {
     p.setTag(r.tag());
     p.setNew(Boolean.TRUE.equals(r.isNew()));
     p.setBestseller(Boolean.TRUE.equals(r.isBestseller()));
+    p.setArchived(Boolean.TRUE.equals(r.archived()));
   }
 
   private BigDecimal primaryPrice(Product p) {

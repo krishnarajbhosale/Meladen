@@ -118,4 +118,8 @@ public class Product {
 
   @Column(name = "is_bestseller")
   private boolean isBestseller;
+
+  /** When true, product is hidden from the public catalog but kept for order history. */
+  @Column(name = "archived", nullable = false)
+  private boolean archived;
 }

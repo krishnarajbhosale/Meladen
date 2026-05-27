@@ -32,4 +32,5 @@ public record ProductAdminResponse(
     String galleryImage3,
     String tag,
     @JsonProperty("isNew") boolean isNew,
-    @JsonProperty("isBestseller") boolean isBestseller) {}
+    @JsonProperty("isBestseller") boolean isBestseller,
+    boolean archived) {}

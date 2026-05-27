@@ -172,13 +172,6 @@ export default function CartDrawer({ open, onClose }: Props) {
                       </motion.article>
                     ))}
                   </AnimatePresence>
-
-                  <button className="mt-1 flex items-center gap-2 text-[10px] text-brand-gray transition-colors hover:text-brand-dark">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full border border-brand-gray/40 text-[10px]">
-                      +
-                    </span>
-                    Add a promo code
-                  </button>
                 </div>
               )}
             </div>

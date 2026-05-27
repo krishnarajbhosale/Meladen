@@ -64,6 +64,16 @@ function collectUnseenOrderIds(orders: OrderApi[], seenAtMs: number | null): Set
   }
   return unseen;
 }
+
+function formatPaymentMethod(method: string | null | undefined, status: string): string {
+  const m = method?.toUpperCase();
+  if (m === 'RAZORPAY') return 'Razorpay (Online)';
+  if (m === 'COD') return 'Cash on Delivery';
+  if (m === 'WALLET') return 'Wallet';
+  if (status === 'COD') return 'Cash on Delivery';
+  if (status === 'PAYMENT_PENDING') return 'Pending';
+  return method?.replace(/_/g, ' ') ?? '—';
+}
 const PRODUCT_TABS = ['Basics', 'Pricing & Notes', 'Media & Flags'] as const;
 const ADMIN_TABS = ['Categories', 'Products', 'Stock', 'Orders', 'Promo codes', 'Returns', 'Wallet'] as const;
 type ProductTab = (typeof PRODUCT_TABS)[number];
@@ -98,6 +108,7 @@ type ProductFormState = {
   tag: string;
   isNew: boolean;
   isBestseller: boolean;
+  archived: boolean;
 };
 
 type ProductMediaDefaults = Pick<ProductFormState, 'galleryImage1' | 'galleryImage2' | 'galleryImage3'>;
@@ -140,6 +151,7 @@ function emptyProductForm(defaultCategoryId: number, defaults?: ProductMediaDefa
     tag: '',
     isNew: false,
     isBestseller: false,
+    archived: false,
   };
 }
 
@@ -644,6 +656,7 @@ export default function AdminPage() {
     tag: productForm.tag || null,
     isNew: productForm.isNew,
     isBestseller: productForm.isBestseller,
+    archived: productForm.archived,
   });
 
   const saveProduct = async (e: React.FormEvent) => {
@@ -700,6 +713,7 @@ export default function AdminPage() {
       tag: p.tag ?? '',
       isNew: p.isNew,
       isBestseller: p.isBestseller,
+      archived: Boolean((p as any).archived),
     });
     setSelectedImageName(p.hasImage ? 'Existing image present (choose file to replace)' : '');
   };
@@ -1299,6 +1313,14 @@ export default function AdminPage() {
                       />
                       Bestseller
                     </label>
+                    <label className="col-span-2 flex items-center gap-2 text-sm font-medium text-[#4d3f31]">
+                      <input
+                        type="checkbox"
+                        checked={productForm.archived}
+                        onChange={e => setProductField('archived', e.target.checked)}
+                      />
+                      Archive / hide from website
+                    </label>
                   </div>
                 </div>
               )}
@@ -1446,6 +1468,7 @@ export default function AdminPage() {
                   {orders.map(order => {
                     const isNewOrder = unseenOrderIds.has(order.id);
                     const statusLabel = order.status.replace(/_/g, ' ');
+                    const paymentLabel = formatPaymentMethod(order.paymentMethod, order.status);
                     const statusTone =
                       order.status === 'PAID' || order.status === 'PLACED'
                         ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
@@ -1469,6 +1492,9 @@ export default function AdminPage() {
                               className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${statusTone}`}
                             >
                               {statusLabel}
+                            </span>
+                            <span className="rounded-full border border-[#dbcdb8] bg-[#f7f2ea] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#5c4f40]">
+                              {paymentLabel}
                             </span>
                             {isNewOrder && (
                               <span className="rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
@@ -1547,6 +1573,10 @@ export default function AdminPage() {
                             <div className="flex justify-between gap-2 border-t border-[#eadfce] pt-1 font-semibold text-[#241d14]">
                               <dt>Total</dt>
                               <dd>{formatInr(Number(order.total))}</dd>
+                            </div>
+                            <div className="flex justify-between gap-2 pt-1">
+                              <dt className="text-[#9a8b78]">Payment mode</dt>
+                              <dd className="font-medium text-[#3a2f25]">{paymentLabel}</dd>
                             </div>
                             <div className="flex justify-between gap-2 pt-1 text-[#6b5c4b]">
                               <dt>Alcohol used</dt>

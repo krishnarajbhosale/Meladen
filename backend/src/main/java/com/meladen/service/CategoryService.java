@@ -45,6 +45,7 @@ public class CategoryService {
             c -> {
               List<com.meladen.dto.ProductPublicResponse> products =
                   c.getProducts().stream()
+                      .filter(p -> !p.isArchived())
                       .sorted(
                           Comparator.comparing(
                               com.meladen.entity.Product::getMeladenFragrance,

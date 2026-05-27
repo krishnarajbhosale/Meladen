@@ -3,11 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { products, type Product } from '../data/products';
 import { meladen9, meladen10, meladen11 } from '../data/meladenImages';
-import bento1 from '../assets/Bento1.png';
-import bento2 from '../assets/BentoPerfumeRight.png';
+import bentoMen from '../assets/BentoMen.png';
+import bentoWomen from '../assets/BentoWomen.png';
 import heroVideo from '../assets/HeroVideo-optimized.webm';
 import heroVideoMp4 from '../assets/Homepagevideo-optimized.mp4';
-import heroPoster from '../assets/hero.png';
 import { apiProductToProduct, fetchCategoriesWithProducts } from '../api/catalog';
 import AutoplayVideo from '../components/AutoplayVideo';
 import HorizontalProductRail from '../components/HorizontalProductRail';
@@ -43,58 +42,18 @@ export default function HomePage() {
 
   return (
     <motion.div variants={pageVariants} initial="hidden" animate="visible" className="relative isolate overflow-x-clip bg-brand-cream">
-      <div className="mx-auto w-full max-w-[1500px] px-3 pb-4 pt-3 lg:px-4 lg:pt-4">
+      <div className="mx-auto w-full max-w-[1500px] px-3 pb-4 pt-0 lg:px-4 lg:pt-4">
         <div className="min-w-0">
-          <section className="relative -mx-3 mb-8 w-[calc(100%+1.5rem)] max-w-[100vw] overflow-hidden rounded-none max-lg:aspect-[9/18] max-lg:h-auto lg:mx-0 lg:mb-10 lg:aspect-auto lg:h-[96vh] lg:w-full lg:max-w-none lg:rounded-3xl">
+          <section className="relative -mx-3 mb-8 h-[calc(100vh-4rem)] h-[calc(100svh-4rem)] w-[calc(100%+1.5rem)] max-w-[100vw] overflow-hidden rounded-none bg-black lg:mx-0 lg:mb-10 lg:h-[96vh] lg:w-full lg:max-w-none lg:rounded-3xl">
             <AutoplayVideo
               sources={[
                 { src: heroVideo, type: 'video/webm' },
                 { src: heroVideoMp4, type: 'video/mp4' },
               ]}
               preload="auto"
-              poster={heroPoster}
               className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/15 to-black/75" />
-            <div className="absolute inset-0 flex flex-col justify-end px-7 pb-10 lg:justify-center lg:px-16 lg:pb-0">
-              <motion.p
-                variants={fadeUp}
-                custom={0}
-                initial="hidden"
-                animate="visible"
-                className="mb-2 text-[9px] uppercase tracking-[0.3em] text-white/60 lg:text-[10px]"
-              >
-                Signature
-              </motion.p>
-              <motion.h1
-                variants={fadeUp}
-                custom={1}
-                initial="hidden"
-                animate="visible"
-                className="mb-3 font-serif text-[2.6rem] font-medium leading-[1.05] text-white lg:mb-5 lg:text-6xl xl:text-7xl"
-              >
-                The Essence
-                <br />
-                of Midnight
-              </motion.h1>
-              <motion.p
-                variants={fadeUp}
-                custom={2}
-                initial="hidden"
-                animate="visible"
-                className="mb-7 max-w-[240px] text-[13px] leading-relaxed text-white/65 lg:max-w-md lg:text-lg"
-              >
-                A symphony of rare night-blooming jasmine and warm amber, crafted for the twilight hours.
-              </motion.p>
-              <motion.div variants={fadeUp} custom={3} initial="hidden" animate="visible">
-                <button
-                  onClick={() => navigate('/product/1')}
-                  className="rounded-full border border-white/40 bg-white/15 px-7 py-3 text-[11px] font-medium uppercase tracking-[0.1em] text-white backdrop-blur-sm transition-all duration-300 hover:bg-white/30 lg:px-9 lg:py-4 lg:text-xs"
-                >
-                  Shop the Collection
-                </button>
-              </motion.div>
-            </div>
           </section>
 
           <section className="mt-6 lg:mt-8">
@@ -123,12 +82,13 @@ export default function HomePage() {
               >
                 <p className="relative z-10 font-serif text-base font-semibold text-brand-dark lg:text-2xl">Men&apos;s</p>
                 <img
-                  src={bento1}
+                  src={bentoMen}
                   alt="Men's fragrance"
-                  className="pointer-events-none absolute left-1/2 bottom-0 w-[82%] max-w-[250px] -translate-x-1/2 object-contain drop-shadow-[0_24px_32px_rgba(0,0,0,0.45)] lg:bottom-0"
+                  className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[center_20%]"
                   loading="lazy"
                   decoding="async"
                 />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#111111]/85 via-transparent to-transparent" aria-hidden />
               </motion.article>
 
               <motion.button
@@ -149,12 +109,13 @@ export default function HomePage() {
               >
                 <p className="relative z-10 font-serif text-base font-semibold text-brand-dark lg:text-2xl">Women&apos;s</p>
                 <img
-                  src={bento2}
+                  src={bentoWomen}
                   alt="Women's fragrance"
-                  className="pointer-events-none absolute left-1/2 bottom-0 w-[82%] max-w-[250px] -translate-x-1/2 object-contain drop-shadow-[0_24px_32px_rgba(0,0,0,0.45)] lg:bottom-0"
+                  className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[center_25%]"
                   loading="lazy"
                   decoding="async"
                 />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#111111]/85 via-transparent to-transparent" aria-hidden />
               </motion.article>
 
               <motion.button
@@ -169,13 +130,13 @@ export default function HomePage() {
             </motion.div>
           </section>
 
-          <HomeCollectionsSection />
-
           <HorizontalProductRail
             title="Best Sellers"
             subtitle="The latest additions to our olfactory library."
             products={bestSellers}
           />
+
+          <HomeCollectionsSection />
 
           <section className="hidden bg-brand-beige px-10 py-20 lg:mt-6 lg:block xl:px-20">
             <div className="mx-auto grid max-w-6xl grid-cols-[1fr_1fr] items-center gap-16">

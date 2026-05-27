@@ -366,7 +366,12 @@ public class OrderService {
 
   @Transactional(readOnly = true)
   public List<OrderResponse> listAdminOrders() {
-    return orderRepository.findAllWithItems().stream().map(this::toOrderResponse).toList();
+    // Admin should only see orders that were confirmed (paid / COD / placed).
+    // Checkout attempts that never completed payment remain PAYMENT_PENDING and are excluded.
+    return orderRepository.findAllWithItems().stream()
+        .filter(o -> o.getStatus() != null && !"PAYMENT_PENDING".equalsIgnoreCase(o.getStatus()))
+        .map(this::toOrderResponse)
+        .toList();
   }
 
   @Transactional(readOnly = true)

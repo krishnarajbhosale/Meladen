@@ -62,15 +62,17 @@ const SIZE_RECIPES: Record<string, { oil: number; alcohol: number }> = {
 };
 
 export function getProductSizeOptions(product: Product): ProductSizeOption[] {
-  const base = product.price50Ml ?? product.price;
-  const p30 = product.price30Ml ?? Math.round(base * 0.75);
-  const p50 = product.price50Ml ?? product.price;
-  const p100 = product.price100Ml ?? Math.round(base * 1.7);
-  return [
-    { label: '30ml', price: p30 },
-    { label: '50ml', price: p50 },
-    { label: '100ml', price: p100 },
-  ];
+  const options: ProductSizeOption[] = [];
+  if (product.price30Ml != null) options.push({ label: '30ml', price: product.price30Ml });
+  if (product.price50Ml != null) options.push({ label: '50ml', price: product.price50Ml });
+  if (product.price100Ml != null) options.push({ label: '100ml', price: product.price100Ml });
+  if (options.length > 0) return options;
+
+  // Legacy/demo products with only a single list price
+  if (product.price > 0) {
+    return [{ label: product.size || '50ml', price: product.price }];
+  }
+  return [];
 }
 
 export function getProductSizeAvailability(

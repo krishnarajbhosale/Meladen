@@ -32,4 +32,5 @@ public record ProductRequest(
     String galleryImage3,
     String tag,
     Boolean isNew,
-    Boolean isBestseller) {}
+    Boolean isBestseller,
+    Boolean archived) {}

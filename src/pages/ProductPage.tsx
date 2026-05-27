@@ -20,7 +20,7 @@ export default function ProductPage() {
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
   const [added, setAdded] = useState(false);
-  const [selectedSizeLabel, setSelectedSizeLabel] = useState('50ml');
+  const [selectedSizeLabel, setSelectedSizeLabel] = useState('');
   const [alcoholStockGm, setAlcoholStockGm] = useState<number | null>(null);
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
 
@@ -84,7 +84,6 @@ export default function ProductPage() {
   }, []);
 
   useEffect(() => {
-    setSelectedSizeLabel('50ml');
     setQty(1);
     setActiveImg(0);
     setAdded(false);
@@ -93,9 +92,16 @@ export default function ProductPage() {
   useEffect(() => {
     if (!product) return;
     const options = getProductSizeAvailability(product, alcoholStockGm);
+    const pick = options.find(option => option.available) ?? options[0];
+    if (pick) setSelectedSizeLabel(pick.label);
+  }, [product?.id, alcoholStockGm]);
+
+  useEffect(() => {
+    if (!product || !selectedSizeLabel) return;
+    const options = getProductSizeAvailability(product, alcoholStockGm);
     const selected = options.find(option => option.label === selectedSizeLabel);
     const firstAvailable = options.find(option => option.available);
-    if ((!selected || !selected.available) && firstAvailable) {
+    if (selected && !selected.available && firstAvailable) {
       setSelectedSizeLabel(firstAvailable.label);
     }
   }, [product, alcoholStockGm, selectedSizeLabel]);
@@ -136,8 +142,14 @@ export default function ProductPage() {
   ];
   const sizeOptions = getProductSizeAvailability(product, alcoholStockGm);
   const firstAvailable = sizeOptions.find(option => option.available) ?? null;
-  const selectedSize = sizeOptions.find(option => option.label === selectedSizeLabel) ?? firstAvailable ?? sizeOptions[1] ?? sizeOptions[0];
-  const selectedUnavailable = selectedSize ? !selectedSize.available : true;
+  const selectedSize =
+    sizeOptions.find(option => option.label === selectedSizeLabel) ??
+    firstAvailable ??
+    sizeOptions[0] ??
+    null;
+  const selectedUnavailable = !selectedSize || !selectedSize.available;
+  const sizeGridClass =
+    sizeOptions.length <= 1 ? 'grid-cols-1' : sizeOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-3';
 
   const handleAdd = () => {
     if (!selectedSize || selectedUnavailable) return;
@@ -238,8 +250,10 @@ export default function ProductPage() {
             animate="visible"
             className="mb-5 text-xl font-medium text-brand-dark lg:text-2xl"
           >
-            {formatInr(selectedSize.price, 0)}
-            <span className="ml-2 text-sm font-normal text-brand-gray">{selectedSize.label}</span>
+            {selectedSize ? formatInr(selectedSize.price, 0) : formatInr(product.price, 0)}
+            {selectedSize && (
+              <span className="ml-2 text-sm font-normal text-brand-gray">{selectedSize.label}</span>
+            )}
           </motion.p>
           <motion.p
             variants={fadeUp}
@@ -251,11 +265,12 @@ export default function ProductPage() {
             {product.description}
           </motion.p>
 
+          {sizeOptions.length > 0 && (
           <motion.div variants={fadeUp} custom={4} initial="hidden" animate="visible" className="mb-8">
             <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Choose Size</p>
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className={`grid gap-2.5 ${sizeGridClass}`}>
               {sizeOptions.map(option => {
-                const isActive = selectedSize.label === option.label;
+                    const isActive = selectedSize?.label === option.label;
                 const badge =
                   option.label === '50ml'
                     ? 'Best Seller'
@@ -301,6 +316,7 @@ export default function ProductPage() {
               </p>
             )}
           </motion.div>
+          )}
 
           <motion.div
             variants={fadeUp}
@@ -336,18 +352,9 @@ export default function ProductPage() {
             </Accordion>
             <Accordion title="More Information">
               {product.moreInformation?.trim() ? (
-                <ul className="space-y-2 text-sm leading-relaxed text-brand-gray">
-                  {product.moreInformation
-                    .split(/\r?\n|,/)
-                    .map(part => part.trim())
-                    .filter(Boolean)
-                    .map(line => (
-                      <li key={line} className="flex gap-2">
-                        <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-brand-sage" aria-hidden />
-                        <span>{line}</span>
-                      </li>
-                    ))}
-                </ul>
+                <p className="text-sm leading-relaxed text-brand-gray">
+                  {product.moreInformation.trim().replace(/\s*\r?\n+\s*/g, ' ')}
+                </p>
               ) : (
                 <p className="text-sm text-brand-gray">No additional information available for this fragrance.</p>
               )}
