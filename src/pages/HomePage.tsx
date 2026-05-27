@@ -78,16 +78,18 @@ export default function HomePage() {
                 variants={fadeUp}
                 custom={1}
                 onClick={() => navigate('/collection')}
-                className="group relative row-span-2 cursor-pointer overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[radial-gradient(circle_at_50%_105%,rgba(201,168,76,0.18),transparent_42%),linear-gradient(180deg,#1a1a1a,#111111)] p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] lg:rounded-[1.4rem]"
+                className="group relative row-span-2 flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[radial-gradient(circle_at_50%_105%,rgba(201,168,76,0.18),transparent_42%),linear-gradient(180deg,#1a1a1a,#111111)] px-0 pb-0 pt-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] lg:rounded-[1.4rem]"
               >
-                <p className="relative z-10 font-serif text-base font-semibold text-brand-dark lg:text-2xl">Men&apos;s</p>
-                <img
-                  src={bentoMen}
-                  alt="Men's fragrance"
-                  className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[center_20%]"
-                  loading="lazy"
-                  decoding="async"
-                />
+                <p className="relative z-10 flex-shrink-0 px-4 font-serif text-base font-semibold text-brand-dark lg:text-2xl">Men&apos;s</p>
+                <div className="relative z-0 mt-2 min-h-0 flex-1 overflow-hidden">
+                  <img
+                    src={bentoMen}
+                    alt="Men's fragrance"
+                    className="pointer-events-none absolute bottom-0 left-0 h-full w-auto max-w-none object-contain object-left"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#111111]/85 via-transparent to-transparent" aria-hidden />
               </motion.article>
 
@@ -105,16 +107,18 @@ export default function HomePage() {
                 variants={fadeUp}
                 custom={3}
                 onClick={() => navigate('/collection')}
-                className="group relative row-span-2 cursor-pointer overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[radial-gradient(circle_at_50%_105%,rgba(201,168,76,0.18),transparent_42%),linear-gradient(180deg,#1a1a1a,#111111)] p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] lg:rounded-[1.4rem]"
+                className="group relative row-span-2 flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[radial-gradient(circle_at_50%_105%,rgba(201,168,76,0.18),transparent_42%),linear-gradient(180deg,#1a1a1a,#111111)] px-0 pb-0 pt-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] lg:rounded-[1.4rem]"
               >
-                <p className="relative z-10 font-serif text-base font-semibold text-brand-dark lg:text-2xl">Women&apos;s</p>
-                <img
-                  src={bentoWomen}
-                  alt="Women's fragrance"
-                  className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[center_25%]"
-                  loading="lazy"
-                  decoding="async"
-                />
+                <p className="relative z-10 flex-shrink-0 px-4 font-serif text-base font-semibold text-brand-dark lg:text-2xl">Women&apos;s</p>
+                <div className="relative z-0 mt-2 min-h-0 flex-1 overflow-hidden">
+                  <img
+                    src={bentoWomen}
+                    alt="Women's fragrance"
+                    className="pointer-events-none absolute bottom-0 right-0 h-full w-auto max-w-none object-contain object-right"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#111111]/85 via-transparent to-transparent" aria-hidden />
               </motion.article>
 
