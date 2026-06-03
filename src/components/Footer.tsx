@@ -1,61 +1,87 @@
 import { Link } from 'react-router-dom';
 
+const INSTAGRAM_URL =
+  'https://www.instagram.com/melangesecretofficial?igsh=MTB1c3p3a21xc2Y4aQ==';
+
 const footerColumns = [
-  { label: 'Shop', links: ['New Arrivals', 'Collection', 'Bestsellers'] as const },
-  { label: 'Company', links: ['About', 'Atelier', 'Contact'] as const },
+  {
+    label: 'Shop',
+    links: [
+      { label: 'Collection', href: '/collection', internal: true as const },
+      { label: 'Bestsellers', href: '/#best-sellers', internal: true as const },
+    ],
+  },
   {
     label: 'Support',
     links: [
-      { label: 'Terms & Conditions', href: '/policies#terms' },
-      { label: 'Shipping Policy', href: '/policies#shipping' },
-      { label: 'Returns & Refund Policy', href: '/policies#returns' },
-      { label: 'Law of Jurisdiction', href: '/policies#jurisdiction' },
-      { label: 'Return Request', href: '/returns' },
-      { label: 'Contact Support', href: 'mailto:support.meladen@gmail.com' },
-    ] as const,
+      { label: 'Terms & Conditions', href: '/policies#terms', internal: true as const },
+      { label: 'Shipping Policy', href: '/policies#shipping', internal: true as const },
+      { label: 'Returns & Refund Policy', href: '/policies#returns', internal: true as const },
+      { label: 'Law of Jurisdiction', href: '/policies#jurisdiction', internal: true as const },
+      { label: 'Return Request', href: '/returns', internal: true as const },
+      { label: 'Contact Support', href: 'mailto:support.meladen@gmail.com', internal: false as const },
+    ],
   },
 ] as const;
 
+const linkClass = 'transition-colors hover:text-brand-cream';
+
 export default function Footer() {
   return (
-    <footer className="bg-brand-dark px-5 lg:px-10 xl:px-20 py-14">
-      <div className="lg:flex lg:items-start lg:justify-between mb-10">
-        <div className="mb-8 lg:mb-0">
-          <p className="font-serif text-2xl text-brand-cream tracking-[0.2em] uppercase mb-1">Meladen</p>
-          <p className="text-xs text-brand-cream/40 tracking-wide">The Art of Fine Fragrance</p>
+    <footer className="bg-brand-dark px-5 py-14 lg:px-10 xl:px-20">
+      <div className="mb-10 flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-16">
+        <div className="max-w-sm">
+          <p className="mb-1 font-serif text-2xl uppercase tracking-[0.2em] text-brand-cream">Meladen</p>
+          <p className="text-xs tracking-wide text-brand-cream/40">The Art of Fine Fragrance</p>
+          <div className="mt-5 space-y-2.5 text-[11px] tracking-wide text-brand-cream/60">
+            <p>
+              <a href="tel:+919028980520" className={linkClass}>
+                +91 90289 80520
+              </a>
+            </p>
+            <p>
+              <a href="mailto:support.meladen@gmail.com" className={linkClass}>
+                support.meladen@gmail.com
+              </a>
+            </p>
+            <p>
+              <a
+                href={INSTAGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={linkClass}
+              >
+                Instagram
+              </a>
+            </p>
+          </div>
         </div>
-        <div className="grid grid-cols-3 lg:flex lg:gap-16 gap-6 text-[11px] text-brand-cream/60 tracking-widest uppercase">
+
+        <div className="flex flex-col gap-8 text-[11px] uppercase tracking-widest text-brand-cream/60 lg:flex-row lg:gap-16">
           {footerColumns.map(col => (
             <div key={col.label} className="space-y-3">
-              <p className="text-brand-cream/30 text-[9px] mb-2">{col.label}</p>
-              {col.label === 'Support'
-                ? col.links.map(l => (
-                    <p key={l.label}>
-                      {l.href.startsWith('/') ? (
-                        <Link to={l.href} className="hover:text-brand-cream transition-colors">
-                          {l.label}
-                        </Link>
-                      ) : (
-                        <a href={l.href} className="hover:text-brand-cream transition-colors">
-                          {l.label}
-                        </a>
-                      )}
-                    </p>
-                  ))
-                : col.links.map(l => (
-                    <p key={l}>
-                      <a href="#" className="hover:text-brand-cream transition-colors">
-                        {l}
-                      </a>
-                    </p>
-                  ))}
+              <p className="mb-2 text-[9px] text-brand-cream/30">{col.label}</p>
+              {col.links.map(l => (
+                <p key={l.label}>
+                  {l.internal ? (
+                    <Link to={l.href} className={linkClass}>
+                      {l.label}
+                    </Link>
+                  ) : (
+                    <a href={l.href} className={linkClass}>
+                      {l.label}
+                    </a>
+                  )}
+                </p>
+              ))}
             </div>
           ))}
         </div>
       </div>
-      <div className="border-t border-brand-cream/10 pt-6 flex flex-col lg:flex-row lg:justify-between gap-2">
+
+      <div className="flex flex-col gap-2 border-t border-brand-cream/10 pt-6 lg:flex-row lg:justify-between">
         <p className="text-[10px] text-brand-cream/30">© 2026 Meladen. All rights reserved.</p>
-        <p className="text-[10px] text-brand-cream/30">Grasse · Paris · New York</p>
+        <p className="text-[10px] text-brand-cream/30">India</p>
       </div>
     </footer>
   );

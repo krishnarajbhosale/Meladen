@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProductSizeAvailability, products } from '../data/products';
-import { meladen12 } from '../data/meladenImages';
 import { useCart } from '../context/CartContext';
 import { pageVariants, fadeUp } from '../animations/variants';
 import { apiProductToProduct, fetchCategoriesWithProducts, fetchPublicStock } from '../api/catalog';
 import type { CategoryWithProductsApi } from '../api/types';
 import type { Product } from '../data/products';
-import { slugifyCategoryName, categorySlugMatches } from '../data/collections';
+import { slugifyCategoryName, categorySlugMatches, productFieldMatches } from '../data/collections';
 import { formatInr } from '../utils/currency';
+import ProductCard from '../components/ProductCard';
 
 const CONCENTRATIONS = ['Eau de Parfum', 'Extrait de Parfum', 'Eau de Toilette'];
 const FAMILIES = ['Woody', 'Floral', 'Citrus', 'Oriental'];
@@ -52,7 +52,6 @@ export default function CollectionPage() {
   const [maxPrice, setMaxPrice] = useState(1000);
   const [sort, setSort] = useState('Featured');
   const [page, setPage] = useState(1);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [alcoholStockGm, setAlcoholStockGm] = useState<number | null>(null);
 
   useEffect(() => {
@@ -140,6 +139,19 @@ export default function CollectionPage() {
     location.state,
   ]);
 
+  const filterIdealFor = useMemo(
+    () => searchParams.get('idealFor')?.trim() ?? '',
+    [searchParams],
+  );
+  const filterMood = useMemo(() => searchParams.get('mood')?.trim() ?? '', [searchParams]);
+  const hasBentoFilter = Boolean(filterIdealFor || filterMood);
+
+  const bentoFilterLabel = useMemo(() => {
+    if (filterIdealFor) return filterIdealFor;
+    if (filterMood) return filterMood;
+    return null;
+  }, [filterIdealFor, filterMood]);
+
   const toggle = (arr: string[], val: string) =>
     arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val];
 
@@ -151,6 +163,8 @@ export default function CollectionPage() {
     };
 
     const filterProduct = (p: Product) => {
+      if (filterIdealFor && !productFieldMatches(p.idealFor, filterIdealFor)) return false;
+      if (filterMood && !productFieldMatches(p.mood, filterMood)) return false;
       if (selectedConc.length > 0 && !selectedConc.includes(p.category)) return false;
       if (p.price > maxPrice) return false;
       if (!familyMatches(p)) return false;
@@ -171,14 +185,19 @@ export default function CollectionPage() {
         items: sortProducts(s.items.filter(filterProduct)),
       }))
       .filter(s => s.items.length > 0);
-  }, [sections, selectedConc, maxPrice, selectedFamily, sort]);
+  }, [sections, selectedConc, maxPrice, selectedFamily, sort, filterIdealFor, filterMood]);
 
   const visibleSections = useMemo(() => {
+    if (hasBentoFilter) return filteredSections;
     if (!activeCategorySlug) return filteredSections;
     return filteredSections.filter(s => categorySlugMatches(activeCategorySlug, s.slug, s.title));
-  }, [filteredSections, activeCategorySlug]);
+  }, [filteredSections, activeCategorySlug, hasBentoFilter]);
 
-  const activeSectionTitle = visibleSections.length === 1 ? visibleSections[0].title : null;
+  const activeSectionTitle = useMemo(() => {
+    if (bentoFilterLabel) return bentoFilterLabel;
+    if (visibleSections.length === 1) return visibleSections[0].title;
+    return null;
+  }, [bentoFilterLabel, visibleSections]);
 
   const filteredFlat = useMemo(() => visibleSections.flatMap(s => s.items), [visibleSections]);
 
@@ -189,7 +208,7 @@ export default function CollectionPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [selectedConc, selectedFamily, maxPrice, sort, useApiLayout]);
+  }, [selectedConc, selectedFamily, maxPrice, sort, useApiLayout, filterIdealFor, filterMood]);
 
   useEffect(() => {
     if (!activeCategorySlug || catalogLoading || visibleSections.length === 0) return;
@@ -211,63 +230,30 @@ export default function CollectionPage() {
     const firstAvailable = availability.find(size => size.available);
     const isOutOfStock = !firstAvailable;
     return (
-    <motion.div
-      key={p.id}
-      layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={{ duration: 0.3, delay: i * 0.04 }}
-      className="bg-brand-beige rounded-2xl overflow-hidden border border-[#2a2a2a] cursor-pointer group"
-      onMouseEnter={() => setHoveredId(p.id)}
-      onMouseLeave={() => setHoveredId(null)}
-      onClick={() => navigate(`/product/${p.id}`)}
-    >
-      <div className="relative h-[200px] lg:h-[260px] bg-brand-beige overflow-hidden">
-        <motion.img
-          src={p.image}
-          alt={p.name}
-          className="w-full h-full object-cover object-center"
-          animate={{ scale: hoveredId === p.id ? 1.05 : 1 }}
-          transition={{ duration: 0.35 }}
+      <motion.div
+        key={p.id}
+        layout
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        transition={{ duration: 0.3, delay: i * 0.04 }}
+        className="overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[#141414]"
+      >
+        <ProductCard
+          product={p}
+          collectionLayout
+          skipEntranceAnimation
+          cardClassName="w-full"
+          addToBag={{
+            disabled: isOutOfStock,
+            label: isOutOfStock ? 'Out of Stock' : 'Add to Bag',
+            onClick: e => {
+              if (!firstAvailable) return;
+              addToCart(p, firstAvailable.label, firstAvailable.price);
+            },
+          }}
         />
-        {p.tag && (
-          <span className="absolute top-3 left-3 bg-brand-sage text-black text-[8px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full">
-            {p.tag}
-          </span>
-        )}
-        <AnimatePresence>
-          {hoveredId === p.id && (
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              disabled={isOutOfStock}
-              className={`absolute bottom-3 left-3 right-3 text-[9px] font-semibold tracking-widest uppercase py-2 rounded-xl transition-colors ${
-                isOutOfStock
-                  ? 'bg-red-200 text-red-800 cursor-not-allowed'
-                  : 'bg-brand-sage text-black hover:bg-brand-sage/90'
-              }`}
-              onClick={e => {
-                e.stopPropagation();
-                if (!firstAvailable) return;
-                addToCart(p, firstAvailable.label, firstAvailable.price);
-              }}
-            >
-              {isOutOfStock ? 'Out of Stock' : 'Add to Bag'}
-            </motion.button>
-          )}
-        </AnimatePresence>
-      </div>
-      <div className="p-4 text-center">
-        <p className="text-[9px] text-[#888] tracking-[0.2em] uppercase mb-1">{p.category}</p>
-        <p className="font-serif text-sm lg:text-base font-medium text-brand-dark mb-1">{p.name}</p>
-        <p className="text-[10px] text-brand-gray mb-2 truncate">{p.notes.top.join(', ')}</p>
-        <p className="text-sm font-medium text-brand-dark">{formatInr(p.price, 0)}</p>
-        {isOutOfStock && <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-red-700">Out of stock</p>}
-      </div>
-    </motion.div>
+      </motion.div>
     );
   };
 
@@ -303,13 +289,13 @@ export default function CollectionPage() {
             {activeSectionTitle}
           </motion.p>
         )}
-        {activeCategorySlug && (
+        {(activeCategorySlug || hasBentoFilter) && (
           <motion.div variants={fadeUp} custom={1.6} initial="hidden" animate="visible" className="mt-4">
             <Link
               to="/collection"
               className="text-[10px] font-medium uppercase tracking-[0.18em] text-brand-gray underline-offset-4 hover:text-brand-dark hover:underline"
             >
-              View all categories
+              View all products
             </Link>
           </motion.div>
         )}
@@ -376,7 +362,25 @@ export default function CollectionPage() {
 
       <div className="px-5 lg:px-10 xl:px-16 pt-8 pb-16">
         <div className="flex-1 space-y-14">
-          <p className="text-[11px] text-brand-gray mb-2">{filteredFlat.length} products</p>
+          <p className="text-[11px] text-brand-gray mb-2">
+            {filteredFlat.length} product{filteredFlat.length === 1 ? '' : 's'}
+            {hasBentoFilter && filterIdealFor && (
+              <span className="text-brand-dark"> · Ideal for: {filterIdealFor}</span>
+            )}
+            {hasBentoFilter && filterMood && <span className="text-brand-dark"> · Mood: {filterMood}</span>}
+          </p>
+
+          {filteredFlat.length === 0 && hasBentoFilter && (
+            <p className="mb-8 text-sm text-brand-gray">
+              No products match this filter yet. In admin, set{' '}
+              {filterIdealFor ? (
+                <strong className="text-brand-dark">Ideal for</strong>
+              ) : (
+                <strong className="text-brand-dark">Mood</strong>
+              )}{' '}
+              on your products to match &quot;{bentoFilterLabel}&quot;.
+            </p>
+          )}
 
           {useApiLayout
             ? visibleSections.map(section => {
@@ -453,35 +457,6 @@ export default function CollectionPage() {
           )}
         </div>
       </div>
-
-      <section className="mx-4 lg:mx-10 xl:mx-16 mb-12 rounded-3xl bg-brand-beige border border-[#2a2a2a] overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-2">
-          <div className="p-8 lg:p-12 flex flex-col justify-center">
-            <p className="text-[9px] text-brand-gray tracking-[0.2em] uppercase mb-3">New · Discovery</p>
-            <h3 className="font-serif text-2xl lg:text-3xl font-medium text-brand-dark mb-3">The Discovery Set</h3>
-            <p className="text-[12px] text-brand-gray leading-relaxed mb-6 max-w-xs">
-              Experience our signature collection with five 7ml sample sizes. The perfect introduction to the world of
-              Meladen.
-            </p>
-            <button
-              type="button"
-              onClick={() => navigate('/product/1')}
-              className="self-start bg-brand-dark text-brand-cream text-[10px] font-medium tracking-[0.15em] uppercase px-6 py-3 rounded-sm hover:bg-brand-dark/85 transition-colors"
-            >
-              Shop Discovery Set · {formatInr(45, 0)}
-            </button>
-          </div>
-          <div className="h-[220px] lg:h-auto overflow-hidden">
-            <img
-              src={meladen12}
-              alt="Discovery Set"
-              className="w-full h-full object-cover object-center"
-              loading="lazy"
-              decoding="async"
-            />
-          </div>
-        </div>
-      </section>
     </motion.div>
   );
 }

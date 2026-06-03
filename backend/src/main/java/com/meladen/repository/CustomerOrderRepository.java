@@ -9,18 +9,29 @@ import org.springframework.data.repository.query.Param;
 
 public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, String> {
 
-  @Query("SELECT DISTINCT o FROM CustomerOrder o LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.product ORDER BY o.createdAt DESC")
+  @Query(
+      "SELECT DISTINCT o FROM CustomerOrder o LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.product p "
+          + "LEFT JOIN FETCH p.category WHERE UPPER(o.status) IN ('PAID', 'COD') ORDER BY o.createdAt DESC")
+  List<CustomerOrder> findConfirmedWithItems();
+
+  @Query(
+      "SELECT DISTINCT o FROM CustomerOrder o LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.product p "
+          + "LEFT JOIN FETCH p.category ORDER BY o.createdAt DESC")
   List<CustomerOrder> findAllWithItems();
 
   @Query(
-      "SELECT DISTINCT o FROM CustomerOrder o LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.product WHERE o.customerId = :customerId ORDER BY o.createdAt DESC")
+      "SELECT DISTINCT o FROM CustomerOrder o LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.product p "
+          + "LEFT JOIN FETCH p.category WHERE o.customerId = :customerId ORDER BY o.createdAt DESC")
   List<CustomerOrder> findByCustomerIdWithItems(@Param("customerId") Long customerId);
 
   List<CustomerOrder> findByCustomerEmailIgnoreCaseOrderByCreatedAtDesc(String email);
 
   @Query(
-      "SELECT DISTINCT o FROM CustomerOrder o LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.product WHERE o.id = :id")
+      "SELECT DISTINCT o FROM CustomerOrder o LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.product p "
+          + "LEFT JOIN FETCH p.category WHERE o.id = :id")
   Optional<CustomerOrder> findByIdWithItems(@Param("id") String id);
+
+  Optional<CustomerOrder> findTopByOrderNumberStartingWithOrderByOrderNumberDesc(String prefix);
 
   @Query("SELECT COUNT(i) FROM CustomerOrderItem i WHERE i.product.id = :productId")
   long countItemsByProductId(@Param("productId") String productId);

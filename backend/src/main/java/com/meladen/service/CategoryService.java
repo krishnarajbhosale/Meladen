@@ -5,6 +5,7 @@ import com.meladen.dto.CategoryResponse;
 import com.meladen.dto.CategoryWithProductsResponse;
 import com.meladen.entity.Category;
 import com.meladen.repository.CategoryRepository;
+import com.meladen.util.InvoiceHsnCodes;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -64,6 +65,7 @@ public class CategoryService {
     c.setDescription(request.description());
     c.setSortOrder(request.sortOrder());
     c.setSlug(ensureUniqueSlug(slugify(c.getName()), null));
+    c.setHsnCode(InvoiceHsnCodes.resolveForCategory(c.getName(), c.getSlug()));
     return toResponse(categoryRepository.save(c));
   }
 
@@ -77,6 +79,7 @@ public class CategoryService {
     c.setDescription(request.description());
     c.setSortOrder(request.sortOrder());
     c.setSlug(ensureUniqueSlug(slugify(c.getName()), c.getId()));
+    c.setHsnCode(InvoiceHsnCodes.resolveForCategory(c.getName(), c.getSlug()));
     return toResponse(categoryRepository.save(c));
   }
 

@@ -14,14 +14,17 @@ public record PlaceOrderRequest(
     @NotBlank String lastName,
     @NotBlank @Email String email,
     String phone,
+    String apartmentHouseNumber,
     @NotBlank String address,
+    String nearestLandmark,
     @NotBlank String city,
     @NotBlank String postcode,
     @NotBlank String country,
     @NotEmpty List<@Valid OrderItemRequest> items,
     String promoCode,
     BigDecimal walletDiscount,
-    BigDecimal clientTotal) {
+    BigDecimal clientTotal,
+    String paymentMethod) {
 
   public record OrderItemRequest(
       @NotBlank String productId,

@@ -1,5 +1,7 @@
 package com.meladen.service;
 
+import com.meladen.config.MeladenProperties;
+import com.meladen.dto.DeliveryQuote;
 import com.meladen.dto.OrderResponse;
 import com.meladen.dto.PaymentVerifyRequest;
 import com.meladen.dto.PlaceOrderRequest;
@@ -13,6 +15,7 @@ import com.meladen.entity.Product;
 import com.meladen.repository.CustomerOrderRepository;
 import com.meladen.repository.InventoryStockRepository;
 import com.meladen.repository.ProductRepository;
+import com.meladen.util.InvoiceHsnCodes;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -33,9 +36,8 @@ public class OrderService {
   private static final Long STOCK_ROW_ID = 1L;
   private static final BigDecimal LOW_ALCOHOL_THRESHOLD = new BigDecimal("200");
   private static final BigDecimal LOW_PRODUCT_OIL_THRESHOLD = new BigDecimal("100");
-  private static final BigDecimal FREE_SHIPPING_THRESHOLD = new BigDecimal("150");
-  private static final BigDecimal SHIPPING_FEE = new BigDecimal("12");
 
+  private final MeladenProperties properties;
   private final ProductRepository productRepository;
   private final InventoryStockRepository stockRepository;
   private final CustomerOrderRepository orderRepository;
@@ -44,6 +46,7 @@ public class OrderService {
   private final OrderMailService orderMailService;
   private final RazorpayService razorpayService;
   private final ShiprocketService shiprocketService;
+  private final OrderNumberService orderNumberService;
 
   @Transactional
   public OrderResponse placeOrder(PlaceOrderRequest request, Long customerIdOrNull) {
@@ -68,6 +71,7 @@ public class OrderService {
       oi.setLineTotal(row.lineTotal());
       oi.setOilUsedGm(row.oilUsedGm().setScale(2, RoundingMode.HALF_UP));
       oi.setAlcoholUsedGm(row.alcoholUsedGm().setScale(2, RoundingMode.HALF_UP));
+      oi.setHsnCode(InvoiceHsnCodes.forProduct(row.product()));
       items.add(oi);
     }
     order.setItems(items);
@@ -76,10 +80,6 @@ public class OrderService {
 
     CustomerOrder savedOrder = orderRepository.save(order);
     orderMailService.sendOrderPendingEmail(savedOrder);
-
-    if (computed.finalTotal().compareTo(BigDecimal.ZERO) <= 0) {
-      return completeOrderWithoutRazorpay(savedOrder.getId(), customerIdOrNull);
-    }
     return toOrderResponse(savedOrder);
   }
 
@@ -173,6 +173,10 @@ public class OrderService {
       walletService.debitForOrder(customerId, order.getId(), computed.walletUse());
     }
 
+    order.setShipping(computed.shipping());
+    order.setCodCharges(computed.codCharges());
+    order.setWalletDiscount(computed.walletUse());
+    order.setTotal(computed.finalTotal());
     order.setStatus(status);
     shiprocketService.createShipmentForOrder(order);
     CustomerOrder saved = orderRepository.save(order);
@@ -206,7 +210,7 @@ public class OrderService {
     for (PlaceOrderRequest.OrderItemRequest item : request.items()) {
       Product product =
           productRepository
-              .findById(item.productId())
+              .findDetailById(item.productId())
               .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid product: " + item.productId()));
       SizeRecipe recipe = sizeRecipe(item.size());
       int qty = item.quantity();
@@ -248,9 +252,25 @@ public class OrderService {
 
     BigDecimal subtotalAfterDiscount =
         subtotal.subtract(discount).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
-    BigDecimal shipping =
-        subtotalAfterDiscount.compareTo(FREE_SHIPPING_THRESHOLD) >= 0 ? BigDecimal.ZERO : SHIPPING_FEE;
-    BigDecimal preWalletTotal = subtotalAfterDiscount.add(shipping).setScale(2, RoundingMode.HALF_UP);
+
+    int itemUnits =
+        request.items().stream().mapToInt(PlaceOrderRequest.OrderItemRequest::quantity).sum();
+    boolean codPayment = isCodPayment(request.paymentMethod());
+    DeliveryQuote deliveryQuote =
+        shiprocketService.quoteDelivery(
+            request.postcode(), subtotalAfterDiscount, itemUnits, codPayment);
+
+    BigDecimal shipping = deliveryQuote.shippingFee();
+    MeladenProperties.OrderPricing pricing = properties.getOrderPricing();
+    if (!deliveryQuote.shiprocketAvailable()
+        && subtotalAfterDiscount.compareTo(pricing.getFreeShippingThreshold()) >= 0) {
+      shipping = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    BigDecimal codCharges =
+        codPayment ? deliveryQuote.codCharges() : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    BigDecimal preWalletTotal =
+        subtotalAfterDiscount.add(shipping).add(codCharges).setScale(2, RoundingMode.HALF_UP);
     BigDecimal walletUse = resolveWalletDiscount(request, customerIdOrNull, preWalletTotal);
     BigDecimal finalTotal =
         preWalletTotal.subtract(walletUse).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
@@ -261,20 +281,33 @@ public class OrderService {
         discount,
         appliedPromo,
         shipping.setScale(2, RoundingMode.HALF_UP),
+        codCharges,
         walletUse,
         finalTotal,
         totalAlcoholRequired.setScale(2, RoundingMode.HALF_UP));
+  }
+
+  @Transactional(readOnly = true)
+  public DeliveryQuote quoteShippingForCheckout(
+      String postcode, BigDecimal orderValue, int itemCount, boolean cod) {
+    return shiprocketService.quoteDelivery(postcode, orderValue, itemCount, cod);
+  }
+
+  private static boolean isCodPayment(String paymentMethod) {
+    return paymentMethod != null && "COD".equalsIgnoreCase(paymentMethod.trim());
   }
 
   private CustomerOrder buildOrderEntity(
       PlaceOrderRequest request, Long customerIdOrNull, ComputedOrder computed) {
     CustomerOrder order = new CustomerOrder();
     order.setId(UUID.randomUUID().toString());
-    order.setOrderNumber("MLD-" + System.currentTimeMillis());
+    order.setOrderNumber(orderNumberService.nextOrderNumber());
     order.setCustomerName((request.firstName().trim() + " " + request.lastName().trim()).trim());
     order.setCustomerEmail(request.email().trim());
     order.setCustomerPhone(request.phone());
+    order.setApartmentHouseNumber(trimToNull(request.apartmentHouseNumber()));
     order.setAddress(request.address().trim());
+    order.setNearestLandmark(trimToNull(request.nearestLandmark()));
     order.setCity(request.city().trim());
     order.setPostcode(request.postcode().trim());
     order.setCountry(request.country().trim());
@@ -285,6 +318,7 @@ public class OrderService {
       order.setCustomerId(customerIdOrNull);
     }
     order.setShipping(computed.shipping());
+    order.setCodCharges(computed.codCharges());
     order.setWalletDiscount(computed.walletUse());
     order.setTotal(computed.finalTotal());
     order.setCreatedAt(Instant.now());
@@ -324,14 +358,17 @@ public class OrderService {
         last,
         order.getCustomerEmail(),
         order.getCustomerPhone(),
+        order.getApartmentHouseNumber(),
         order.getAddress(),
+        order.getNearestLandmark(),
         order.getCity(),
         order.getPostcode(),
         order.getCountry(),
         items,
         order.getPromoCode(),
         order.getWalletDiscount(),
-        order.getTotal());
+        order.getTotal(),
+        order.getPaymentMethod());
   }
 
   private BigDecimal resolveWalletDiscount(
@@ -366,12 +403,7 @@ public class OrderService {
 
   @Transactional(readOnly = true)
   public List<OrderResponse> listAdminOrders() {
-    // Admin should only see orders that were confirmed (paid / COD / placed).
-    // Checkout attempts that never completed payment remain PAYMENT_PENDING and are excluded.
-    return orderRepository.findAllWithItems().stream()
-        .filter(o -> o.getStatus() != null && !"PAYMENT_PENDING".equalsIgnoreCase(o.getStatus()))
-        .map(this::toOrderResponse)
-        .toList();
+    return orderRepository.findConfirmedWithItems().stream().map(this::toOrderResponse).toList();
   }
 
   @Transactional(readOnly = true)
@@ -432,7 +464,9 @@ public class OrderService {
         o.getCustomerName(),
         o.getCustomerEmail(),
         o.getCustomerPhone(),
+        o.getApartmentHouseNumber(),
         o.getAddress(),
+        o.getNearestLandmark(),
         o.getCity(),
         o.getPostcode(),
         o.getCountry(),
@@ -440,6 +474,9 @@ public class OrderService {
         disc,
         o.getPromoCode(),
         o.getShipping(),
+        o.getCodCharges() != null
+            ? o.getCodCharges().setScale(2, RoundingMode.HALF_UP)
+            : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP),
         walletDisc,
         o.getTotal(),
         o.getAlcoholUsedGm(),
@@ -501,12 +538,21 @@ public class OrderService {
       BigDecimal oilUsedGm,
       BigDecimal alcoholUsedGm) {}
 
+  private static String trimToNull(String value) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
+  }
+
   private record ComputedOrder(
       List<ResolvedOrderItem> resolved,
       BigDecimal subtotal,
       BigDecimal discount,
       String promoCode,
       BigDecimal shipping,
+      BigDecimal codCharges,
       BigDecimal walletUse,
       BigDecimal finalTotal,
       BigDecimal totalAlcoholRequired) {}

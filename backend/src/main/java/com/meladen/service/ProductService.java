@@ -8,6 +8,7 @@ import com.meladen.entity.Product;
 import com.meladen.repository.CategoryRepository;
 import com.meladen.repository.CustomerOrderRepository;
 import com.meladen.repository.ProductRepository;
+import com.meladen.util.UploadSizeValidator;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -31,6 +32,7 @@ public class ProductService {
   private final ProductRepository productRepository;
   private final CategoryRepository categoryRepository;
   private final CustomerOrderRepository orderRepository;
+  private final UploadSizeValidator uploadSizeValidator;
 
   @Transactional(readOnly = true)
   public List<ProductAdminResponse> listForAdmin() {
@@ -133,6 +135,7 @@ public class ProductService {
 
     BigDecimal primary = primaryPrice(p);
     int price = toInt(primary);
+    String listSize = listSizeForCard(p);
 
     List<String> gallery = new ArrayList<>();
     if (p.getGalleryImage1() != null && !p.getGalleryImage1().isBlank()) {
@@ -157,7 +160,7 @@ public class ProductService {
         p.getMeladenFragrance(),
         BRAND,
         price,
-        "50ml",
+        listSize,
         cardCategory,
         p.getTag(),
         image,
@@ -242,12 +245,17 @@ public class ProductService {
       p.setImageContentType(null);
     } else if (r.imageBase64() != null && !r.imageBase64().isBlank()) {
       try {
-        p.setImageBlob(Base64.getDecoder().decode(r.imageBase64()));
+        byte[] imageBytes = Base64.getDecoder().decode(r.imageBase64());
+        uploadSizeValidator.validateImageBytes(imageBytes, "Primary image");
+        p.setImageBlob(imageBytes);
         p.setImageContentType(r.imageContentType());
       } catch (IllegalArgumentException ex) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid image data");
       }
     }
+    uploadSizeValidator.validateGalleryImageValue(r.galleryImage1(), "Gallery image 1");
+    uploadSizeValidator.validateGalleryImageValue(r.galleryImage2(), "Gallery image 2");
+    uploadSizeValidator.validateGalleryImageValue(r.galleryImage3(), "Gallery image 3");
     p.setGalleryImage1(r.galleryImage1());
     p.setGalleryImage2(r.galleryImage2());
     p.setGalleryImage3(r.galleryImage3());
@@ -257,11 +265,30 @@ public class ProductService {
     p.setArchived(Boolean.TRUE.equals(r.archived()));
   }
 
+  private boolean isPerfumeCategory(Product p) {
+    Category c = p.getCategory();
+    if (c == null || c.getName() == null) return false;
+    return c.getName().toLowerCase().contains("perfume");
+  }
+
   private BigDecimal primaryPrice(Product p) {
+    if (isPerfumeCategory(p) && p.getPrice30Ml() != null) {
+      return p.getPrice30Ml();
+    }
     if (p.getPrice50Ml() != null) return p.getPrice50Ml();
     if (p.getPrice30Ml() != null) return p.getPrice30Ml();
     if (p.getPrice100Ml() != null) return p.getPrice100Ml();
     return BigDecimal.ZERO;
+  }
+
+  private String listSizeForCard(Product p) {
+    if (isPerfumeCategory(p) && p.getPrice30Ml() != null) {
+      return "30ml";
+    }
+    if (p.getPrice50Ml() != null) return "50ml";
+    if (p.getPrice30Ml() != null) return "30ml";
+    if (p.getPrice100Ml() != null) return "100ml";
+    return "50ml";
   }
 
   private int toInt(BigDecimal v) {

@@ -3,15 +3,16 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import { ApiError } from '../api/client';
-import { placePublicOrder } from '../api/catalog';
+import { placePublicOrder, fetchShippingQuote } from '../api/catalog';
 import { getCustomerEmail, isCustomerLoggedIn } from '../api/customerAuth';
 import { validatePromoCode } from '../api/promo';
 import { getMyWallet } from '../api/wallet';
 import InputField from '../components/InputField';
 import Button from '../components/Button';
+import CheckoutSummary from '../components/CheckoutSummary';
 import Drawer from '../components/Drawer';
 import { pageVariants, fadeUp } from '../animations/variants';
-import { formatInr, formatInrDiscount } from '../utils/currency';
+import { formatInr } from '../utils/currency';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -25,13 +26,20 @@ export default function CheckoutPage() {
   const [promoLoading, setPromoLoading] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
   const [walletUseInput, setWalletUseInput] = useState('');
+  const [shippingFee, setShippingFee] = useState(0);
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [shippingSource, setShippingSource] = useState<string | null>(null);
+
+  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
+    apartmentHouseNumber: '',
     address: '',
+    nearestLandmark: '',
     city: '',
     postcode: '',
     country: '',
@@ -53,12 +61,47 @@ export default function CheckoutPage() {
 
   const promoDiscount = appliedPromo?.discountAmount ?? 0;
   const subtotalAfterPromo = Math.max(0, total - promoDiscount);
-  const preWalletTotal = subtotalAfterPromo;
+  const deliveryTotal = shippingFee;
+  const preWalletTotal = subtotalAfterPromo + deliveryTotal;
   const maxWalletUse = Math.min(walletBalance, preWalletTotal);
   const parsedWalletUse =
     walletUseInput.trim() === '' ? 0 : Math.max(0, Number(walletUseInput) || 0);
   const effectiveWallet = Math.min(parsedWalletUse, maxWalletUse);
   const payableTotal = Math.max(0, preWalletTotal - effectiveWallet);
+
+  useEffect(() => {
+    const postcode = form.postcode.replace(/\D/g, '');
+    if (postcode.length !== 6 || items.length === 0) {
+      setShippingFee(0);
+      setShippingSource(null);
+      return;
+    }
+    let cancelled = false;
+    setShippingLoading(true);
+    void fetchShippingQuote({
+      postcode,
+      orderValue: subtotalAfterPromo,
+      itemCount,
+      cod: false,
+    })
+      .then(quote => {
+        if (cancelled) return;
+        setShippingFee(Number(quote.shippingFee ?? 0));
+        setShippingSource(quote.source ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setShippingFee(0);
+          setShippingSource(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setShippingLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [form.postcode, subtotalAfterPromo, itemCount, items.length]);
 
   const applyPromo = async () => {
     setPromoLoading(true);
@@ -82,6 +125,29 @@ export default function CheckoutPage() {
     }
   };
 
+  const summaryProps = {
+    items,
+    total,
+    promoInput,
+    onPromoInputChange: setPromoInput,
+    onApplyPromo: () => void applyPromo(),
+    promoLoading,
+    promoError,
+    appliedPromo,
+    walletBalance,
+    walletUseInput,
+    onWalletUseChange: setWalletUseInput,
+    maxWalletUse,
+    preWalletTotal,
+    promoDiscount,
+    effectiveWallet,
+    shippingFee,
+    shippingLoading,
+    shippingSource,
+    postcode: form.postcode,
+    payableTotal,
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (items.length === 0) {
@@ -97,7 +163,9 @@ export default function CheckoutPage() {
         lastName: form.lastName,
         email: form.email,
         phone: form.phone || null,
+        apartmentHouseNumber: form.apartmentHouseNumber.trim() || null,
         address: form.address,
+        nearestLandmark: form.nearestLandmark.trim() || null,
         city: form.city,
         postcode: form.postcode,
         country: form.country,
@@ -112,11 +180,7 @@ export default function CheckoutPage() {
         })),
       });
       clearCart();
-      if (order.status === 'PAID' || order.status === 'PLACED') {
-        navigate('/order-confirmation', { state: { order } });
-      } else {
-        navigate(`/order-pending/${order.id}`, { state: { cartItems: cartSnapshot } });
-      }
+      navigate(`/order-pending/${order.id}`, { state: { cartItems: cartSnapshot } });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         navigate('/login', { state: { from: '/checkout' } });
@@ -147,10 +211,11 @@ export default function CheckoutPage() {
         </button>
         <h1 className="font-serif text-xl font-medium text-brand-dark">Checkout</h1>
         <button
+          type="button"
           onClick={() => setSummaryOpen(true)}
           className="text-[11px] tracking-wide text-brand-gray underline underline-offset-4 lg:hidden"
         >
-          Summary
+          {formatInr(payableTotal)}
         </button>
         <div className="hidden w-10 lg:block" />
       </div>
@@ -184,7 +249,17 @@ export default function CheckoutPage() {
           >
             <p className="mb-4 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Shipping Address</p>
             <div className="space-y-3">
+              <InputField
+                label="Apartment / House Number"
+                value={form.apartmentHouseNumber}
+                onChange={set('apartmentHouseNumber')}
+              />
               <InputField label="Street Address" value={form.address} onChange={set('address')} required />
+              <InputField
+                label="Nearest Landmark"
+                value={form.nearestLandmark}
+                onChange={set('nearestLandmark')}
+              />
               <div className="grid grid-cols-2 gap-3">
                 <InputField label="City" value={form.city} onChange={set('city')} required />
                 <InputField label="Postcode" value={form.postcode} onChange={set('postcode')} required />
@@ -193,9 +268,20 @@ export default function CheckoutPage() {
             </div>
           </motion.div>
 
+          <motion.div
+            variants={fadeUp}
+            custom={2}
+            initial="hidden"
+            animate="visible"
+            className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#101010)] p-5 lg:hidden lg:p-6"
+          >
+            <p className="mb-5 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Order &amp; payment</p>
+            <CheckoutSummary {...summaryProps} />
+          </motion.div>
+
           <div className="lg:hidden">
             <Button type="submit" fullWidth disabled={submitting}>
-              {submitting ? 'Placing Order...' : 'Place Order'}
+              {submitting ? 'Placing Order...' : `Place Order · ${formatInr(payableTotal)}`}
             </Button>
             {submitError && <p className="mt-3 text-sm text-red-500">{submitError}</p>}
           </div>
@@ -210,101 +296,8 @@ export default function CheckoutPage() {
         >
           <div className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#0f0f0f)] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.24)]">
             <p className="mb-5 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Order Summary</p>
-
-            <div className="mb-6 space-y-4 rounded-2xl border border-[#252525] bg-[#141414] p-4">
-              {items.map(item => (
-                <div key={`${item.product.id}-${item.size}`} className="flex items-center gap-3">
-                  <div className="h-16 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-brand-light-gray">
-                    <img src={item.product.image} alt={item.product.name} className="h-full w-full object-cover" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-serif text-sm font-medium text-brand-dark">{item.product.name}</p>
-                    <p className="text-xs text-brand-gray">{item.size} · Qty: {item.quantity}</p>
-                  </div>
-                  <p className="text-sm font-medium text-brand-dark">{formatInr(item.unitPrice * item.quantity, 0)}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mb-4 space-y-2 rounded-2xl border border-[#252525] bg-[#141414] p-4">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-brand-gray">Promo code</p>
-              <div className="flex gap-2">
-                <input
-                  value={promoInput}
-                  onChange={e => setPromoInput(e.target.value)}
-                  placeholder="Code"
-                  className="min-w-0 flex-1 rounded-xl border border-[#333] bg-[#0c0c0c] px-3 py-2 text-sm text-brand-dark outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => void applyPromo()}
-                  disabled={promoLoading || !promoInput.trim()}
-                  className="rounded-xl border border-brand-beige/30 px-3 py-2 text-xs uppercase tracking-widest text-brand-cream disabled:opacity-40"
-                >
-                  {promoLoading ? '…' : 'Apply'}
-                </button>
-              </div>
-              {promoError && <p className="text-xs text-red-400">{promoError}</p>}
-              {appliedPromo && (
-                <p className="text-xs text-emerald-400/90">
-                  {appliedPromo.code} · {formatInrDiscount(appliedPromo.discountAmount, 0)}
-                </p>
-              )}
-            </div>
-
-            <div className="mb-4 space-y-2 rounded-2xl border border-[#252525] bg-[#141414] p-4">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-brand-gray">Store wallet</p>
-              <div className="flex justify-between text-sm text-[#e8e4dc]">
-                <span>Balance</span>
-                <span className="font-medium text-gold">{formatInr(walletBalance)}</span>
-              </div>
-              {walletBalance > 0 && preWalletTotal > 0 && (
-                <>
-                  <label htmlFor="wallet-use" className="sr-only">
-                    Use from wallet (₹)
-                  </label>
-                  <input
-                    id="wallet-use"
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    placeholder="Amount to apply"
-                    value={walletUseInput}
-                    onChange={e => setWalletUseInput(e.target.value)}
-                    className="w-full rounded-xl border border-[#333] bg-[#0c0c0c] px-3 py-2 text-sm text-brand-dark outline-none"
-                  />
-                  <p className="text-[10px] text-[#8a8580]">
-                    Up to {formatInr(maxWalletUse)} can be applied to this order.
-                  </p>
-                </>
-              )}
-            </div>
-
-            <div className="mb-6 space-y-2 rounded-2xl border border-[#252525] bg-[#141414] p-5">
-              <div className="flex justify-between text-sm text-brand-gray">
-                <span>Subtotal</span>
-                <span>{formatInr(total, 0)}</span>
-              </div>
-              {promoDiscount > 0 && (
-                <div className="flex justify-between text-sm text-emerald-400/80">
-                  <span>Discount</span>
-                  <span>{formatInrDiscount(promoDiscount, 0)}</span>
-                </div>
-              )}
-              {effectiveWallet > 0 && (
-                <div className="flex justify-between text-sm text-emerald-400/85">
-                  <span>Wallet</span>
-                  <span>{formatInrDiscount(effectiveWallet)}</span>
-                </div>
-              )}
-              <div className="h-px bg-[#262626]" />
-              <div className="flex justify-between font-medium text-brand-dark">
-                <span>{payableTotal <= 0 ? 'Due' : 'Total'}</span>
-                <span>{formatInr(payableTotal)}</span>
-              </div>
-            </div>
-
-            <Button type="submit" fullWidth disabled={submitting}>
+            <CheckoutSummary {...summaryProps} />
+            <Button type="submit" fullWidth disabled={submitting} className="mt-6">
               {submitting ? 'Placing Order...' : 'Place Order'}
             </Button>
             {submitError && <p className="mt-3 text-sm text-red-500">{submitError}</p>}
@@ -313,43 +306,7 @@ export default function CheckoutPage() {
       </form>
 
       <Drawer open={summaryOpen} onClose={() => setSummaryOpen(false)} title="Order Summary">
-        <div className="space-y-4">
-          {items.map(item => (
-            <div key={`${item.product.id}-${item.size}`} className="flex items-center gap-3">
-              <div className="h-16 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-brand-light-gray">
-                <img src={item.product.image} alt={item.product.name} className="h-full w-full object-cover" />
-              </div>
-              <div className="flex-1">
-                <p className="font-serif text-sm font-medium text-brand-dark">{item.product.name}</p>
-                <p className="text-xs text-brand-gray">{item.size} · Qty: {item.quantity}</p>
-              </div>
-              <p className="text-sm font-medium text-brand-dark">{formatInr(item.unitPrice * item.quantity, 0)}</p>
-            </div>
-          ))}
-          <div className="h-px bg-brand-beige" />
-          <div className="space-y-1 text-sm text-brand-gray">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>{formatInr(total, 0)}</span>
-            </div>
-            {promoDiscount > 0 && (
-              <div className="flex justify-between text-emerald-400/80">
-                <span>Discount</span>
-                <span>{formatInrDiscount(promoDiscount, 0)}</span>
-              </div>
-            )}
-            {effectiveWallet > 0 && (
-              <div className="flex justify-between text-emerald-400/85">
-                <span>Wallet</span>
-                <span>{formatInrDiscount(effectiveWallet)}</span>
-              </div>
-            )}
-          </div>
-          <div className="flex justify-between font-medium text-brand-dark">
-            <span>Due</span>
-            <span>{formatInr(payableTotal)}</span>
-          </div>
-        </div>
+        <CheckoutSummary {...summaryProps} />
       </Drawer>
     </motion.div>
   );

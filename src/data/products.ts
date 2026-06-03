@@ -61,6 +61,18 @@ const SIZE_RECIPES: Record<string, { oil: number; alcohol: number }> = {
   '100ml': { oil: 20, alcohol: 60 },
 };
 
+/** List price on product cards — uses 30ml when that size is priced (typical for perfumes). */
+export function getProductCardListPrice(product: Product): { price: number; sizeLabel: string } {
+  if (product.price30Ml != null) {
+    return { price: product.price30Ml, sizeLabel: '30ml' };
+  }
+  const options = getProductSizeOptions(product);
+  if (options.length > 0) {
+    return { price: options[0].price, sizeLabel: options[0].label };
+  }
+  return { price: product.price, sizeLabel: product.size || '50ml' };
+}
+
 export function getProductSizeOptions(product: Product): ProductSizeOption[] {
   const options: ProductSizeOption[] = [];
   if (product.price30Ml != null) options.push({ label: '30ml', price: product.price30Ml });

@@ -84,3 +84,34 @@ export function resolveHomeCollectionSlug(
   const hit = apiCategories.find(c => categorySlugMatches(homeSlug, c.slug, c.name));
   return hit?.slug ?? homeSlug;
 }
+
+/** Bento "Our Specials" → collection filters (admin product fields). */
+export type BentoProductFilter =
+  | { kind: 'idealFor'; value: string; label: string }
+  | { kind: 'mood'; value: string; label: string };
+
+export const BENTO_PRODUCT_FILTERS = {
+  men: { kind: 'idealFor', value: 'Men', label: "Men's" } as const,
+  women: { kind: 'idealFor', value: 'Women', label: "Women's" } as const,
+  unisex: { kind: 'idealFor', value: 'Unisex', label: 'Unisex' } as const,
+  luxury: { kind: 'mood', value: 'Luxury', label: 'Luxury' } as const,
+};
+
+export function buildBentoCollectionUrl(filter: BentoProductFilter): string {
+  const params = new URLSearchParams();
+  if (filter.kind === 'idealFor') params.set('idealFor', filter.value);
+  else params.set('mood', filter.value);
+  return `/collection?${params.toString()}`;
+}
+
+function normalizeProductField(value: string): string {
+  return value.trim().toLowerCase().replace(/'/g, '').replace(/\s+/g, ' ');
+}
+
+/** Match admin idealFor / mood text to a bento filter value (case-insensitive). */
+export function productFieldMatches(value: string | undefined, target: string): boolean {
+  if (!value?.trim() || !target?.trim()) return false;
+  const v = normalizeProductField(value);
+  const t = normalizeProductField(target);
+  return v === t || v.includes(t) || t.includes(v);
+}

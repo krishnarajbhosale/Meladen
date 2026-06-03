@@ -3,6 +3,7 @@ package com.meladen.service;
 import com.meladen.config.MeladenProperties;
 import com.meladen.entity.CustomerOrder;
 import com.meladen.entity.CustomerOrderItem;
+import com.meladen.util.ShippingAddressFormatter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -243,6 +244,7 @@ public class OrderMailService {
           <td style="padding:6px 0;font-size:13px;color:#e8e4dc;text-align:right;">₹%s</td></tr>
           %s
           %s
+          %s
           <tr><td style="padding:14px 0 0;font-size:15px;font-weight:600;color:#f5f0e8;border-top:1px solid #2a2a2a;">Total</td>
           <td style="padding:14px 0 0;font-size:15px;font-weight:600;color:#c9a84c;text-align:right;border-top:1px solid #2a2a2a;">₹%s</td></tr>
           %s
@@ -278,13 +280,14 @@ public class OrderMailService {
             discountRow(order),
             paymentLine,
             money(order.getShipping()),
+            codRow(order),
             walletRow(order),
             "",
             money(order.getTotal()),
             invoiceNote,
             escape(order.getCustomerName()),
             escape(order.getCustomerEmail()),
-            escape(order.getAddress()),
+            escape(ShippingAddressFormatter.streetLine(order)),
             escape(order.getCity()),
             escape(order.getPostcode()),
             escape(order.getCountry()),
@@ -310,6 +313,17 @@ public class OrderMailService {
           + promo
           + "</td><td style=\"padding:6px 0;font-size:13px;color:#6fcf97;text-align:right;\">−₹"
           + money(order.getDiscountAmount())
+          + "</td></tr>";
+    }
+    return "";
+  }
+
+  private static String codRow(CustomerOrder order) {
+    if (order.getCodCharges() != null
+        && order.getCodCharges().compareTo(BigDecimal.ZERO) > 0) {
+      return "<tr><td style=\"padding:6px 0;font-size:13px;color:#888;\">COD charges</td>"
+          + "<td style=\"padding:6px 0;font-size:13px;color:#e8e4dc;text-align:right;\">₹"
+          + money(order.getCodCharges())
           + "</td></tr>";
     }
     return "";

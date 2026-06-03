@@ -37,6 +37,10 @@ public class Category {
   @Column(name = "sort_order")
   private Integer sortOrder = 0;
 
+  /** GST HSN/SAC code for products in this category (e.g. 3303 for perfumes). */
+  @Column(name = "hsn_code", length = 4)
+  private String hsnCode;
+
   @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<Product> products = new ArrayList<>();
 }

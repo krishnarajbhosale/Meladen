@@ -4,6 +4,7 @@ import { fetchCategoriesWithProducts } from '../api/catalog';
 import { HOME_COLLECTIONS, resolveHomeCollectionSlug } from '../data/collections';
 import { fadeUp } from '../animations/variants';
 import CollectionCategoryBanner from './CollectionCategoryBanner';
+import HomeSectionHeading from './HomeSectionHeading';
 
 export default function HomeCollectionsSection() {
   const [categorySlugs, setCategorySlugs] = useState<Record<string, string>>({});
@@ -36,18 +37,11 @@ export default function HomeCollectionsSection() {
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true }}
-        className="mb-6 text-center lg:mb-8"
       >
-        <h2 className="font-serif text-[1.35rem] font-semibold uppercase tracking-[0.12em] text-brand-dark lg:text-3xl">
-          Collections
-        </h2>
-        <div className="mx-auto mt-2 h-px w-16 bg-gradient-to-r from-transparent via-brand-sage to-transparent" />
-        <p className="mx-auto mt-3 max-w-lg text-[11px] leading-relaxed text-brand-gray lg:text-xs">
-          Explore our fragrance families—each crafted for a distinct mood and moment.
-        </p>
+        <HomeSectionHeading title="Collections" />
       </motion.div>
 
-      <div className="mx-auto flex max-w-5xl flex-col gap-3 lg:gap-4">
+      <div className="mx-auto flex max-w-5xl flex-col gap-4 lg:gap-5">
         {HOME_COLLECTIONS.map((collection, index) => (
           <motion.div
             key={collection.slug}

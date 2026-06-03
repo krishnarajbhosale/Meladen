@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { products, getProductSizeAvailability, type Product } from '../data/products';
 import { useCart } from '../context/CartContext';
 import Accordion from '../components/Accordion';
 import Button from '../components/Button';
+import InspiredByBadge from '../components/InspiredByBadge';
 import HorizontalProductRail from '../components/HorizontalProductRail';
 import QuantityStepper from '../components/QuantityStepper';
 import { pageVariants, fadeUp } from '../animations/variants';
@@ -118,6 +119,43 @@ export default function ProductPage() {
     return [...sameCategory, ...others].slice(0, 10);
   }, [id, product, catalogProducts]);
 
+  const galleryImages = useMemo(() => {
+    if (!product) return [];
+    return [
+      product.image,
+      product.gallery[0] ?? product.image,
+      product.gallery[1] ?? product.gallery[0] ?? product.image,
+      product.gallery[2] ?? product.gallery[1] ?? product.gallery[0] ?? product.image,
+    ];
+  }, [product]);
+
+  const imageCount = Math.max(galleryImages.length, 1);
+  const touchStartX = useRef<number | null>(null);
+  const SWIPE_THRESHOLD_PX = 48;
+
+  const showPrevImage = useCallback(() => {
+    setActiveImg(i => (i - 1 + imageCount) % imageCount);
+  }, [imageCount]);
+
+  const showNextImage = useCallback(() => {
+    setActiveImg(i => (i + 1) % imageCount);
+  }, [imageCount]);
+
+  const onGalleryTouchStart = (event: React.TouchEvent) => {
+    touchStartX.current = event.touches[0]?.clientX ?? null;
+  };
+
+  const onGalleryTouchEnd = (event: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const endX = event.changedTouches[0]?.clientX;
+    if (endX == null) return;
+    const delta = endX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(delta) < SWIPE_THRESHOLD_PX) return;
+    if (delta < 0) showNextImage();
+    else showPrevImage();
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -134,12 +172,6 @@ export default function ProductPage() {
     );
   }
 
-  const images = [
-    product.image,
-    product.gallery[0] ?? product.image,
-    product.gallery[1] ?? product.gallery[0] ?? product.image,
-    product.gallery[2] ?? product.gallery[1] ?? product.gallery[0] ?? product.image,
-  ];
   const sizeOptions = getProductSizeAvailability(product, alcoholStockGm);
   const firstAvailable = sizeOptions.find(option => option.available) ?? null;
   const selectedSize =
@@ -182,23 +214,67 @@ export default function ProductPage() {
 
       <div className="px-5 pb-12 lg:grid lg:grid-cols-2 lg:items-start lg:gap-16 lg:px-16 xl:px-24">
         <div>
-          <div className="relative mb-3 h-[340px] overflow-hidden rounded-3xl bg-brand-light-gray lg:h-[580px]">
-            <AnimatePresence mode="wait">
+          <div
+            className="relative mb-3 h-[340px] touch-pan-y overflow-hidden rounded-3xl bg-brand-light-gray lg:h-[580px]"
+            onTouchStart={onGalleryTouchStart}
+            onTouchEnd={onGalleryTouchEnd}
+          >
+            <AnimatePresence mode="wait" initial={false}>
               <motion.img
                 key={activeImg}
-                src={images[activeImg]}
+                src={galleryImages[activeImg]}
                 alt={product.name}
                 className="h-full w-full object-contain p-3"
-                initial={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, x: 24 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                exit={{ opacity: 0, x: -24 }}
                 transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                draggable={false}
               />
             </AnimatePresence>
+
+            <InspiredByBadge inspiredBy={product.inspiredBy} className="z-20" />
+
+            {imageCount > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={showPrevImage}
+                  aria-label="Previous image"
+                  className="absolute left-3 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/55 text-white backdrop-blur-sm transition-colors hover:bg-black/75 lg:flex"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M15 18l-6-6 6-6"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={showNextImage}
+                  aria-label="Next image"
+                  className="absolute right-3 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/55 text-white backdrop-blur-sm transition-colors hover:bg-black/75 lg:flex"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M9 18l6-6-6-6"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </>
+            )}
           </div>
 
           <div className="mb-5 flex gap-3">
-            {images.map((img, i) => (
+            {galleryImages.map((img, i) => (
               <button
                 key={i}
                 onClick={() => setActiveImg(i)}
@@ -212,7 +288,7 @@ export default function ProductPage() {
           </div>
 
           <div className="mb-5 flex justify-center gap-2 lg:hidden">
-            {images.map((_, i) => (
+            {galleryImages.map((_, i) => (
               <motion.button
                 key={i}
                 onClick={() => setActiveImg(i)}
@@ -234,9 +310,14 @@ export default function ProductPage() {
           >
             {product.category}
           </motion.p>
+          {product.inspiredBy?.trim() ? (
+            <motion.div variants={fadeUp} custom={1} initial="hidden" animate="visible" className="mb-2">
+              <InspiredByBadge inspiredBy={product.inspiredBy} variant="inline" />
+            </motion.div>
+          ) : null}
           <motion.h1
             variants={fadeUp}
-            custom={1}
+            custom={2}
             initial="hidden"
             animate="visible"
             className="mb-2 font-serif text-3xl font-medium text-brand-dark lg:text-5xl"
@@ -245,7 +326,7 @@ export default function ProductPage() {
           </motion.h1>
           <motion.p
             variants={fadeUp}
-            custom={2}
+            custom={3}
             initial="hidden"
             animate="visible"
             className="mb-5 text-xl font-medium text-brand-dark lg:text-2xl"
@@ -257,16 +338,16 @@ export default function ProductPage() {
           </motion.p>
           <motion.p
             variants={fadeUp}
-            custom={3}
+            custom={4}
             initial="hidden"
             animate="visible"
-            className="mb-8 text-sm leading-relaxed text-brand-gray lg:text-base"
+            className="mb-8 text-sm leading-relaxed text-[#888] lg:text-base"
           >
             {product.description}
           </motion.p>
 
           {sizeOptions.length > 0 && (
-          <motion.div variants={fadeUp} custom={4} initial="hidden" animate="visible" className="mb-8">
+          <motion.div variants={fadeUp} custom={5} initial="hidden" animate="visible" className="mb-8">
             <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Choose Size</p>
             <div className={`grid gap-2.5 ${sizeGridClass}`}>
               {sizeOptions.map(option => {
@@ -320,7 +401,7 @@ export default function ProductPage() {
 
           <motion.div
             variants={fadeUp}
-            custom={5}
+            custom={6}
             initial="hidden"
             animate="visible"
             className="mb-10 flex items-center gap-3"
@@ -331,7 +412,7 @@ export default function ProductPage() {
             </Button>
           </motion.div>
 
-          <motion.div variants={fadeUp} custom={6} initial="hidden" animate="visible">
+          <motion.div variants={fadeUp} custom={7} initial="hidden" animate="visible">
             <Accordion title="Fragrance Notes">
               <div className="space-y-2">
                 {(['top', 'heart', 'base'] as const).map(layer => (
@@ -345,19 +426,37 @@ export default function ProductPage() {
               </div>
             </Accordion>
             <Accordion title="How to Apply">
-              <p>
-                Apply to pulse points, including wrists, neck, and behind the ears. Hold the bottle
-                15cm from skin and spray 2-3 times. Layer with our matching body lotion for longer wear.
-              </p>
+              <div className="space-y-3">
+                <p>
+                  Spray the perfume from a distance of approximately 6 inches onto your clothing to
+                  help prevent oil stains. If you wish to apply it directly to your skin, we
+                  recommend performing a patch test first to ensure compatibility with your skin
+                  type.
+                </p>
+                <p>
+                  For the best performance and long-lasting fragrance experience, apply 8–10 sprays on
+                  your clothes and pulse points.
+                </p>
+              </div>
             </Accordion>
             <Accordion title="More Information">
               {product.moreInformation?.trim() ? (
-                <p className="text-sm leading-relaxed text-brand-gray">
+                <p className="text-sm leading-relaxed text-[#888]">
                   {product.moreInformation.trim().replace(/\s*\r?\n+\s*/g, ' ')}
                 </p>
               ) : (
-                <p className="text-sm text-brand-gray">No additional information available for this fragrance.</p>
+                <p className="text-sm text-[#888]">No additional information available for this fragrance.</p>
               )}
+            </Accordion>
+            <Accordion title="Disclaimer">
+              <p>
+                Our perfumes and fragrance oils are uniquely handcrafted blends, inspired by the spirit of
+                renowned designer fragrances, yet created as original and independent compositions. We do not
+                have any connection, partnership, or authorization from the brands or manufacturers referenced.
+                All trademarks and intellectual property rights remain with their respective owners. These
+                references are used only to give customers a clearer idea of the scent direction, helping them
+                understand the fragrance profile and what we offer.
+              </p>
             </Accordion>
           </motion.div>
         </div>

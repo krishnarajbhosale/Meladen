@@ -118,7 +118,9 @@ export interface OrderApi {
   customerName: string;
   customerEmail: string;
   customerPhone: string | null;
+  apartmentHouseNumber?: string | null;
   address: string;
+  nearestLandmark?: string | null;
   city: string;
   postcode: string;
   country: string;
@@ -126,6 +128,7 @@ export interface OrderApi {
   discountAmount?: number;
   promoCode?: string | null;
   shipping: number;
+  codCharges?: number;
   walletDiscount?: number;
   total: number;
   alcoholUsedGm: number;

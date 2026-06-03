@@ -39,22 +39,22 @@ export default function CartDrawer({ open, onClose }: Props) {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-            className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[440px] flex-col border-l border-[#242424] bg-[linear-gradient(180deg,#121212,#0d0d0d)] shadow-[0_28px_80px_rgba(0,0,0,0.5)]"
+            className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[440px] flex-col bg-[linear-gradient(180deg,#121212,#0d0d0d)] shadow-[0_28px_80px_rgba(0,0,0,0.5)]"
           >
-            <div className="border-b border-[#252525] px-5 py-4">
+            <div className="px-6 py-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[9px] uppercase tracking-[0.2em] text-brand-gray">Shopping Bag</p>
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <h2 className="font-serif text-lg text-brand-dark">Your Cart</h2>
-                    <span className="rounded-full border border-[#31291c] px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-brand-dark">
+                  <div className="mt-2 flex items-center gap-3">
+                    <h2 className="font-serif text-xl text-brand-dark">Your Cart</h2>
+                    <span className="text-[9px] uppercase tracking-[0.14em] text-brand-gray">
                       {count} {count === 1 ? 'item' : 'items'}
                     </span>
                   </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[#2d2d2d] text-brand-gray transition-colors hover:border-brand-dark hover:text-brand-dark"
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-brand-gray transition-colors hover:bg-white/5 hover:text-brand-dark"
                   aria-label="Close cart"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -65,10 +65,10 @@ export default function CartDrawer({ open, onClose }: Props) {
 
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div className="flex-1 overflow-y-auto px-6 pb-2">
               {items.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center text-center">
-                  <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-[#2d2418] bg-[#181818]">
+                <div className="flex h-full flex-col items-center justify-center px-4 text-center">
+                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#181818]">
                     <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
                       <path
                         d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
@@ -101,7 +101,7 @@ export default function CartDrawer({ open, onClose }: Props) {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="divide-y divide-[#1f1f1f]/90">
                   <AnimatePresence>
                     {items.map(item => (
                       <motion.article
@@ -111,12 +111,12 @@ export default function CartDrawer({ open, onClose }: Props) {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                         transition={{ duration: 0.25 }}
-                        className="rounded-2xl border border-[#252525] bg-[#141414] p-4"
+                        className="py-6 first:pt-0"
                       >
-                        <div className="flex gap-3.5">
+                        <div className="flex gap-4">
                           <button
                             type="button"
-                            className="h-[72px] w-[60px] flex-shrink-0 overflow-hidden rounded-xl border border-[#262626] bg-brand-light-gray"
+                            className="h-[76px] w-[64px] flex-shrink-0 overflow-hidden rounded-xl bg-[#161616]"
                             onClick={() => {
                               onClose();
                               navigate(`/product/${item.product.id}`);
@@ -136,7 +136,7 @@ export default function CartDrawer({ open, onClose }: Props) {
                               <button
                                 type="button"
                                 onClick={() => removeFromCart(item.product.id, item.size)}
-                                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-[#2d2d2d] text-brand-gray transition-colors hover:border-brand-dark hover:text-brand-dark"
+                                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-brand-gray transition-colors hover:bg-white/5 hover:text-brand-dark"
                                 aria-label={`Remove ${item.product.name}`}
                               >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -145,16 +145,16 @@ export default function CartDrawer({ open, onClose }: Props) {
                               </button>
                             </div>
 
-                            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                              <span className="rounded-full border border-[#3a3121] bg-[#181512] px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-brand-dark">
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-[#1a1814] px-2.5 py-0.5 text-[9px] uppercase tracking-[0.12em] text-brand-dark">
                                 {item.size}
                               </span>
-                              <span className="rounded-full border border-[#2b2b2b] px-2 py-0.5 text-[9px] text-brand-gray">
+                              <span className="text-[9px] text-brand-gray">
                                 {formatInr(item.unitPrice, 0)} each
                               </span>
                             </div>
 
-                            <div className="mt-4 flex items-end justify-between gap-3">
+                            <div className="mt-5 flex items-end justify-between gap-4">
                               <QuantityStepper
                                 compact
                                 value={item.quantity}
@@ -177,22 +177,19 @@ export default function CartDrawer({ open, onClose }: Props) {
             </div>
 
             {items.length > 0 && (
-              <div className="border-t border-[#252525] bg-[#101010] px-5 pb-5 pt-4">
-                <div className="rounded-2xl border border-[#252525] bg-[#141414] p-4">
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-[10px] text-brand-gray">
-                      <span>Subtotal</span>
-                      <span>{formatInr(total)}</span>
-                    </div>
-                    <div className="h-px bg-[#262626]" />
-                    <div className="flex justify-between text-xs font-medium text-brand-dark">
-                      <span>Total</span>
-                      <span>{formatInr(total)}</span>
-                    </div>
+              <div className="px-6 pb-6 pt-2">
+                <div className="space-y-4 py-4">
+                  <div className="flex justify-between text-[10px] uppercase tracking-[0.14em] text-brand-gray">
+                    <span>Subtotal</span>
+                    <span>{formatInr(total)}</span>
+                  </div>
+                  <div className="flex justify-between font-serif text-lg text-brand-dark">
+                    <span>Total</span>
+                    <span>{formatInr(total)}</span>
                   </div>
                 </div>
 
-                <p className="mb-3 mt-4 text-center text-[9px] leading-relaxed text-brand-gray">
+                <p className="mb-5 mt-2 text-center text-[9px] leading-relaxed text-brand-gray">
                   Taxes calculated at checkout.
                   <br />
                   Complimentary returns within 30 days.
@@ -206,11 +203,11 @@ export default function CartDrawer({ open, onClose }: Props) {
                   <span aria-hidden="true">→</span>
                 </button>
 
-                <div className="mt-4 flex justify-center gap-2">
+                <div className="mt-5 flex justify-center gap-3 opacity-40">
                   {['VISA', 'MC', 'AMEX', 'PYPL', 'GPY'].map(p => (
                     <span
                       key={p}
-                      className="rounded border border-brand-beige px-1.5 py-0.5 text-[8px] font-medium tracking-wide text-brand-gray/50"
+                      className="text-[8px] font-medium tracking-[0.12em] text-brand-gray"
                     >
                       {p}
                     </span>

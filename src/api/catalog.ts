@@ -58,7 +58,7 @@ export function apiProductToProduct(p: ProductPublicApi): Product {
     price30Ml: p.price30Ml ?? undefined,
     price50Ml: p.price50Ml ?? undefined,
     price100Ml: p.price100Ml ?? undefined,
-    inspiredBy: p.inspiredBy || undefined,
+    inspiredBy: p.inspiredBy?.trim() || undefined,
     luxuryDescription: p.luxuryDescription || undefined,
     mood: p.mood || undefined,
     occasion: p.occasion || undefined,
@@ -200,6 +200,23 @@ export async function adminListOrders(token: string): Promise<OrderApi[]> {
 export async function fetchMyOrders(): Promise<OrderApi[]> {
   return fetchJson<OrderApi[]>('/api/public/orders/me', {
     headers: { ...customerAuthHeaders() },
+  });
+}
+
+export async function fetchShippingQuote(body: {
+  postcode: string;
+  orderValue: number;
+  itemCount: number;
+  cod: boolean;
+}): Promise<{
+  shippingFee: number;
+  codFee: number;
+  shiprocketAvailable: boolean;
+  source: string;
+}> {
+  return fetchJson('/api/public/checkout/shipping-quote', {
+    method: 'POST',
+    body: JSON.stringify(body),
   });
 }
 

@@ -4,6 +4,7 @@ import { API_BASE_URL } from '../api/client';
 import Button from '../components/Button';
 import type { OrderApi } from '../api/types';
 import { formatInr } from '../utils/currency';
+import { formatShippingAddress } from '../utils/address';
 
 type LocationState = { order?: OrderApi };
 
@@ -73,9 +74,7 @@ export default function OrderConfirmationPage() {
             <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Ship to</p>
             <p className="text-sm text-[#e8e4dc]">{order.customerName}</p>
             <p className="text-sm text-brand-gray">{order.customerPhone || order.customerEmail}</p>
-            <p className="mt-1 text-sm text-brand-gray">
-              {order.address}, {order.city} {order.postcode}, {order.country}
-            </p>
+            <p className="mt-1 text-sm text-brand-gray">{formatShippingAddress(order)}</p>
           </section>
 
           <section>

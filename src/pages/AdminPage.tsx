@@ -22,6 +22,27 @@ import {
   fetchAdminReturnVideoBlobUrl,
   loginAdmin,
 } from '../api/catalog';
+import {
+  adminDeleteNewsletterSubscriber,
+  adminListNewsletterSubscribers,
+  type NewsletterSubscriberRow,
+} from '../api/newsletter';
+import {
+  adminCreateCelebPhoto,
+  adminDeleteCelebPhoto,
+  adminListCelebPhotos,
+  celebPhotoImageSrc,
+  type CelebPhotoApi,
+} from '../api/celebPhotos';
+import { groupCelebPhotos } from '../data/mockCelebPhotos';
+import {
+  adminApproveCustomerReview,
+  adminCreateCustomerReview,
+  adminDeleteCustomerReview,
+  adminListCustomerReviews,
+  customerReviewPhotoSrc,
+  type CustomerReviewApi,
+} from '../api/customerReviews';
 import type {
   CategoryResponse,
   OrderApi,
@@ -34,11 +55,17 @@ import default2 from '../assets/Default 2.jpg';
 import default3 from '../assets/DEFAULT 3.png';
 import default4 from '../assets/Default 4.png';
 import { formatInr, formatInrDiscount } from '../utils/currency';
+import { formatShippingAddressLines } from '../utils/address';
+import { assertImageFileWithinLimit, MAX_IMAGE_UPLOAD_LABEL } from '../utils/uploadLimits';
 
 const TOKEN_KEY = 'meladen_admin_jwt';
 const PRODUCT_MEDIA_DEFAULTS_KEY = 'meladen_product_media_defaults';
 const ORDERS_SEEN_AT_KEY = 'meladen_admin_orders_seen_at';
 const ORDERS_POLL_MS = 30_000;
+
+function isAdminConfirmedOrder(order: OrderApi): boolean {
+  return order.status === 'PAID' || order.status === 'COD';
+}
 
 function getOrdersSeenAtMs(): number | null {
   const raw = localStorage.getItem(ORDERS_SEEN_AT_KEY);
@@ -75,7 +102,7 @@ function formatPaymentMethod(method: string | null | undefined, status: string):
   return method?.replace(/_/g, ' ') ?? '—';
 }
 const PRODUCT_TABS = ['Basics', 'Pricing & Notes', 'Media & Flags'] as const;
-const ADMIN_TABS = ['Categories', 'Products', 'Stock', 'Orders', 'Promo codes', 'Returns', 'Wallet'] as const;
+const ADMIN_TABS = ['Categories', 'Products', 'Stock', 'Orders', 'Promo codes', 'Returns', 'Wallet', 'Celeb photos', 'Reviews', 'Newsletter'] as const;
 type ProductTab = (typeof PRODUCT_TABS)[number];
 type AdminTab = (typeof ADMIN_TABS)[number];
 
@@ -173,6 +200,18 @@ export default function AdminPage() {
   const [unseenOrderIds, setUnseenOrderIds] = useState<Set<string>>(() => new Set());
   const [promoRows, setPromoRows] = useState<PromoCodeRow[]>([]);
   const [returnRows, setReturnRows] = useState<ReturnRequestRow[]>([]);
+  const [newsletterRows, setNewsletterRows] = useState<NewsletterSubscriberRow[]>([]);
+  const [celebPhotos, setCelebPhotos] = useState<CelebPhotoApi[]>([]);
+  const [celebSectionName, setCelebSectionName] = useState('');
+  const [celebSortOrder, setCelebSortOrder] = useState('0');
+  const [celebUploading, setCelebUploading] = useState(false);
+  const [celebMessage, setCelebMessage] = useState<string | null>(null);
+  const [customerReviews, setCustomerReviews] = useState<CustomerReviewApi[]>([]);
+  const [reviewerNameInput, setReviewerNameInput] = useState('');
+  const [reviewTextInput, setReviewTextInput] = useState('');
+  const [reviewSortOrder, setReviewSortOrder] = useState('0');
+  const [reviewUploading, setReviewUploading] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState<string | null>(null);
   const [alcoholStockInput, setAlcoholStockInput] = useState('');
   const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>('Categories');
   const activeAdminTabRef = useRef<AdminTab>('Categories');
@@ -250,8 +289,9 @@ export default function AdminPage() {
 
   const applyOrdersFromServer = useCallback(
     (list: OrderApi[]) => {
-      setOrders(list);
-      syncOrdersNotification(list, activeAdminTabRef.current);
+      const confirmed = list.filter(isAdminConfirmedOrder);
+      setOrders(confirmed);
+      syncOrdersNotification(confirmed, activeAdminTabRef.current);
     },
     [syncOrdersNotification],
   );
@@ -389,6 +429,51 @@ export default function AdminPage() {
   }, [token, activeAdminTab]);
 
   useEffect(() => {
+    if (!token || activeAdminTab !== 'Celeb photos') return;
+    let cancelled = false;
+    adminListCelebPhotos(token)
+      .then(rows => {
+        if (!cancelled) setCelebPhotos(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setCelebPhotos([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, activeAdminTab]);
+
+  useEffect(() => {
+    if (!token || activeAdminTab !== 'Reviews') return;
+    let cancelled = false;
+    adminListCustomerReviews(token)
+      .then(rows => {
+        if (!cancelled) setCustomerReviews(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setCustomerReviews([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, activeAdminTab]);
+
+  useEffect(() => {
+    if (!token || activeAdminTab !== 'Newsletter') return;
+    let cancelled = false;
+    adminListNewsletterSubscribers(token)
+      .then(rows => {
+        if (!cancelled) setNewsletterRows(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setNewsletterRows([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, activeAdminTab]);
+
+  useEffect(() => {
     if (!token || activeAdminTab !== 'Wallet') return;
     let cancelled = false;
     adminListWalletCustomers(token)
@@ -491,6 +576,127 @@ export default function AdminPage() {
       setPromoRows(await adminListPromoCodes(token));
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Delete failed');
+    }
+  };
+
+  const removeNewsletterSubscriber = async (id: number) => {
+    if (!token || !confirm('Remove this subscriber from the list?')) return;
+    try {
+      await adminDeleteNewsletterSubscriber(token, id);
+      setNewsletterRows(await adminListNewsletterSubscribers(token));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Delete failed');
+    }
+  };
+
+  const uploadCelebPhoto = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!token) return;
+    const fileInput = (e.currentTarget.elements.namedItem('celebImage') as HTMLInputElement | null);
+    const file = fileInput?.files?.[0];
+    if (!celebSectionName.trim()) {
+      setCelebMessage('Section name is required.');
+      return;
+    }
+    if (!file) {
+      setCelebMessage('Choose a photo to upload.');
+      return;
+    }
+    try {
+      assertImageFileWithinLimit(file);
+    } catch (err) {
+      setCelebMessage(err instanceof Error ? err.message : 'Image too large');
+      return;
+    }
+    setCelebUploading(true);
+    setCelebMessage(null);
+    try {
+      await adminCreateCelebPhoto(token, celebSectionName, Number(celebSortOrder) || 0, file);
+      setCelebPhotos(await adminListCelebPhotos(token));
+      setCelebSectionName('');
+      setCelebSortOrder('0');
+      if (fileInput) fileInput.value = '';
+      setCelebMessage('Photo uploaded. It will appear on the homepage under that section name.');
+    } catch (err) {
+      setCelebMessage(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setCelebUploading(false);
+    }
+  };
+
+  const removeCelebPhoto = async (id: number) => {
+    if (!token || !confirm('Delete this photo?')) return;
+    try {
+      await adminDeleteCelebPhoto(token, id);
+      setCelebPhotos(await adminListCelebPhotos(token));
+      setCelebMessage('Photo removed.');
+    } catch (err) {
+      setCelebMessage(err instanceof Error ? err.message : 'Delete failed');
+    }
+  };
+
+  const uploadAdminReview = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!token) return;
+    const fileInput = (e.currentTarget.elements.namedItem('reviewPhoto') as HTMLInputElement | null);
+    const file = fileInput?.files?.[0];
+    if (!reviewerNameInput.trim() || !reviewTextInput.trim()) {
+      setReviewMessage('Name and review text are required.');
+      return;
+    }
+    if (!file) {
+      setReviewMessage('Choose a reviewer photo.');
+      return;
+    }
+    try {
+      assertImageFileWithinLimit(file);
+    } catch (err) {
+      setReviewMessage(err instanceof Error ? err.message : 'Image too large');
+      return;
+    }
+    setReviewUploading(true);
+    setReviewMessage(null);
+    try {
+      await adminCreateCustomerReview(
+        token,
+        reviewerNameInput,
+        reviewTextInput,
+        Number(reviewSortOrder) || 0,
+        file,
+        true,
+      );
+      setCustomerReviews(await adminListCustomerReviews(token));
+      setReviewerNameInput('');
+      setReviewTextInput('');
+      setReviewSortOrder('0');
+      if (fileInput) fileInput.value = '';
+      setReviewMessage('Review published on the homepage.');
+    } catch (err) {
+      setReviewMessage(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setReviewUploading(false);
+    }
+  };
+
+  const approveCustomerReview = async (id: number) => {
+    if (!token) return;
+    try {
+      await adminApproveCustomerReview(token, id);
+      setCustomerReviews(await adminListCustomerReviews(token));
+      setReviewMessage('Review approved and visible on the homepage.');
+    } catch (err) {
+      setReviewMessage(err instanceof Error ? err.message : 'Approve failed');
+    }
+  };
+
+  const removeCustomerReview = async (id: number) => {
+    if (!token || !confirm('Delete this review?')) return;
+    try {
+      await adminDeleteCustomerReview(token, id);
+      setCustomerReviews(await adminListCustomerReviews(token));
+      setReviewMessage('Review removed.');
+    } catch (err) {
+      setReviewMessage(err instanceof Error ? err.message : 'Delete failed');
     }
   };
 
@@ -798,6 +1004,7 @@ export default function AdminPage() {
   const onPrimaryImageChange = async (file: File | null) => {
     if (!file) return;
     try {
+      assertImageFileWithinLimit(file);
       const base64 = await readFileAsBase64(file);
       setProductField('imageBase64', base64);
       setProductField('imageContentType', file.type || 'application/octet-stream');
@@ -814,6 +1021,7 @@ export default function AdminPage() {
   ) => {
     if (!file) return;
     try {
+      assertImageFileWithinLimit(file);
       const dataUrl = await readFileAsDataUrl(file);
       setProductField(field, dataUrl);
     } catch (e) {
@@ -885,7 +1093,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="mt-8 grid grid-cols-2 gap-2 rounded-lg bg-[#efe4d2] p-1 sm:grid-cols-3 lg:w-fit lg:grid-cols-7">
+        <div className="mt-8 grid grid-cols-2 gap-2 rounded-lg bg-[#efe4d2] p-1 sm:grid-cols-3 lg:w-fit lg:grid-cols-8">
           {ADMIN_TABS.map(tab => {
             const isOrdersTab = tab === 'Orders';
             const showOrderAlert = isOrdersTab && hasNewOrders;
@@ -1222,6 +1430,7 @@ export default function AdminPage() {
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#7a6b57]">
                       Primary image (BLOB upload)
                     </p>
+                    <p className="mb-2 text-[11px] text-[#8a7a66]">Max file size: {MAX_IMAGE_UPLOAD_LABEL}</p>
                     <input
                       type="file"
                       accept="image/*"
@@ -1256,6 +1465,7 @@ export default function AdminPage() {
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#7a6b57]">
                         Default image {idx + 2}
                       </p>
+                      <p className="mb-2 text-[11px] text-[#8a7a66]">Max file size: {MAX_IMAGE_UPLOAD_LABEL}</p>
                       <img
                         src={productForm[field]}
                         alt={`Preview ${idx + 2}`}
@@ -1537,11 +1747,12 @@ export default function AdminPage() {
                             Shipping address
                           </p>
                           <p className="text-xs leading-relaxed text-[#3a2f25]">
-                            {order.address}
-                            <br />
-                            {order.city}, {order.postcode}
-                            <br />
-                            {order.country}
+                            {formatShippingAddressLines(order).map((line, index, lines) => (
+                              <span key={index}>
+                                {line}
+                                {index < lines.length - 1 ? <br /> : null}
+                              </span>
+                            ))}
                           </p>
                         </div>
 
@@ -1564,6 +1775,12 @@ export default function AdminPage() {
                               <dt className="text-[#9a8b78]">Shipping</dt>
                               <dd>{formatInr(Number(order.shipping))}</dd>
                             </div>
+                            {(order.codCharges ?? 0) > 0 && (
+                              <div className="flex justify-between gap-2">
+                                <dt className="text-[#9a8b78]">COD charges</dt>
+                                <dd>{formatInr(Number(order.codCharges))}</dd>
+                              </div>
+                            )}
                             {(order.walletDiscount ?? 0) > 0 && (
                               <div className="flex justify-between gap-2 text-emerald-700">
                                 <dt>Wallet</dt>
@@ -1847,6 +2064,342 @@ export default function AdminPage() {
                   <p className="text-sm text-[#5d4d3b]">{walletTabMessage}</p>
                 )}
               </form>
+            </section>
+          )}
+
+          {activeAdminTab === 'Celeb photos' && (
+            <section className="max-w-4xl space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold text-[#241d14]">Celeb photos</h2>
+                <p className="mt-1 text-sm text-[#6b5c4b]">
+                  Upload photos with a section name. They appear on the homepage after Our Story, grouped by
+                  section with a smooth slideshow.
+                </p>
+              </div>
+
+              <form
+                onSubmit={uploadCelebPhoto}
+                className="space-y-4 rounded-xl border border-[#dbcdb8] bg-white p-4 shadow-sm"
+              >
+                <p className="text-xs font-semibold uppercase tracking-widest text-[#7a6b57]">Add photo</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm text-[#4b3f32]">
+                    Section name
+                    <input
+                      value={celebSectionName}
+                      onChange={e => setCelebSectionName(e.target.value)}
+                      placeholder="e.g. Red Carpet"
+                      className="mt-1 w-full rounded-lg border border-[#dbcdb8] px-3 py-2 text-sm"
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm text-[#4b3f32]">
+                    Sort order
+                    <input
+                      type="number"
+                      min={0}
+                      value={celebSortOrder}
+                      onChange={e => setCelebSortOrder(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-[#dbcdb8] px-3 py-2 text-sm"
+                    />
+                  </label>
+                </div>
+                <label className="block text-sm text-[#4b3f32]">
+                  Photo (max 5 MB)
+                  <input
+                    name="celebImage"
+                    type="file"
+                    accept="image/*"
+                    className="mt-1 block w-full text-sm"
+                    required
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={celebUploading}
+                  className="rounded-full bg-[#241d14] px-5 py-2 text-xs font-semibold uppercase tracking-widest text-white disabled:opacity-50"
+                >
+                  {celebUploading ? 'Uploading…' : 'Upload photo'}
+                </button>
+                {celebMessage && <p className="text-sm text-[#5d4d3b]">{celebMessage}</p>}
+              </form>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-[#7a6b57]">
+                    Published sections ({celebPhotos.length} photos)
+                  </p>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!token) return;
+                      setCelebPhotos(await adminListCelebPhotos(token));
+                    }}
+                    className="rounded-full border border-[#c8b89f] bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#4b3f32]"
+                  >
+                    Refresh
+                  </button>
+                </div>
+
+                {celebPhotos.length === 0 ? (
+                  <p className="rounded-xl border border-[#dbcdb8] bg-white p-4 text-sm text-[#6b5c4b]">
+                    No uploads yet. Homepage shows mock preview photos until you upload here.
+                  </p>
+                ) : (
+                  groupCelebPhotos(
+                    celebPhotos.map(row => ({
+                      id: row.id,
+                      sectionName: row.sectionName,
+                      sortOrder: row.sortOrder,
+                      imageUrl: celebPhotoImageSrc(row),
+                    })),
+                  ).map(group => (
+                    <div
+                      key={group.sectionName}
+                      className="rounded-xl border border-[#dbcdb8] bg-white p-4 shadow-sm"
+                    >
+                      <p className="mb-3 font-serif text-base text-[#241d14]">{group.sectionName}</p>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {group.photos.map(photo => (
+                          <div key={String(photo.id)} className="space-y-2">
+                            <div className="aspect-[4/5] overflow-hidden rounded-lg bg-[#f5f0e8]">
+                              <img
+                                src={photo.imageUrl}
+                                alt={group.sectionName}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between gap-2 text-[10px] text-[#6b5c4b]">
+                              <span>Order {photo.sortOrder}</span>
+                              <button
+                                type="button"
+                                className="text-red-700 underline"
+                                onClick={() => removeCelebPhoto(Number(photo.id))}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          )}
+
+          {activeAdminTab === 'Reviews' && (
+            <section className="max-w-4xl space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold text-[#241d14]">Reviews</h2>
+                <p className="mt-1 text-sm text-[#6b5c4b]">
+                  Add reviews here with photo, name, and text. Published reviews appear on the homepage
+                  after Celebrity Moments.
+                </p>
+              </div>
+
+              <form
+                onSubmit={uploadAdminReview}
+                className="space-y-4 rounded-xl border border-[#dbcdb8] bg-white p-4 shadow-sm"
+              >
+                <p className="text-xs font-semibold uppercase tracking-widest text-[#7a6b57]">
+                  Add review (published immediately)
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm text-[#4b3f32]">
+                    Reviewer name
+                    <input
+                      value={reviewerNameInput}
+                      onChange={e => setReviewerNameInput(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-[#dbcdb8] px-3 py-2 text-sm"
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm text-[#4b3f32]">
+                    Sort order
+                    <input
+                      type="number"
+                      min={0}
+                      value={reviewSortOrder}
+                      onChange={e => setReviewSortOrder(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-[#dbcdb8] px-3 py-2 text-sm"
+                    />
+                  </label>
+                </div>
+                <label className="block text-sm text-[#4b3f32]">
+                  Review text
+                  <textarea
+                    value={reviewTextInput}
+                    onChange={e => setReviewTextInput(e.target.value)}
+                    rows={3}
+                    className="mt-1 w-full rounded-lg border border-[#dbcdb8] px-3 py-2 text-sm"
+                    required
+                    maxLength={2000}
+                  />
+                </label>
+                <label className="block text-sm text-[#4b3f32]">
+                  Reviewer photo (max 5 MB)
+                  <input
+                    name="reviewPhoto"
+                    type="file"
+                    accept="image/*"
+                    className="mt-1 block w-full text-sm"
+                    required
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={reviewUploading}
+                  className="rounded-full bg-[#241d14] px-5 py-2 text-xs font-semibold uppercase tracking-widest text-white disabled:opacity-50"
+                >
+                  {reviewUploading ? 'Saving…' : 'Publish review'}
+                </button>
+                {reviewMessage && <p className="text-sm text-[#5d4d3b]">{reviewMessage}</p>}
+              </form>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-[#7a6b57]">
+                    All reviews ({customerReviews.length})
+                  </p>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!token) return;
+                      setCustomerReviews(await adminListCustomerReviews(token));
+                    }}
+                    className="rounded-full border border-[#c8b89f] bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#4b3f32]"
+                  >
+                    Refresh
+                  </button>
+                </div>
+
+                {customerReviews.length === 0 ? (
+                  <p className="rounded-xl border border-[#dbcdb8] bg-white p-4 text-sm text-[#6b5c4b]">
+                    No reviews yet. Homepage shows mock preview reviews until approved uploads exist.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {customerReviews.map(row => (
+                      <div
+                        key={row.id}
+                        className="flex flex-col gap-3 rounded-xl border border-[#dbcdb8] bg-white p-4 shadow-sm sm:flex-row sm:items-start"
+                      >
+                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-[#f5f0e8]">
+                          <img
+                            src={customerReviewPhotoSrc(row)}
+                            alt={row.reviewerName}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium text-[#241d14]">{row.reviewerName}</p>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                                row.approved
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-amber-100 text-amber-900'
+                              }`}
+                            >
+                              {row.approved ? 'Published' : 'Pending'}
+                            </span>
+                            <span className="text-[10px] text-[#6b5c4b]">Order {row.sortOrder}</span>
+                          </div>
+                          <p className="text-sm text-[#4b3f32]">&ldquo;{row.reviewText}&rdquo;</p>
+                          {row.createdAt && (
+                            <p className="text-[10px] text-[#6b5c4b]">
+                              {new Date(row.createdAt).toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col sm:items-end">
+                          {!row.approved && (
+                            <button
+                              type="button"
+                              className="rounded-full bg-[#241d14] px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white"
+                              onClick={() => approveCustomerReview(row.id)}
+                            >
+                              Approve
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="text-xs text-red-700 underline"
+                            onClick={() => removeCustomerReview(row.id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {activeAdminTab === 'Newsletter' && (
+            <section className="max-w-3xl space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-[#241d14]">Newsletter subscribers</h2>
+                  <p className="mt-1 text-sm text-[#6b5c4b]">
+                    Emails collected from the homepage “Subscribe for Exclusive Access” form.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!token) return;
+                    try {
+                      setNewsletterRows(await adminListNewsletterSubscribers(token));
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                  className="rounded-full border border-[#c8b89f] bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#4b3f32]"
+                >
+                  Refresh
+                </button>
+              </div>
+              {newsletterRows.length === 0 ? (
+                <p className="rounded-xl border border-[#dbcdb8] bg-white p-4 text-sm text-[#6b5c4b] shadow-sm">
+                  No subscribers yet.
+                </p>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-[#dbcdb8] bg-white shadow-sm">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-[#eadfce] text-xs uppercase tracking-wide text-[#7a6b57]">
+                        <th className="px-3 py-2">Subscribed</th>
+                        <th className="px-3 py-2">Email</th>
+                        <th className="px-3 py-2" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {newsletterRows.map(row => (
+                        <tr key={row.id} className="border-b border-[#f0e8dc]">
+                          <td className="px-3 py-2 text-[#6b5c4b]">
+                            {row.createdAt ? new Date(row.createdAt).toLocaleString() : '—'}
+                          </td>
+                          <td className="px-3 py-2 font-medium text-[#241d14]">{row.email}</td>
+                          <td className="px-3 py-2 text-right">
+                            <button
+                              type="button"
+                              className="text-xs text-red-700 underline"
+                              onClick={() => removeNewsletterSubscriber(row.id)}
+                            >
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
           )}
 

@@ -38,8 +38,14 @@ public class CustomerOrder {
   @Column(name = "customer_phone", length = 100)
   private String customerPhone;
 
+  @Column(name = "apartment_house_number", length = 120)
+  private String apartmentHouseNumber;
+
   @Column(nullable = false, length = 600)
   private String address;
+
+  @Column(name = "nearest_landmark", length = 300)
+  private String nearestLandmark;
 
   @Column(nullable = false, length = 200)
   private String city;
@@ -64,6 +70,9 @@ public class CustomerOrder {
 
   @Column(nullable = false, precision = 14, scale = 2)
   private BigDecimal shipping;
+
+  @Column(name = "cod_charges", nullable = false, precision = 14, scale = 2)
+  private BigDecimal codCharges = BigDecimal.ZERO;
 
   @Column(name = "wallet_discount", nullable = false, precision = 14, scale = 2)
   private BigDecimal walletDiscount = BigDecimal.ZERO;

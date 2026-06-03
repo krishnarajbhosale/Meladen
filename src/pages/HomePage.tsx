@@ -1,22 +1,53 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { products, type Product } from '../data/products';
-import { meladen9, meladen10, meladen11 } from '../data/meladenImages';
 import bentoMen from '../assets/BentoMen.png';
 import bentoWomen from '../assets/BentoWomen.png';
 import heroVideo from '../assets/HeroVideo-optimized.webm';
 import heroVideoMp4 from '../assets/Homepagevideo-optimized.mp4';
 import { apiProductToProduct, fetchCategoriesWithProducts } from '../api/catalog';
+import { BENTO_PRODUCT_FILTERS, buildBentoCollectionUrl } from '../data/collections';
 import AutoplayVideo from '../components/AutoplayVideo';
 import HorizontalProductRail from '../components/HorizontalProductRail';
+import HomeSectionHeading from '../components/HomeSectionHeading';
 import HomeCollectionsSection from '../components/HomeCollectionsSection';
+import OurStorySection from '../components/OurStorySection';
+import CelebPhotosSection from '../components/CelebPhotosSection';
+import CustomerReviewsSection from '../components/CustomerReviewsSection';
 import { pageVariants, fadeUp } from '../animations/variants';
+import { subscribeNewsletter } from '../api/newsletter';
+import { ApiError } from '../api/client';
+
+function newsletterErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    try {
+      const parsed = JSON.parse(err.message) as { message?: string };
+      if (parsed.message) return parsed.message;
+    } catch {
+      /* plain text body */
+    }
+    return err.message || 'Could not subscribe. Please try again.';
+  }
+  return err instanceof Error ? err.message : 'Could not subscribe. Please try again.';
+}
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
+  const [subscribeLoading, setSubscribeLoading] = useState(false);
+  const [subscribeFeedback, setSubscribeFeedback] = useState<string | null>(null);
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    if (location.hash !== '#best-sellers') return;
+    const scrollToBestSellers = () => {
+      document.getElementById('best-sellers')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    const id = window.setTimeout(scrollToBestSellers, 120);
+    return () => window.clearTimeout(id);
+  }, [location.pathname, location.hash]);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,6 +71,26 @@ export default function HomePage() {
     return source.filter(product => product.isBestseller);
   }, [catalogProducts]);
 
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = email.trim();
+    if (!trimmed) {
+      setSubscribeFeedback('Please enter your email address.');
+      return;
+    }
+    setSubscribeLoading(true);
+    setSubscribeFeedback(null);
+    try {
+      const res = await subscribeNewsletter(trimmed);
+      setSubscribeFeedback(res.message || 'Thank you for subscribing.');
+      setEmail('');
+    } catch (err) {
+      setSubscribeFeedback(newsletterErrorMessage(err));
+    } finally {
+      setSubscribeLoading(false);
+    }
+  };
+
   return (
     <motion.div variants={pageVariants} initial="hidden" animate="visible" className="relative isolate overflow-x-clip bg-brand-cream">
       <div className="mx-auto w-full max-w-[1500px] px-3 pb-4 pt-0 lg:px-4 lg:pt-4">
@@ -56,48 +107,41 @@ export default function HomePage() {
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/15 to-black/75" />
           </section>
 
-          <section className="mt-6 lg:mt-8">
-            <motion.h2
-              variants={fadeUp}
-              custom={0}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="mb-4 text-center font-serif text-[1.35rem] font-semibold text-brand-dark lg:mb-5 lg:text-3xl"
-            >
-              Our Specials
-            </motion.h2>
+          <section className="mt-10 px-3 lg:mt-14 lg:px-4">
+            <motion.div variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}>
+              <HomeSectionHeading title="Our Specials" />
+            </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 18 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35 }}
               viewport={{ once: true, margin: '-80px' }}
-              className="mx-auto grid max-w-4xl grid-cols-2 grid-rows-[90px_118px_92px] gap-2.5 sm:grid-rows-[120px_170px_120px] lg:grid-rows-[140px_190px_140px] lg:gap-4"
+              className="mx-auto grid max-w-4xl grid-cols-2 grid-rows-[96px_132px_96px] gap-2.5 sm:grid-rows-[190px_178px_118px] lg:grid-rows-[140px_190px_140px] lg:gap-4"
             >
               <motion.article
                 variants={fadeUp}
                 custom={1}
-                onClick={() => navigate('/collection')}
-                className="group relative row-span-2 flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[radial-gradient(circle_at_50%_105%,rgba(201,168,76,0.18),transparent_42%),linear-gradient(180deg,#1a1a1a,#111111)] px-0 pb-0 pt-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] lg:rounded-[1.4rem]"
+                onClick={() => navigate(buildBentoCollectionUrl(BENTO_PRODUCT_FILTERS.men))}
+                className="group relative row-span-2 flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[radial-gradient(circle_at_50%_105%,rgba(201,168,76,0.18),transparent_42%),linear-gradient(180deg,#1a1a1a,#111111)] px-1 pb-0 pt-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:px-4 sm:pt-4 lg:rounded-[1.4rem]"
               >
-                <p className="relative z-10 flex-shrink-0 px-4 font-serif text-base font-semibold text-brand-dark lg:text-2xl">Men&apos;s</p>
-                <div className="relative z-0 mt-2 min-h-0 flex-1 overflow-hidden">
+                <p className="relative z-10 shrink-0 font-serif text-base font-semibold text-brand-dark lg:text-2xl">Men&apos;s</p>
+                <div className="relative z-0 min-h-0 flex-1">
                   <img
                     src={bentoMen}
                     alt="Men's fragrance"
-                    className="pointer-events-none absolute bottom-0 left-0 h-full w-auto max-w-none object-contain object-left"
+                    className="pointer-events-none absolute bottom-0 left-0 max-h-[calc(100%+4px)] w-auto max-w-[92%] object-contain object-bottom object-left drop-shadow-[0_20px_28px_rgba(0,0,0,0.45)] sm:max-w-[115%]"
                     loading="lazy"
                     decoding="async"
                   />
                 </div>
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#111111]/85 via-transparent to-transparent" aria-hidden />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#111111]/70 via-transparent to-transparent" aria-hidden />
               </motion.article>
 
               <motion.button
                 type="button"
                 variants={fadeUp}
                 custom={2}
-                onClick={() => navigate('/collection')}
+                onClick={() => navigate(buildBentoCollectionUrl(BENTO_PRODUCT_FILTERS.luxury))}
                 className="flex items-center justify-center rounded-2xl border border-[#2a2a2a] bg-[linear-gradient(145deg,#1d1d1d,#141414)] px-3 text-center font-serif text-base font-semibold text-brand-dark shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors hover:border-[#c9a84c]/50 lg:rounded-[1.4rem] lg:text-2xl"
               >
                 Luxury
@@ -106,27 +150,27 @@ export default function HomePage() {
               <motion.article
                 variants={fadeUp}
                 custom={3}
-                onClick={() => navigate('/collection')}
-                className="group relative row-span-2 flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[radial-gradient(circle_at_50%_105%,rgba(201,168,76,0.18),transparent_42%),linear-gradient(180deg,#1a1a1a,#111111)] px-0 pb-0 pt-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] lg:rounded-[1.4rem]"
+                onClick={() => navigate(buildBentoCollectionUrl(BENTO_PRODUCT_FILTERS.women))}
+                className="group relative row-span-2 flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[radial-gradient(circle_at_50%_105%,rgba(201,168,76,0.18),transparent_42%),linear-gradient(180deg,#1a1a1a,#111111)] px-1 pb-0 pt-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:px-4 sm:pt-4 lg:rounded-[1.4rem]"
               >
-                <p className="relative z-10 flex-shrink-0 px-4 font-serif text-base font-semibold text-brand-dark lg:text-2xl">Women&apos;s</p>
-                <div className="relative z-0 mt-2 min-h-0 flex-1 overflow-hidden">
+                <p className="relative z-10 shrink-0 font-serif text-base font-semibold text-brand-dark lg:text-2xl">Women&apos;s</p>
+                <div className="relative z-0 min-h-0 flex-1">
                   <img
                     src={bentoWomen}
                     alt="Women's fragrance"
-                    className="pointer-events-none absolute bottom-0 right-0 h-full w-auto max-w-none object-contain object-right"
+                    className="pointer-events-none absolute bottom-0 right-0 max-h-[calc(100%+4px)] w-auto max-w-[98%] origin-bottom-right object-contain object-bottom object-right drop-shadow-[0_20px_28px_rgba(0,0,0,0.45)] sm:max-w-[125%]"
                     loading="lazy"
                     decoding="async"
                   />
                 </div>
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#111111]/85 via-transparent to-transparent" aria-hidden />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#111111]/70 via-transparent to-transparent" aria-hidden />
               </motion.article>
 
               <motion.button
                 type="button"
                 variants={fadeUp}
                 custom={4}
-                onClick={() => navigate('/collection')}
+                onClick={() => navigate(buildBentoCollectionUrl(BENTO_PRODUCT_FILTERS.unisex))}
                 className="flex items-center justify-center rounded-2xl border border-[#2a2a2a] bg-[linear-gradient(145deg,#1d1d1d,#141414)] px-3 text-center font-serif text-base font-semibold text-brand-dark shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors hover:border-[#c9a84c]/50 lg:rounded-[1.4rem] lg:text-2xl"
               >
                 Unisex
@@ -134,160 +178,22 @@ export default function HomePage() {
             </motion.div>
           </section>
 
-          <HorizontalProductRail
-            title="Best Sellers"
-            subtitle="The latest additions to our olfactory library."
-            products={bestSellers}
-          />
+          <div id="best-sellers" className="scroll-mt-24">
+            <HorizontalProductRail
+              title="Best Sellers"
+              subtitle="The latest additions to our olfactory library."
+              products={bestSellers}
+              headingStyle="collections"
+            />
+          </div>
 
           <HomeCollectionsSection />
 
-          <section className="hidden bg-brand-beige px-10 py-20 lg:mt-6 lg:block xl:px-20">
-            <div className="mx-auto grid max-w-6xl grid-cols-[1fr_1fr] items-center gap-16">
-              <motion.div
-                variants={fadeUp}
-                custom={0}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                className="relative"
-              >
-                <div className="relative h-[420px] overflow-hidden rounded-2xl">
-                  <img
-                    src={meladen9}
-                    alt="Notes from the Atelier"
-                    className="h-full w-full object-cover object-center"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
-                <div className="absolute bottom-4 right-4 h-[130px] w-[130px] overflow-hidden rounded-xl border-4 border-brand-cream shadow-lg">
-                  <img
-                    src={meladen10}
-                    alt="Ingredient detail"
-                    className="h-full w-full object-cover object-center"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
-              </motion.div>
+          <OurStorySection />
 
-              <div className="pl-4">
-                <motion.p
-                  variants={fadeUp}
-                  custom={1}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  className="mb-4 text-[9px] tracking-[0.25em] text-brand-gray"
-                >
-                  The Art of Extraction
-                </motion.p>
-                <motion.h2
-                  variants={fadeUp}
-                  custom={2}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  className="mb-5 font-serif text-[2.8rem] font-medium leading-[1.1] text-brand-dark"
-                >
-                  Notes from
-                  <br />
-                  the Atelier.
-                </motion.h2>
-                <motion.p
-                  variants={fadeUp}
-                  custom={3}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  className="mb-7 max-w-sm text-[13px] leading-relaxed text-brand-gray"
-                >
-                  Our perfumers travel the globe to source the finest raw materials. From the sun-drenched citrus groves of Calabria to the misty cedar forests of the Atlas Mountains, every ingredient tells a story. We believe in slow perfumery, allowing complex notes to mature and reveal their true character.
-                </motion.p>
-                <motion.div
-                  variants={fadeUp}
-                  custom={4}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  className="mb-8 space-y-3"
-                >
-                  {[
-                    { title: 'Sustainable Sourcing', desc: 'Partnering directly with artisan farmers.' },
-                    { title: 'Small Batch Production', desc: 'Blended and aged in our Paris atelier.' },
-                  ].map(item => (
-                    <div key={item.title} className="flex items-start gap-3">
-                      <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-brand-dark" />
-                      <div>
-                        <p className="text-[12px] font-medium text-brand-dark">{item.title}</p>
-                        <p className="text-[11px] text-brand-gray">{item.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </motion.div>
-                <motion.div variants={fadeUp} custom={5} initial="hidden" whileInView="visible" viewport={{ once: true }}>
-                  <button className="border border-brand-dark px-7 py-3 text-[10px] font-medium uppercase tracking-[0.15em] text-brand-dark transition-all duration-200 hover:bg-brand-dark hover:text-brand-cream">
-                    Read the Journal
-                  </button>
-                </motion.div>
-              </div>
-            </div>
-          </section>
+          <CelebPhotosSection />
 
-          <section className="px-5 pb-10 pt-10 lg:hidden">
-            <motion.p
-              variants={fadeUp}
-              custom={0}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="mb-2 text-[9px] uppercase tracking-[0.2em] text-brand-gray"
-            >
-              The Atelier
-            </motion.p>
-            <motion.h2
-              variants={fadeUp}
-              custom={1}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="mb-4 font-serif text-[2rem] font-medium leading-tight text-brand-dark"
-            >
-              Crafted in
-              <br />
-              <span className="italic">Grasse, France</span>
-            </motion.h2>
-            <motion.div
-              variants={fadeUp}
-              custom={2}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="relative mb-5 h-[220px] overflow-hidden rounded-2xl"
-            >
-              <img
-                src={meladen11}
-                alt="Crafted in Grasse"
-                className="h-full w-full object-cover object-center"
-                loading="lazy"
-                decoding="async"
-              />
-            </motion.div>
-            <motion.p
-              variants={fadeUp}
-              custom={3}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="mb-5 text-[13px] leading-relaxed text-brand-gray"
-            >
-              Every Meladen fragrance begins its journey in the historic perfume capital of the world. We source only the finest botanicals, blending south-facing mimosa, crisp alpine lavender, and long-aged absolutes in a way that celebrates the masterpiece of olfactory art.
-            </motion.p>
-            <motion.div variants={fadeUp} custom={4} initial="hidden" whileInView="visible" viewport={{ once: true }}>
-              <button className="flex items-center gap-1.5 text-[12px] font-medium text-brand-dark">Read our story</button>
-            </motion.div>
-          </section>
+          <CustomerReviewsSection />
 
           <section className="mx-1 mb-4 mt-10 rounded-3xl bg-brand-beige/60 px-7 py-12 text-center lg:mx-0 lg:mt-14 lg:py-20">
             <motion.p
@@ -321,30 +227,43 @@ export default function HomePage() {
             >
               Be the first to discover new collections, atelier events, and members-only offers.
             </motion.p>
-            <motion.div
+            <motion.form
               variants={fadeUp}
               custom={3}
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
-              className="mx-auto flex max-w-sm items-center gap-2 rounded-full border border-[#2a2a2a] bg-brand-light-gray px-4 py-1.5 shadow-sm"
+              onSubmit={handleNewsletterSubmit}
+              className="mx-auto max-w-sm"
             >
-              <input
-                type="email"
-                placeholder="Your email address"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="flex-1 bg-transparent py-1.5 text-[12px] text-brand-dark outline-none placeholder:text-brand-gray/50"
-              />
-              <button
-                onClick={() => setEmail('')}
-                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-dark text-brand-cream transition-colors hover:bg-brand-dark/80"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            </motion.div>
+              <div className="flex items-center gap-2 rounded-full border border-[#2a2a2a] bg-brand-light-gray px-4 py-1.5 shadow-sm">
+                <input
+                  type="email"
+                  placeholder="Your email address"
+                  value={email}
+                  onChange={e => {
+                    setEmail(e.target.value);
+                    if (subscribeFeedback) setSubscribeFeedback(null);
+                  }}
+                  disabled={subscribeLoading}
+                  required
+                  className="flex-1 bg-transparent py-1.5 text-[12px] text-brand-dark outline-none placeholder:text-brand-gray/50 disabled:opacity-60"
+                />
+                <button
+                  type="submit"
+                  disabled={subscribeLoading}
+                  aria-label="Subscribe"
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-dark text-brand-cream transition-colors hover:bg-brand-dark/80 disabled:opacity-50"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+              {subscribeFeedback && (
+                <p className="mt-3 text-center text-[11px] leading-relaxed text-brand-gray">{subscribeFeedback}</p>
+              )}
+            </motion.form>
 
             <motion.div
               variants={fadeUp}

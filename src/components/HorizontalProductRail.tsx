@@ -1,8 +1,9 @@
-import { useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Product } from '../data/products';
 import ProductCard from './ProductCard';
+import HomeSectionHeading from './HomeSectionHeading';
 
 interface HorizontalProductRailProps {
   title: string;
@@ -14,7 +15,11 @@ interface HorizontalProductRailProps {
   maxProducts?: number;
   /** `dark` matches product detail page background; `light` for homepage. */
   tone?: 'light' | 'dark';
+  /** `collections` uses centered uppercase title + sage divider (homepage). */
+  headingStyle?: 'default' | 'collections';
 }
+
+const CARD_GAP_PX = 16;
 
 export default function HorizontalProductRail({
   title,
@@ -23,43 +28,71 @@ export default function HorizontalProductRail({
   showViewAll = true,
   maxProducts = 10,
   tone = 'light',
+  headingStyle = 'default',
 }: HorizontalProductRailProps) {
   const navigate = useNavigate();
   const railRef = useRef<HTMLDivElement>(null);
-  const dragState = useRef<{ active: boolean; startX: number; scrollLeft: number }>({
+  const dragState = useRef<{ active: boolean; startX: number; scrollLeft: number; pointerId: number | null }>({
     active: false,
     startX: 0,
     scrollLeft: 0,
+    pointerId: null,
   });
 
-  const beginDrag = (clientX: number) => {
+  const getScrollStep = useCallback(() => {
     const rail = railRef.current;
-    if (!rail) return;
-    dragState.current = {
-      active: true,
-      startX: clientX,
-      scrollLeft: rail.scrollLeft,
-    };
-    rail.classList.add('cursor-grabbing');
-  };
-
-  const updateDrag = (clientX: number) => {
-    const rail = railRef.current;
-    if (!rail || !dragState.current.active) return;
-    const delta = clientX - dragState.current.startX;
-    rail.scrollLeft = dragState.current.scrollLeft - delta;
-  };
-
-  const endDrag = () => {
-    const rail = railRef.current;
-    dragState.current.active = false;
-    rail?.classList.remove('cursor-grabbing');
-  };
+    if (!rail) return 204;
+    const first = rail.querySelector<HTMLElement>('[data-rail-item]');
+    if (!first) return 204;
+    return first.offsetWidth + CARD_GAP_PX;
+  }, []);
 
   const scrollByCard = (direction: 1 | -1) => {
     const rail = railRef.current;
     if (!rail) return;
-    rail.scrollBy({ left: direction * 320, behavior: 'smooth' });
+    rail.scrollBy({ left: direction * getScrollStep(), behavior: 'smooth' });
+  };
+
+  const endDrag = useCallback(() => {
+    const rail = railRef.current;
+    dragState.current.active = false;
+    dragState.current.pointerId = null;
+    rail?.classList.remove('cursor-grabbing');
+  }, []);
+
+  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || event.button !== 0) return;
+    const rail = railRef.current;
+    if (!rail) return;
+    dragState.current = {
+      active: true,
+      startX: event.clientX,
+      scrollLeft: rail.scrollLeft,
+      pointerId: event.pointerId,
+    };
+    rail.classList.add('cursor-grabbing');
+    rail.setPointerCapture(event.pointerId);
+  };
+
+  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const rail = railRef.current;
+    const state = dragState.current;
+    if (!rail || !state.active || state.pointerId !== event.pointerId) return;
+    const delta = event.clientX - state.startX;
+    rail.scrollLeft = state.scrollLeft - delta;
+  };
+
+  const onPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragState.current.pointerId === event.pointerId) {
+      endDrag();
+      railRef.current?.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const onPointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragState.current.pointerId === event.pointerId) {
+      endDrag();
+    }
   };
 
   const isDark = tone === 'dark';
@@ -74,72 +107,91 @@ export default function HorizontalProductRail({
     ? 'border-white/20 text-white/60 hover:border-white/50 hover:text-white'
     : 'border-brand-beige text-brand-gray hover:border-brand-dark hover:text-brand-dark';
   const navSolid = isDark ? 'bg-[#f5f0e8] text-[#0a0a0a] hover:bg-white' : 'bg-brand-dark text-white hover:bg-brand-dark/80';
+  const useCollectionsHeading = headingStyle === 'collections' && !isDark;
+
+  const navButtons = (
+    <>
+      <button
+        type="button"
+        onClick={() => scrollByCard(-1)}
+        className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all duration-300 ${navOutline}`}
+        aria-label={`Scroll ${title} left`}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        onClick={() => scrollByCard(1)}
+        className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all duration-300 ${navSolid}`}
+        aria-label={`Scroll ${title} right`}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+    </>
+  );
 
   return (
     <section className={sectionClass}>
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div className="min-w-0 pr-2">
-          <motion.h2
+      {useCollectionsHeading ? (
+        <div className="mb-5 px-2">
+          <motion.div
             initial={{ opacity: 0, y: 18 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.35 }}
-            className={headingClass}
           >
-            {title}
-          </motion.h2>
-          {subtitle && <p className={subtitleClass}>{subtitle}</p>}
+            <HomeSectionHeading title={title} subtitle={subtitle} />
+          </motion.div>
+          <div className="hidden justify-end lg:flex">
+            <div className="flex items-center gap-2">{navButtons}</div>
+          </div>
         </div>
-        <div className="hidden shrink-0 items-center gap-2 lg:flex">
-          <button
-            type="button"
-            onClick={() => scrollByCard(-1)}
-            className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all duration-300 ${navOutline}`}
-            aria-label={`Scroll ${title} left`}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollByCard(1)}
-            className={`flex h-9 w-9 items-center justify-center rounded-full transition-all duration-300 ${navSolid}`}
-            aria-label={`Scroll ${title} right`}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+      ) : (
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div className="min-w-0 pr-2">
+            <motion.h2
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.35 }}
+              className={headingClass}
+            >
+              {title}
+            </motion.h2>
+            {subtitle && <p className={subtitleClass}>{subtitle}</p>}
+          </div>
+          <div className="hidden shrink-0 items-center gap-2 lg:flex">{navButtons}</div>
         </div>
-      </div>
+      )}
 
       <div
         ref={railRef}
-        className="flex cursor-grab snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 pl-1 pr-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        onMouseDown={event => beginDrag(event.clientX)}
-        onMouseMove={event => updateDrag(event.clientX)}
-        onMouseLeave={endDrag}
-        onMouseUp={endDrag}
-        onTouchStart={event => beginDrag(event.touches[0].clientX)}
-        onTouchMove={event => updateDrag(event.touches[0].clientX)}
-        onTouchEnd={endDrag}
+        data-rail-scroll
+        className="flex cursor-grab snap-x snap-proximity gap-4 overflow-x-auto overscroll-x-contain pb-2 pl-1 pr-4 touch-pan-x [-webkit-overflow-scrolling:touch] [scrollbar-width:none] active:cursor-grabbing lg:snap-mandatory lg:scroll-smooth [&::-webkit-scrollbar]:hidden"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={endDrag}
+        onPointerCancel={onPointerCancel}
       >
         {products.slice(0, maxProducts).map((product, index) => (
-          <div key={`${product.id}-${index}`} className="w-[188px] min-w-[188px] max-w-[188px] shrink-0 snap-start lg:w-[220px] lg:min-w-[220px] lg:max-w-[220px]">
-            <ProductCard
-              product={product}
-              index={index}
-              imageLayout="contain"
-              tone={tone}
-              cardClassName="w-full max-w-full"
-            />
+          <div
+            key={`${product.id}-${index}`}
+            data-rail-item
+            className="w-[188px] min-w-[188px] max-w-[188px] shrink-0 snap-start lg:w-[220px] lg:min-w-[220px] lg:max-w-[220px]"
+          >
+            <ProductCard product={product} index={index} tone={tone} inRail cardClassName="w-full max-w-full" />
           </div>
         ))}
 
         {showViewAll && (
           <button
             type="button"
+            data-rail-item
             onClick={() => navigate('/collection')}
             className="flex h-[286px] w-[188px] snap-start flex-shrink-0 flex-col items-center justify-center rounded-[1.75rem] border border-brand-beige bg-brand-light-gray text-center transition-all duration-300 hover:-translate-y-1 lg:h-[368px] lg:w-[220px]"
           >

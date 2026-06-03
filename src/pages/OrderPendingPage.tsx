@@ -7,6 +7,7 @@ import {
   confirmCodOrder,
   createRazorpayCheckout,
   fetchPublicOrder,
+  fetchShippingQuote,
   verifyOrderPayment,
 } from '../api/catalog';
 import { isCustomerLoggedIn } from '../api/customerAuth';
@@ -15,6 +16,7 @@ import type { CartItem } from '../context/CartContext';
 import Button from '../components/Button';
 import { pageVariants, fadeUp } from '../animations/variants';
 import { formatInr, formatInrDiscount } from '../utils/currency';
+import { formatShippingAddress } from '../utils/address';
 
 type PaymentMethod = 'razorpay' | 'wallet' | 'cod';
 
@@ -50,6 +52,9 @@ export default function OrderPendingPage() {
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('razorpay');
+  const [deliveryQuote, setDeliveryQuote] = useState<{ shippingFee: number; codFee: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!orderId) return;
@@ -65,6 +70,25 @@ export default function OrderPendingPage() {
       .catch(e => setError(e instanceof Error ? e.message : 'Could not load order'))
       .finally(() => setLoading(false));
   }, [orderId, navigate]);
+
+  useEffect(() => {
+    if (!order) return;
+    const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+    const orderValue = Math.max(0, Number(order.subtotal) - Number(order.discountAmount ?? 0));
+    void fetchShippingQuote({
+      postcode: order.postcode,
+      orderValue,
+      itemCount,
+      cod: paymentMethod === 'cod',
+    })
+      .then(q =>
+        setDeliveryQuote({
+          shippingFee: Number(q.shippingFee ?? 0),
+          codFee: Number(q.codFee ?? 0),
+        }),
+      )
+      .catch(() => setDeliveryQuote(null));
+  }, [order, paymentMethod]);
 
   const proceedToPayment = async () => {
     if (!order || !orderId) return;
@@ -151,7 +175,14 @@ export default function OrderPendingPage() {
     );
   }
 
-  const due = order.total;
+  const goodsAfterPromo = Math.max(0, Number(order.subtotal) - Number(order.discountAmount ?? 0));
+  const shippingAmount = deliveryQuote?.shippingFee ?? Number(order.shipping ?? 0);
+  const codAmount =
+    paymentMethod === 'cod' ? (deliveryQuote?.codFee ?? Number(order.codCharges ?? 0)) : 0;
+  const due = Math.max(
+    0,
+    goodsAfterPromo + shippingAmount + codAmount - Number(order.walletDiscount ?? 0),
+  );
   const walletCoversAll = due <= 0;
 
   return (
@@ -199,9 +230,7 @@ export default function OrderPendingPage() {
               </div>
               <div className="sm:col-span-2">
                 <dt className="text-[10px] uppercase tracking-wider text-brand-gray">Shipping address</dt>
-                <dd className="mt-0.5 leading-relaxed">
-                  {order.address}, {order.city} {order.postcode}, {order.country}
-                </dd>
+                <dd className="mt-0.5 leading-relaxed">{formatShippingAddress(order)}</dd>
               </div>
             </dl>
           </section>
@@ -261,8 +290,14 @@ export default function OrderPendingPage() {
               )}
               <div className="flex justify-between text-brand-gray">
                 <span>Shipping</span>
-                <span>{formatInr(Number(order.shipping))}</span>
+                <span>{formatInr(shippingAmount)}</span>
               </div>
+              {paymentMethod === 'cod' && codAmount > 0 && (
+                <div className="flex justify-between text-brand-gray">
+                  <span>COD charges</span>
+                  <span>{formatInr(codAmount)}</span>
+                </div>
+              )}
               {(order.walletDiscount ?? 0) > 0 && (
                 <div className="flex justify-between text-emerald-400/85">
                   <span>Wallet applied</span>
@@ -318,7 +353,8 @@ export default function OrderPendingPage() {
                     <span>
                       <span className="block text-sm font-medium text-brand-dark">Cash on Delivery</span>
                       <span className="mt-0.5 block text-[11px] leading-relaxed text-brand-gray">
-                        Pay in cash when your order arrives · Available across India
+                        Pay in cash when your order arrives
+                        {codAmount > 0 ? ` · COD fee ${formatInr(codAmount)}` : ''}
                       </span>
                     </span>
                   </label>

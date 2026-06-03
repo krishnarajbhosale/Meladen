@@ -53,4 +53,8 @@ public class CustomerOrderItem {
 
   @Column(name = "alcohol_used_gm", nullable = false, precision = 14, scale = 2)
   private BigDecimal alcoholUsedGm;
+
+  /** HSN code at time of order (from product category). */
+  @Column(name = "hsn_code", length = 4)
+  private String hsnCode;
 }

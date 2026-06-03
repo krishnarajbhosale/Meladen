@@ -76,21 +76,18 @@ export default function CartPage() {
           </motion.div>
         ) : (
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-10">
-            <section className="space-y-5">
-              <div className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#101010)] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.24)] lg:p-6">
-                <div className="mb-2 flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[9px] uppercase tracking-[0.2em] text-brand-gray">Shopping Bag</p>
-                    <h1 className="mt-2 font-serif text-2xl text-brand-dark lg:text-3xl">Review Your Selection</h1>
-                  </div>
+            <section className="space-y-0 divide-y divide-[#1f1f1f]/90">
+              <div className="pb-8">
+                <p className="text-[9px] uppercase tracking-[0.2em] text-brand-gray">Shopping Bag</p>
+                <div className="mt-3 flex items-start justify-between gap-4">
+                  <h1 className="font-serif text-2xl text-brand-dark lg:text-3xl">Review Your Selection</h1>
                   <button
                     onClick={() => navigate('/collection')}
-                    className="hidden rounded-full border border-[#3a3121] px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-brand-dark transition-colors hover:border-brand-dark lg:inline-flex"
+                    className="hidden text-[11px] uppercase tracking-[0.16em] text-brand-gray transition-colors hover:text-brand-dark lg:inline-flex"
                   >
                     Add More
                   </button>
                 </div>
-
               </div>
 
               <AnimatePresence>
@@ -102,12 +99,12 @@ export default function CartPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
                     transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1], delay: i * 0.04 }}
-                    className="rounded-[1.75rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#101010)] p-5 shadow-[0_20px_40px_rgba(0,0,0,0.18)] lg:p-6"
+                    className="py-8"
                   >
-                    <div className="flex gap-4 lg:gap-5">
+                    <div className="flex gap-5 lg:gap-6">
                       <button
                         type="button"
-                        className="h-24 w-20 flex-shrink-0 overflow-hidden rounded-xl border border-[#262626] bg-[#121212] transition-transform hover:scale-[1.02] lg:h-28 lg:w-24"
+                        className="h-24 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-[#141414] transition-transform hover:scale-[1.02] lg:h-28 lg:w-24"
                         onClick={() => navigate(`/product/${item.product.id}`)}
                       >
                         <img
@@ -128,7 +125,7 @@ export default function CartPage() {
                           <button
                             type="button"
                             onClick={() => removeFromCart(item.product.id, item.size)}
-                            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2e2e2e] text-brand-gray transition-colors hover:border-brand-dark hover:text-brand-dark"
+                            className="flex h-9 w-9 items-center justify-center rounded-full text-brand-gray transition-colors hover:bg-white/5 hover:text-brand-dark"
                             aria-label={`Remove ${item.product.name}`}
                           >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -137,11 +134,11 @@ export default function CartPage() {
                           </button>
                         </div>
 
-                        <div className="mt-4 flex flex-wrap items-center gap-1.5">
-                          <span className="rounded-full border border-[#3a3121] bg-[#181512] px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-brand-dark">
+                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-[#1a1814] px-2.5 py-0.5 text-[9px] uppercase tracking-[0.12em] text-brand-dark">
                             {item.size}
                           </span>
-                          <span className="rounded-full border border-[#2b2b2b] px-2 py-0.5 text-[9px] text-brand-gray">
+                          <span className="text-[9px] text-brand-gray">
                             {formatInr(item.unitPrice, 0)} each
                           </span>
                         </div>
@@ -170,16 +167,15 @@ export default function CartPage() {
             </section>
 
             <aside className="lg:sticky lg:top-24 lg:self-start">
-              <div className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#0f0f0f)] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.24)] lg:p-6">
+              <div className="py-2 lg:pl-4">
                 <p className="text-[9px] uppercase tracking-[0.2em] text-brand-gray">Order Summary</p>
 
-                <div className="mt-4 space-y-3 rounded-2xl border border-[#262626] bg-[#141414] p-4">
+                <div className="mt-6 space-y-4">
                   <div className="flex justify-between text-xs text-brand-gray">
                     <span>Subtotal</span>
                     <span>{formatInr(total, 0)}</span>
                   </div>
-                  <div className="h-px bg-[#262626]" />
-                  <div className="flex justify-between text-sm font-medium text-brand-dark">
+                  <div className="flex justify-between font-serif text-xl text-brand-dark">
                     <span>Total</span>
                     <span>{formatInr(total, 0)}</span>
                   </div>

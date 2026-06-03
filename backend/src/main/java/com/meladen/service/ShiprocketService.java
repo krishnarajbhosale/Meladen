@@ -3,26 +3,33 @@ package com.meladen.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meladen.config.MeladenProperties;
+import com.meladen.dto.DeliveryQuote;
 import com.meladen.entity.CustomerOrder;
+import com.meladen.util.ShippingAddressFormatter;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.net.URI;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class ShiprocketService {
 
   private static final String BASE = "https://apiv2.shiprocket.in/v1/external";
+  private static final String SOURCE_SHIPROCKET = "SHIPROCKET";
+  private static final String SOURCE_FALLBACK = "FALLBACK";
 
   private final MeladenProperties properties;
   private final RestTemplate restTemplate = new RestTemplate();
@@ -30,6 +37,156 @@ public class ShiprocketService {
 
   private String cachedToken;
   private Instant tokenExpiresAt = Instant.EPOCH;
+
+  private String cachedToken;
+  private Instant tokenExpiresAt = Instant.EPOCH;
+
+  public ShiprocketService(MeladenProperties properties) {
+    this.properties = properties;
+  }
+
+  /** Live courier rate from Shiprocket, or configured fallback when API is unavailable. */
+  public DeliveryQuote quoteDelivery(
+      String deliveryPostcode, BigDecimal declaredValue, int itemCount, boolean codPayment) {
+    MeladenProperties.OrderPricing fallback = properties.getOrderPricing();
+    BigDecimal fallbackShipping = fallback.getShippingFee().setScale(2, RoundingMode.HALF_UP);
+    BigDecimal fallbackCod = fallback.getCodFee().setScale(2, RoundingMode.HALF_UP);
+
+    if (!properties.getShiprocket().isEnabled() || !hasCredentials()) {
+      return fallbackQuote(fallbackShipping, codPayment ? fallbackCod : BigDecimal.ZERO, SOURCE_FALLBACK);
+    }
+
+    String pickup = normalizePostcode(properties.getShiprocket().getPickupPostcode());
+    String delivery = normalizePostcode(deliveryPostcode);
+    if (pickup == null || delivery == null) {
+      log.debug("Shiprocket quote skipped: pickup or delivery postcode missing");
+      return fallbackQuote(fallbackShipping, codPayment ? fallbackCod : BigDecimal.ZERO, SOURCE_FALLBACK);
+    }
+
+    try {
+      String token = getToken(properties.getShiprocket().getEmail(), properties.getShiprocket().getPassword());
+      BigDecimal weight = shipmentWeightKg(itemCount);
+      BigDecimal declared =
+          declaredValue == null
+              ? BigDecimal.ZERO
+              : declaredValue.max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+
+      BigDecimal prepaidRate = cheapestCourierRate(token, pickup, delivery, weight, declared, false);
+      if (prepaidRate == null) {
+        return fallbackQuote(fallbackShipping, codPayment ? fallbackCod : BigDecimal.ZERO, SOURCE_FALLBACK);
+      }
+
+      BigDecimal shipping = prepaidRate.setScale(2, RoundingMode.HALF_UP);
+      BigDecimal codCharges = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+      if (codPayment) {
+        BigDecimal codRate = cheapestCourierRate(token, pickup, delivery, weight, declared, true);
+        if (codRate != null) {
+          codCharges =
+              codRate.subtract(prepaidRate).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+        } else {
+          codCharges = fallbackCod;
+        }
+      }
+
+      return new DeliveryQuote(shipping, codCharges, true, SOURCE_SHIPROCKET);
+    } catch (Exception e) {
+      log.warn("Shiprocket rate quote failed: {}", e.getMessage());
+      return fallbackQuote(fallbackShipping, codPayment ? fallbackCod : BigDecimal.ZERO, SOURCE_FALLBACK);
+    }
+  }
+
+  private DeliveryQuote fallbackQuote(
+      BigDecimal shippingFee, BigDecimal codCharges, String source) {
+    return new DeliveryQuote(
+        shippingFee.setScale(2, RoundingMode.HALF_UP),
+        codCharges.setScale(2, RoundingMode.HALF_UP),
+        false,
+        source);
+  }
+
+  private boolean hasCredentials() {
+    String email = properties.getShiprocket().getEmail();
+    String password = properties.getShiprocket().getPassword();
+    return email != null
+        && !email.isBlank()
+        && password != null
+        && !password.isBlank();
+  }
+
+  private BigDecimal shipmentWeightKg(int itemCount) {
+    int units = Math.max(1, itemCount);
+    MeladenProperties.Shiprocket cfg = properties.getShiprocket();
+    return cfg
+        .getDefaultWeightKg()
+        .add(cfg.getWeightPerItemKg().multiply(BigDecimal.valueOf(Math.max(0, units - 1))))
+        .setScale(2, RoundingMode.HALF_UP);
+  }
+
+  private BigDecimal cheapestCourierRate(
+      String token,
+      String pickupPostcode,
+      String deliveryPostcode,
+      BigDecimal weightKg,
+      BigDecimal declaredValue,
+      boolean cod)
+      throws Exception {
+    URI uri =
+        UriComponentsBuilder.fromHttpUrl(BASE + "/courier/serviceability/")
+            .queryParam("pickup_postcode", pickupPostcode)
+            .queryParam("delivery_postcode", deliveryPostcode)
+            .queryParam("weight", weightKg.toPlainString())
+            .queryParam("cod", cod ? 1 : 0)
+            .queryParam("declared_value", declaredValue.toPlainString())
+            .build()
+            .encode()
+            .toUri();
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+    ResponseEntity<String> res =
+        restTemplate.exchange(uri, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+    JsonNode root = objectMapper.readTree(res.getBody());
+    JsonNode couriers = root.path("data").path("available_courier_companies");
+    if (!couriers.isArray() || couriers.isEmpty()) {
+      return null;
+    }
+
+    BigDecimal min = null;
+    for (JsonNode courier : couriers) {
+      BigDecimal candidate = courierRate(courier);
+      if (candidate == null) {
+        continue;
+      }
+      if (min == null || candidate.compareTo(min) < 0) {
+        min = candidate;
+      }
+    }
+    return min;
+  }
+
+  private BigDecimal courierRate(JsonNode courier) {
+    if (courier.hasNonNull("rate")) {
+      return BigDecimal.valueOf(courier.get("rate").asDouble());
+    }
+    BigDecimal freight =
+        courier.hasNonNull("freight_charge")
+            ? BigDecimal.valueOf(courier.get("freight_charge").asDouble())
+            : BigDecimal.ZERO;
+    BigDecimal cod =
+        courier.hasNonNull("cod_charges")
+            ? BigDecimal.valueOf(courier.get("cod_charges").asDouble())
+            : BigDecimal.ZERO;
+    BigDecimal total = freight.add(cod);
+    return total.compareTo(BigDecimal.ZERO) > 0 ? total : null;
+  }
+
+  private static String normalizePostcode(String raw) {
+    if (raw == null) {
+      return null;
+    }
+    String digits = raw.replaceAll("\\D", "");
+    return digits.length() == 6 ? digits : null;
+  }
 
   public void createShipmentForOrder(CustomerOrder order) {
     if (!properties.getShiprocket().isEnabled()) {
@@ -91,7 +248,7 @@ public class ShiprocketService {
     payload.put("pickup_location", properties.getShiprocket().getPickupLocation());
     payload.put("billing_customer_name", nameParts[0]);
     payload.put("billing_last_name", nameParts[1]);
-    payload.put("billing_address", order.getAddress());
+    payload.put("billing_address", ShippingAddressFormatter.streetLine(order));
     payload.put("billing_city", order.getCity());
     payload.put("billing_pincode", order.getPostcode());
     payload.put("billing_state", order.getCity());
