@@ -98,17 +98,39 @@ public class Product {
   @Column(name = "image_content_type", length = 255)
   private String imageContentType;
 
+  /** External URL or bundled asset path when gallery slot is not stored as BLOB. */
   @Lob
-  @Column(name = "gallery_image_1", columnDefinition = "TEXT")
+  @Column(name = "gallery_image_1", columnDefinition = "LONGTEXT")
   private String galleryImage1;
 
   @Lob
-  @Column(name = "gallery_image_2", columnDefinition = "TEXT")
+  @Column(name = "gallery_image_2", columnDefinition = "LONGTEXT")
   private String galleryImage2;
 
   @Lob
-  @Column(name = "gallery_image_3", columnDefinition = "TEXT")
+  @Column(name = "gallery_image_3", columnDefinition = "LONGTEXT")
   private String galleryImage3;
+
+  @Lob
+  @Column(name = "gallery_blob_1", columnDefinition = "LONGBLOB")
+  private byte[] galleryBlob1;
+
+  @Column(name = "gallery_content_type_1", length = 255)
+  private String galleryContentType1;
+
+  @Lob
+  @Column(name = "gallery_blob_2", columnDefinition = "LONGBLOB")
+  private byte[] galleryBlob2;
+
+  @Column(name = "gallery_content_type_2", length = 255)
+  private String galleryContentType2;
+
+  @Lob
+  @Column(name = "gallery_blob_3", columnDefinition = "LONGBLOB")
+  private byte[] galleryBlob3;
+
+  @Column(name = "gallery_content_type_3", length = 255)
+  private String galleryContentType3;
 
   @Column(length = 64)
   private String tag;

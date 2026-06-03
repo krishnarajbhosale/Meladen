@@ -21,17 +21,39 @@ import default4 from '../assets/Default 4.png';
 function normalizeImagePath(value: string | null | undefined): string {
   if (!value) return '';
   const decoded = decodeURIComponent(value);
-  if (decoded.includes('/src/assets/Default 2.jpg')) return default2;
-  if (decoded.includes('/src/assets/DEFAULT 3.png')) return default3;
-  if (decoded.includes('/src/assets/Default 4.png')) return default4;
+  if (decoded.includes('/src/assets/Default 2.jpg') || /Default\s*2/i.test(decoded)) return default2;
+  if (decoded.includes('/src/assets/DEFAULT 3.png') || /DEFAULT\s*3/i.test(decoded)) return default3;
+  if (decoded.includes('/src/assets/Default 4.png') || /Default\s*4/i.test(decoded)) return default4;
   return value;
+}
+
+/** Resolve API-relative media paths for img src (works with Vite proxy and production API base URL). */
+export function resolveProductMediaUrl(value: string | null | undefined): string {
+  if (!value?.trim()) return '';
+  const trimmed = value.trim();
+  if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('/api/')) {
+    return `${API_BASE_URL}${trimmed}`;
+  }
+  return normalizeImagePath(trimmed);
+}
+
+function isStoredGalleryImage(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('data:')) return trimmed.includes(',') && trimmed.length > 64;
+  return true;
 }
 
 export function apiProductToProduct(p: ProductPublicApi): Product {
   const normalizedImage = normalizeImagePath(p.image);
-  const image = normalizedImage?.trim() ? normalizedImage : meladen1;
+  const image = resolveProductMediaUrl(normalizedImage?.trim() ? normalizedImage : p.image) || meladen1;
   const fallbackGallery = [default2, default3, default4];
-  const apiGallery = (p.gallery ?? []).map(g => normalizeImagePath(g)).filter(Boolean);
+  const apiGallery = (p.gallery ?? [])
+    .map(g => resolveProductMediaUrl(normalizeImagePath(g)))
+    .filter(isStoredGalleryImage);
   const gallery = [...apiGallery];
   while (gallery.length < 3) {
     gallery.push(fallbackGallery[gallery.length]);

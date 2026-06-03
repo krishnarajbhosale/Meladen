@@ -69,6 +69,26 @@ public class ProductService {
   }
 
   @Transactional(readOnly = true)
+  public ProductImageData getGalleryImage(String id, int slot) {
+    if (slot < 1 || slot > 3) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid gallery slot");
+    }
+    Product p =
+        productRepository
+            .findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    byte[] bytes = galleryBlob(p, slot);
+    if (bytes == null || bytes.length == 0) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Gallery image not found");
+    }
+    String contentType = galleryContentType(p, slot);
+    if (contentType == null || contentType.isBlank()) {
+      contentType = "application/octet-stream";
+    }
+    return new ProductImageData(bytes, contentType);
+  }
+
+  @Transactional(readOnly = true)
   public ProductImageData getImage(String id) {
     Product p =
         productRepository
@@ -138,14 +158,11 @@ public class ProductService {
     String listSize = listSizeForCard(p);
 
     List<String> gallery = new ArrayList<>();
-    if (p.getGalleryImage1() != null && !p.getGalleryImage1().isBlank()) {
-      gallery.add(p.getGalleryImage1());
-    }
-    if (p.getGalleryImage2() != null && !p.getGalleryImage2().isBlank()) {
-      gallery.add(p.getGalleryImage2());
-    }
-    if (p.getGalleryImage3() != null && !p.getGalleryImage3().isBlank()) {
-      gallery.add(p.getGalleryImage3());
+    for (int slot = 1; slot <= 3; slot++) {
+      String ref = resolveGalleryRef(p, slot);
+      if (ref != null) {
+        gallery.add(ref);
+      }
     }
 
     String image = "/api/public/products/" + p.getId() + "/image";
@@ -211,9 +228,9 @@ public class ProductService {
         p.getConcentration(),
         "/api/public/products/" + p.getId() + "/image",
         p.getImageBlob() != null && p.getImageBlob().length > 0,
-        p.getGalleryImage1(),
-        p.getGalleryImage2(),
-        p.getGalleryImage3(),
+        resolveGalleryRef(p, 1),
+        resolveGalleryRef(p, 2),
+        resolveGalleryRef(p, 3),
         p.getTag(),
         p.isNew(),
         p.isBestseller(),
@@ -256,13 +273,135 @@ public class ProductService {
     uploadSizeValidator.validateGalleryImageValue(r.galleryImage1(), "Gallery image 1");
     uploadSizeValidator.validateGalleryImageValue(r.galleryImage2(), "Gallery image 2");
     uploadSizeValidator.validateGalleryImageValue(r.galleryImage3(), "Gallery image 3");
-    p.setGalleryImage1(r.galleryImage1());
-    p.setGalleryImage2(r.galleryImage2());
-    p.setGalleryImage3(r.galleryImage3());
+    applyGallerySlot(p, 1, r.galleryImage1());
+    applyGallerySlot(p, 2, r.galleryImage2());
+    applyGallerySlot(p, 3, r.galleryImage3());
     p.setTag(r.tag());
     p.setNew(Boolean.TRUE.equals(r.isNew()));
     p.setBestseller(Boolean.TRUE.equals(r.isBestseller()));
     p.setArchived(Boolean.TRUE.equals(r.archived()));
+  }
+
+  private void applyGallerySlot(Product p, int slot, String value) {
+    if (value == null || value.isBlank()) {
+      clearGallerySlot(p, slot);
+      return;
+    }
+    String trimmed = value.trim();
+    if (isExistingGalleryApiUrl(p.getId(), slot, trimmed)) {
+      return;
+    }
+    if (trimmed.regionMatches(true, 0, "data:", 0, 5)) {
+      int comma = trimmed.indexOf(',');
+      if (comma < 0 || comma >= trimmed.length() - 1) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid gallery image data for slot " + slot);
+      }
+      String meta = trimmed.substring(5, comma);
+      String contentType = "application/octet-stream";
+      int semicolon = meta.indexOf(';');
+      if (semicolon > 0) {
+        contentType = meta.substring(0, semicolon).trim();
+      } else if (!meta.isBlank()) {
+        contentType = meta.trim();
+      }
+      try {
+        byte[] bytes = Base64.getDecoder().decode(trimmed.substring(comma + 1).trim());
+        uploadSizeValidator.validateImageBytes(bytes, "Gallery image " + slot);
+        setGalleryBlob(p, slot, bytes);
+        setGalleryContentType(p, slot, contentType);
+        setGalleryString(p, slot, null);
+      } catch (IllegalArgumentException ex) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid gallery image data for slot " + slot);
+      }
+      return;
+    }
+    setGalleryString(p, slot, trimmed);
+    setGalleryBlob(p, slot, null);
+    setGalleryContentType(p, slot, null);
+  }
+
+  private String resolveGalleryRef(Product p, int slot) {
+    byte[] blob = galleryBlob(p, slot);
+    if (blob != null && blob.length > 0) {
+      return galleryApiPath(p.getId(), slot);
+    }
+    String url = galleryString(p, slot);
+    if (url != null && !url.isBlank()) {
+      return url.trim();
+    }
+    return null;
+  }
+
+  private boolean isExistingGalleryApiUrl(String productId, int slot, String value) {
+    if (productId == null || productId.isBlank()) {
+      return false;
+    }
+    String path = galleryApiPath(productId, slot);
+    return value.equals(path) || value.endsWith(path);
+  }
+
+  private String galleryApiPath(String productId, int slot) {
+    return "/api/public/products/" + productId + "/gallery/" + slot;
+  }
+
+  private void clearGallerySlot(Product p, int slot) {
+    setGalleryString(p, slot, null);
+    setGalleryBlob(p, slot, null);
+    setGalleryContentType(p, slot, null);
+  }
+
+  private byte[] galleryBlob(Product p, int slot) {
+    return switch (slot) {
+      case 1 -> p.getGalleryBlob1();
+      case 2 -> p.getGalleryBlob2();
+      case 3 -> p.getGalleryBlob3();
+      default -> null;
+    };
+  }
+
+  private String galleryContentType(Product p, int slot) {
+    return switch (slot) {
+      case 1 -> p.getGalleryContentType1();
+      case 2 -> p.getGalleryContentType2();
+      case 3 -> p.getGalleryContentType3();
+      default -> null;
+    };
+  }
+
+  private String galleryString(Product p, int slot) {
+    return switch (slot) {
+      case 1 -> p.getGalleryImage1();
+      case 2 -> p.getGalleryImage2();
+      case 3 -> p.getGalleryImage3();
+      default -> null;
+    };
+  }
+
+  private void setGalleryBlob(Product p, int slot, byte[] bytes) {
+    switch (slot) {
+      case 1 -> p.setGalleryBlob1(bytes);
+      case 2 -> p.setGalleryBlob2(bytes);
+      case 3 -> p.setGalleryBlob3(bytes);
+      default -> {}
+    }
+  }
+
+  private void setGalleryContentType(Product p, int slot, String contentType) {
+    switch (slot) {
+      case 1 -> p.setGalleryContentType1(contentType);
+      case 2 -> p.setGalleryContentType2(contentType);
+      case 3 -> p.setGalleryContentType3(contentType);
+      default -> {}
+    }
+  }
+
+  private void setGalleryString(Product p, int slot, String value) {
+    switch (slot) {
+      case 1 -> p.setGalleryImage1(value);
+      case 2 -> p.setGalleryImage2(value);
+      case 3 -> p.setGalleryImage3(value);
+      default -> {}
+    }
   }
 
   private boolean isPerfumeCategory(Product p) {

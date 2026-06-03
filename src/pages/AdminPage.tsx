@@ -57,6 +57,7 @@ import default4 from '../assets/Default 4.png';
 import { formatInr, formatInrDiscount } from '../utils/currency';
 import { formatShippingAddressLines } from '../utils/address';
 import { assertImageFileWithinLimit, MAX_IMAGE_UPLOAD_LABEL } from '../utils/uploadLimits';
+import { resolveProductMediaUrl } from '../api/catalog';
 
 const TOKEN_KEY = 'meladen_admin_jwt';
 const PRODUCT_MEDIA_DEFAULTS_KEY = 'meladen_product_media_defaults';
@@ -966,10 +967,18 @@ export default function AdminPage() {
       galleryImage3: productForm.galleryImage3,
     };
     setMediaDefaults(next);
-    localStorage.setItem(PRODUCT_MEDIA_DEFAULTS_KEY, JSON.stringify(next));
+    try {
+      localStorage.setItem(PRODUCT_MEDIA_DEFAULTS_KEY, JSON.stringify(next));
+    } catch {
+      alert(
+        'Could not save gallery defaults in browser storage (images may be too large). Save the product instead — gallery images are stored on the server.',
+      );
+      return;
+    }
     if (!editingProductId) {
       setProductForm(prev => ({ ...prev, ...next }));
     }
+    alert('Gallery defaults saved for new products.');
   };
 
   const readFileAsBase64 = (file: File): Promise<string> =>
@@ -1466,11 +1475,17 @@ export default function AdminPage() {
                         Default image {idx + 2}
                       </p>
                       <p className="mb-2 text-[11px] text-[#8a7a66]">Max file size: {MAX_IMAGE_UPLOAD_LABEL}</p>
-                      <img
-                        src={productForm[field]}
-                        alt={`Preview ${idx + 2}`}
-                        className="mb-2 h-28 w-full rounded-md border border-[#e5d7c2] object-cover"
-                      />
+                      {productForm[field] ? (
+                        <img
+                          src={resolveProductMediaUrl(productForm[field])}
+                          alt={`Preview ${idx + 2}`}
+                          className="mb-2 h-28 w-full rounded-md border border-[#e5d7c2] object-cover"
+                        />
+                      ) : (
+                        <div className="mb-2 flex h-28 items-center justify-center rounded-md border border-dashed border-[#e5d7c2] text-xs text-[#8a7a66]">
+                          No image selected
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <label className="cursor-pointer rounded-lg border border-[#ccbca7] bg-white px-3 py-2 text-xs font-medium text-[#4e4134]">
                           Replace
@@ -1481,12 +1496,17 @@ export default function AdminPage() {
                             onChange={e => {
                               const file = e.target.files?.[0] ?? null;
                               void onGalleryReplace(field, file);
+                              e.target.value = '';
                             }}
                           />
                         </label>
                         <input
-                          placeholder="or paste image URL"
-                          value={productForm[field]}
+                          placeholder={
+                            productForm[field].startsWith('data:')
+                              ? 'Uploaded image saved in form'
+                              : 'or paste image URL'
+                          }
+                          value={productForm[field].startsWith('data:') ? '' : productForm[field]}
                           onChange={e => setProductField(field, e.target.value)}
                           className="w-full rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-3 py-2 text-sm text-[#251d15] outline-none focus:border-[#8c7458] focus:ring-1 focus:ring-[#d7c4aa]"
                         />

@@ -44,6 +44,15 @@ public class PublicCatalogController {
         .body(image.bytes());
   }
 
+  @GetMapping("/products/{id}/gallery/{slot}")
+  public ResponseEntity<byte[]> productGalleryImage(@PathVariable String id, @PathVariable int slot) {
+    var image = productService.getGalleryImage(id, slot);
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+        .contentType(MediaType.parseMediaType(image.contentType()))
+        .body(image.bytes());
+  }
+
   @GetMapping("/stock")
   public StockSummaryResponse stockSummary() {
     return orderService.getStockSummary();
