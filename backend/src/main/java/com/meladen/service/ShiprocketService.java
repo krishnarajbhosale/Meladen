@@ -38,9 +38,6 @@ public class ShiprocketService {
   private String cachedToken;
   private Instant tokenExpiresAt = Instant.EPOCH;
 
-  private String cachedToken;
-  private Instant tokenExpiresAt = Instant.EPOCH;
-
   public ShiprocketService(MeladenProperties properties) {
     this.properties = properties;
   }

@@ -191,8 +191,6 @@ export default function CartDrawer({ open, onClose }: Props) {
 
                 <p className="mb-5 mt-2 text-center text-[9px] leading-relaxed text-brand-gray">
                   Taxes calculated at checkout.
-                  <br />
-                  Complimentary returns within 30 days.
                 </p>
 
                 <button
