@@ -133,8 +133,13 @@ export default function CustomerReviewsSection() {
     void fetchPublicCustomerReviews()
       .then(rows => {
         if (cancelled) return;
-        setUsingApi(true);
-        setReviews(rows.length > 0 ? rows.map(toDisplay) : []);
+        if (rows.length > 0) {
+          setUsingApi(true);
+          setReviews(rows.map(toDisplay));
+        } else {
+          setUsingApi(false);
+          setReviews(MOCK_CUSTOMER_REVIEWS);
+        }
         setLoaded(true);
       })
       .catch(() => {
@@ -153,31 +158,25 @@ export default function CustomerReviewsSection() {
 
   return (
     <section className="mt-10 border-t border-white/10 bg-black px-5 py-12 lg:mt-12 lg:px-10 lg:py-20 xl:px-16">
-      <div className="mx-auto max-w-4xl">
-        <motion.div
-          variants={fadeUp}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-60px' }}
-          className="mb-10 text-center lg:mb-12"
-        >
+      <motion.div
+        variants={fadeUp}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.12 }}
+        className="mx-auto max-w-4xl"
+      >
+        <div className="mb-10 text-center lg:mb-12">
           <p className="mb-2 text-[10px] uppercase tracking-[0.22em] text-brand-gray">Feedback</p>
           <h2 className="font-serif text-2xl font-medium text-brand-dark lg:text-4xl">Reviews &amp; Testimonials</h2>
           {!usingApi && (
             <p className="mt-2 text-[10px] uppercase tracking-widest text-brand-gray/80">Preview reviews</p>
           )}
-        </motion.div>
+        </div>
 
-        <motion.div
-          variants={fadeUp}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-40px' }}
-          className="rounded-2xl border border-white/10 bg-[#141414] px-5 py-10 lg:px-12 lg:py-14"
-        >
+        <div className="min-h-[220px] rounded-2xl border border-white/10 bg-[#141414] px-5 py-10 lg:min-h-[240px] lg:px-12 lg:py-14">
           <ReviewsCarousel reviews={reviews} />
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
     </section>
   );
 }
