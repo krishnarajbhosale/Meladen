@@ -10,6 +10,7 @@ import HorizontalProductRail from '../components/HorizontalProductRail';
 import QuantityStepper from '../components/QuantityStepper';
 import { pageVariants, fadeUp } from '../animations/variants';
 import { apiProductToProduct, fetchCategoriesWithProducts, fetchPublicProduct, fetchPublicStock } from '../api/catalog';
+import { category2Matches } from '../data/collections';
 import { formatInr } from '../utils/currency';
 
 export default function ProductPage() {
@@ -108,15 +109,17 @@ export default function ProductPage() {
   }, [product, alcoholStockGm, selectedSizeLabel]);
 
   const relatedProducts = useMemo(() => {
-    if (!id) return [];
+    if (!id || !product) return [];
     const source = catalogProducts.length > 0 ? catalogProducts : products;
-    const sameCategory = source.filter(
-      p => p.id !== id && product != null && p.category === product.category,
-    );
-    const others = source.filter(
-      p => p.id !== id && (product == null || p.category !== product.category),
-    );
-    return [...sameCategory, ...others].slice(0, 10);
+    const targetCategory2 = product.category2?.trim();
+
+    if (targetCategory2) {
+      return source
+        .filter(p => p.id !== id && category2Matches(p.category2, targetCategory2))
+        .slice(0, 10);
+    }
+
+    return source.filter(p => p.id !== id && p.category === product.category).slice(0, 10);
   }, [id, product, catalogProducts]);
 
   const galleryImages = useMemo(() => {

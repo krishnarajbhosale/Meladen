@@ -108,10 +108,39 @@ function normalizeProductField(value: string): string {
   return value.trim().toLowerCase().replace(/'/g, '').replace(/\s+/g, ' ');
 }
 
-/** Match admin idealFor / mood text to a bento filter value (case-insensitive). */
+/** Split admin text like "Women, Unisex" or "Men / Women" into match tokens. */
+function productFieldTokens(value: string): string[] {
+  const normalized = normalizeProductField(value);
+  if (!normalized) return [];
+  return normalized
+    .split(/[,;/|+]+|\band\b/)
+    .map(part => part.replace(/^for\s+/, '').trim())
+    .filter(Boolean);
+}
+
+function genderTokenMatches(part: string, target: string): boolean {
+  if (part === target) return true;
+  if (target === 'women' && (part === 'woman' || part === 'womens')) return true;
+  if (target === 'men' && (part === 'man' || part === 'mens')) return true;
+  return false;
+}
+
+/** True when two admin category2 values refer to the same sub-category (case-insensitive). */
+export function category2Matches(
+  productValue: string | undefined,
+  targetValue: string | undefined,
+): boolean {
+  if (!productValue?.trim() || !targetValue?.trim()) return false;
+  return normalizeProductField(productValue) === normalizeProductField(targetValue);
+}
+
+/** Match admin idealFor / mood text to a bento filter value (case-insensitive, whole-word). */
 export function productFieldMatches(value: string | undefined, target: string): boolean {
   if (!value?.trim() || !target?.trim()) return false;
-  const v = normalizeProductField(value);
   const t = normalizeProductField(target);
-  return v === t || v.includes(t) || t.includes(v);
+  const tokens = productFieldTokens(value);
+  if (tokens.length === 0) {
+    return normalizeProductField(value) === t;
+  }
+  return tokens.some(part => genderTokenMatches(part, t) || part === t);
 }
