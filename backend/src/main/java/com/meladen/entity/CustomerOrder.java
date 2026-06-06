@@ -105,6 +105,10 @@ public class CustomerOrder {
   @Column(name = "payment_method", length = 32)
   private String paymentMethod;
 
+  /** Admin marks when cash is collected for COD orders. */
+  @Column(name = "cod_payment_received", nullable = false)
+  private boolean codPaymentReceived = false;
+
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 

@@ -7,6 +7,7 @@ import { getMyWallet, type WalletTransactionRow } from '../api/wallet';
 import { ApiError } from '../api/client';
 import { customerLogout, getCustomerEmail, isCustomerLoggedIn } from '../api/customerAuth';
 import { pageVariants, fadeUp } from '../animations/variants';
+import { formatProductSizeLine } from '../data/products';
 import { formatInr, formatInrDiscount } from '../utils/currency';
 
 export default function AccountOrdersPage() {
@@ -205,19 +206,13 @@ export default function AccountOrdersPage() {
                 {order.items.map(item => (
                   <li key={`${order.id}-${item.productId}-${item.size}`} className="flex justify-between gap-2">
                     <span className="text-brand-dark/90">
-                      {item.productName} · {item.size} × {item.quantity}
+                      {item.productName} · {formatProductSizeLine(item.size)} × {item.quantity}
                     </span>
                     <span>{formatInr(Number(item.lineTotal), 0)}</span>
                   </li>
                 ))}
               </ul>
               <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-[#2a2a2a] pt-5">
-                <Link
-                  to={`/returns?orderId=${encodeURIComponent(order.id)}`}
-                  className="inline-flex min-h-[44px] min-w-[160px] items-center justify-center rounded-full bg-gold px-5 py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-black shadow-[0_4px_14px_rgba(201,168,76,0.35)] transition-[filter] hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
-                >
-                  Return or exchange
-                </Link>
                 <Link
                   to={order.trackingUrl ? `/track/${encodeURIComponent(order.id)}` : '#'}
                   onClick={e => {

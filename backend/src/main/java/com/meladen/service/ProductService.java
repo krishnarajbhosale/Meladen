@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -132,6 +133,35 @@ public class ProductService {
   }
 
   @Transactional
+  public ProductAdminResponse replaceGalleryImage(String id, int slot, MultipartFile image) {
+    if (slot < 1 || slot > 3) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid gallery slot");
+    }
+    if (image == null || image.isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Image file is required");
+    }
+    Product p =
+        productRepository
+            .findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    uploadSizeValidator.validateImageFile(image, "Gallery image " + slot);
+    try {
+      byte[] bytes = image.getBytes();
+      uploadSizeValidator.validateImageBytes(bytes, "Gallery image " + slot);
+      String contentType =
+          image.getContentType() != null && !image.getContentType().isBlank()
+              ? image.getContentType()
+              : "application/octet-stream";
+      setGalleryBlob(p, slot, bytes);
+      setGalleryContentType(p, slot, contentType);
+      setGalleryString(p, slot, null);
+      return toAdmin(productRepository.save(p));
+    } catch (java.io.IOException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not read uploaded image");
+    }
+  }
+
+  @Transactional
   public void delete(String id) {
     Product p =
         productRepository
@@ -199,7 +229,8 @@ public class ProductService {
         p.getProductOil(),
         nullToEmpty(p.getConcentration()),
         p.isNew(),
-        p.isBestseller());
+        p.isBestseller(),
+        p.isPremium());
   }
 
   private ProductAdminResponse toAdmin(Product p) {
@@ -234,6 +265,7 @@ public class ProductService {
         p.getTag(),
         p.isNew(),
         p.isBestseller(),
+        p.isPremium(),
         p.isArchived());
   }
 
@@ -279,6 +311,7 @@ public class ProductService {
     p.setTag(r.tag());
     p.setNew(Boolean.TRUE.equals(r.isNew()));
     p.setBestseller(Boolean.TRUE.equals(r.isBestseller()));
+    p.setPremium(Boolean.TRUE.equals(r.isPremium()));
     p.setArchived(Boolean.TRUE.equals(r.archived()));
   }
 
@@ -287,7 +320,7 @@ public class ProductService {
       clearGallerySlot(p, slot);
       return;
     }
-    String trimmed = value.trim();
+    String trimmed = normalizeGalleryInput(value);
     if (isExistingGalleryApiUrl(p.getId(), slot, trimmed)) {
       return;
     }
@@ -336,8 +369,18 @@ public class ProductService {
     if (productId == null || productId.isBlank()) {
       return false;
     }
+    String normalized = normalizeGalleryInput(value);
     String path = galleryApiPath(productId, slot);
-    return value.equals(path) || value.endsWith(path);
+    return normalized.equals(path) || normalized.endsWith(path);
+  }
+
+  private String normalizeGalleryInput(String value) {
+    if (value == null) {
+      return "";
+    }
+    String trimmed = value.trim();
+    int query = trimmed.indexOf('?');
+    return query >= 0 ? trimmed.substring(0, query).trim() : trimmed;
   }
 
   private String galleryApiPath(String productId, int slot) {

@@ -17,6 +17,8 @@ interface HorizontalProductRailProps {
   tone?: 'light' | 'dark';
   /** `collections` uses centered uppercase title + sage divider (homepage). */
   headingStyle?: 'default' | 'collections';
+  /** Show star rating on each product card. */
+  showProductRating?: boolean;
 }
 
 const CARD_GAP_PX = 16;
@@ -29,6 +31,7 @@ export default function HorizontalProductRail({
   maxProducts = 10,
   tone = 'light',
   headingStyle = 'default',
+  showProductRating = false,
 }: HorizontalProductRailProps) {
   const navigate = useNavigate();
   const railRef = useRef<HTMLDivElement>(null);
@@ -97,7 +100,7 @@ export default function HorizontalProductRail({
 
   const isDark = tone === 'dark';
   const sectionClass = isDark
-    ? 'relative mt-10 border-t border-white/10 bg-[#0a0a0a] px-1 pb-10 pt-12 sm:px-3 lg:mt-12 lg:px-2 lg:pb-12 lg:pt-14 xl:px-4'
+    ? 'relative mt-10 border-t border-white/10 bg-brand-cream px-1 pb-10 pt-12 sm:px-3 lg:mt-12 lg:px-2 lg:pb-12 lg:pt-14 xl:px-4'
     : 'relative mt-10 border-t border-white/10 bg-brand-cream px-1 pb-10 pt-12 sm:px-3 lg:mt-12 lg:px-2 lg:pb-12 lg:pt-14 xl:px-4';
   const headingClass = isDark
     ? 'font-serif text-[1.4rem] font-medium text-[#f5f0e8] lg:text-3xl'
@@ -184,7 +187,14 @@ export default function HorizontalProductRail({
             data-rail-item
             className="w-[188px] min-w-[188px] max-w-[188px] shrink-0 snap-start lg:w-[220px] lg:min-w-[220px] lg:max-w-[220px]"
           >
-            <ProductCard product={product} index={index} tone={tone} inRail cardClassName="w-full max-w-full" />
+            <ProductCard
+              product={product}
+              index={index}
+              tone={tone}
+              inRail
+              showRating={showProductRating}
+              cardClassName="w-full max-w-full"
+            />
           </div>
         ))}
 

@@ -33,4 +33,5 @@ public record ProductRequest(
     String tag,
     Boolean isNew,
     Boolean isBestseller,
+    Boolean isPremium,
     Boolean archived) {}

@@ -40,6 +40,7 @@ export interface ProductPublicApi {
   concentration: string;
   isNew: boolean;
   isBestseller: boolean;
+  isPremium: boolean;
 }
 
 export interface CategoryWithProductsApi {
@@ -83,6 +84,7 @@ export interface ProductAdminApi {
   tag: string | null;
   isNew: boolean;
   isBestseller: boolean;
+  isPremium: boolean;
   archived: boolean;
 }
 
@@ -134,6 +136,7 @@ export interface OrderApi {
   alcoholUsedGm: number;
   status: string;
   paymentMethod?: string | null;
+  codPaymentReceived?: boolean;
   trackingAwb?: string | null;
   trackingUrl?: string | null;
   createdAt: string;

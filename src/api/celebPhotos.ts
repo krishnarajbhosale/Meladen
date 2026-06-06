@@ -53,3 +53,18 @@ export async function adminDeleteCelebPhoto(token: string, id: number): Promise<
     headers: authHeaders(token),
   });
 }
+
+export async function adminReplaceCelebPhoto(token: string, id: number, image: File): Promise<CelebPhotoApi> {
+  const form = new FormData();
+  form.append('image', image);
+  const res = await fetch(`${API_BASE_URL}/api/admin/celeb-photos/${id}/image`, {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: form,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || 'Photo replace failed');
+  }
+  return res.json() as Promise<CelebPhotoApi>;
+}

@@ -144,13 +144,18 @@ export default function CollectionPage() {
     [searchParams],
   );
   const filterMood = useMemo(() => searchParams.get('mood')?.trim() ?? '', [searchParams]);
-  const hasBentoFilter = Boolean(filterIdealFor || filterMood);
+  const filterPremium = useMemo(
+    () => searchParams.get('premium') === '1' || searchParams.get('premium')?.toLowerCase() === 'true',
+    [searchParams],
+  );
+  const hasBentoFilter = Boolean(filterIdealFor || filterMood || filterPremium);
 
   const bentoFilterLabel = useMemo(() => {
     if (filterIdealFor) return filterIdealFor;
+    if (filterPremium) return 'Luxury';
     if (filterMood) return filterMood;
     return null;
-  }, [filterIdealFor, filterMood]);
+  }, [filterIdealFor, filterMood, filterPremium]);
 
   const toggle = (arr: string[], val: string) =>
     arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val];
@@ -164,6 +169,7 @@ export default function CollectionPage() {
 
     const filterProduct = (p: Product) => {
       if (filterIdealFor && !productFieldMatches(p.idealFor, filterIdealFor)) return false;
+      if (filterPremium && !p.isPremium) return false;
       if (filterMood && !productFieldMatches(p.mood, filterMood)) return false;
       if (selectedConc.length > 0 && !selectedConc.includes(p.category)) return false;
       if (p.price > maxPrice) return false;
@@ -185,7 +191,7 @@ export default function CollectionPage() {
         items: sortProducts(s.items.filter(filterProduct)),
       }))
       .filter(s => s.items.length > 0);
-  }, [sections, selectedConc, maxPrice, selectedFamily, sort, filterIdealFor, filterMood]);
+  }, [sections, selectedConc, maxPrice, selectedFamily, sort, filterIdealFor, filterMood, filterPremium]);
 
   const visibleSections = useMemo(() => {
     if (hasBentoFilter) return filteredSections;
@@ -208,7 +214,7 @@ export default function CollectionPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [selectedConc, selectedFamily, maxPrice, sort, useApiLayout, filterIdealFor, filterMood]);
+  }, [selectedConc, selectedFamily, maxPrice, sort, useApiLayout, filterIdealFor, filterMood, filterPremium]);
 
   useEffect(() => {
     if (!activeCategorySlug || catalogLoading || visibleSections.length === 0) return;

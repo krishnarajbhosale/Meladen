@@ -38,7 +38,7 @@ export default function HomeCollectionsSection() {
         whileInView="visible"
         viewport={{ once: true }}
       >
-        <HomeSectionHeading title="Collections" />
+        <HomeSectionHeading title="Shop by Collection" />
       </motion.div>
 
       <div className="mx-auto flex max-w-5xl flex-col gap-4 lg:gap-5">

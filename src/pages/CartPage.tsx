@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { guardCheckout } from '../api/customerAuth';
+import { formatProductSizeLine } from '../data/products';
 import { useCart } from '../context/CartContext';
 import QuantityStepper from '../components/QuantityStepper';
 import Button from '../components/Button';
@@ -136,7 +137,7 @@ export default function CartPage() {
 
                         <div className="mt-4 flex flex-wrap items-center gap-2">
                           <span className="rounded-full bg-[#1a1814] px-2.5 py-0.5 text-[9px] uppercase tracking-[0.12em] text-brand-dark">
-                            {item.size}
+                            {formatProductSizeLine(item.size)}
                           </span>
                           <span className="text-[9px] text-brand-gray">
                             {formatInr(item.unitPrice, 0)} each

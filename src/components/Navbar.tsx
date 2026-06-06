@@ -16,6 +16,8 @@ const primaryNavLinks = [
   { label: 'Collection', path: '/collection' },
 ] as const;
 
+const SEARCH_HINT_TEXT = 'e.g. Summer, Strong, Office, Fresh, Date Night';
+
 type NavCategory = { name: string; slug: string; sortOrder: number };
 
 function categoriesFromCatalog(data: CategoryWithProductsApi[]): NavCategory[] {
@@ -293,8 +295,8 @@ export default function Navbar() {
                 type="search"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search products"
-                className="w-52 rounded-full border border-brand-beige/80 bg-[#0f0f0f]/80 px-3 py-1.5 text-[11px] text-brand-dark outline-none transition-colors placeholder:text-brand-gray focus:border-brand-dark"
+                placeholder={SEARCH_HINT_TEXT}
+                className="w-64 rounded-full border border-brand-beige/80 bg-[#0f0f0f]/80 px-3 py-1.5 text-[11px] text-brand-dark outline-none transition-colors placeholder:text-[10px] placeholder:text-brand-gray/75 focus:border-brand-dark xl:w-72"
               />
               {searchQuery.trim() && (
                 <div className="absolute right-0 top-10 z-50 max-h-80 w-72 overflow-y-auto rounded-xl border border-brand-beige bg-[#111111] p-2 shadow-xl">
@@ -367,8 +369,8 @@ export default function Navbar() {
                   type="search"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search products"
-                  className="w-full rounded-full border border-brand-beige/80 bg-[#0f0f0f]/80 px-3 py-2 text-xs text-brand-dark outline-none transition-colors placeholder:text-brand-gray focus:border-brand-dark"
+                  placeholder={SEARCH_HINT_TEXT}
+                  className="w-full rounded-full border border-brand-beige/80 bg-[#0f0f0f]/80 px-3 py-2 text-xs text-brand-dark outline-none transition-colors placeholder:text-[11px] placeholder:text-brand-gray/75 focus:border-brand-dark"
                 />
                 {searchQuery.trim() && (
                   <div className="fixed inset-x-4 top-[7.25rem] z-[100] max-h-[min(20rem,calc(100vh-8rem))] overflow-y-auto rounded-xl border border-brand-beige bg-[#111111] p-2 shadow-xl">

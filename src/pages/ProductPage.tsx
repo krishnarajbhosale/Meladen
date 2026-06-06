@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { products, getProductSizeAvailability, type Product } from '../data/products';
+import { products, getProductSizeAvailability, formatProductSizeDisplay, type Product } from '../data/products';
 import { useCart } from '../context/CartContext';
 import Accordion from '../components/Accordion';
+import FragranceNotesSection from '../components/FragranceNotesSection';
 import Button from '../components/Button';
 import InspiredByBadge from '../components/InspiredByBadge';
 import HorizontalProductRail from '../components/HorizontalProductRail';
@@ -336,7 +337,9 @@ export default function ProductPage() {
           >
             {selectedSize ? formatInr(selectedSize.price, 0) : formatInr(product.price, 0)}
             {selectedSize && (
-              <span className="ml-2 text-sm font-normal text-brand-gray">{selectedSize.label}</span>
+              <span className="ml-2 text-sm font-normal text-brand-gray">
+                {formatProductSizeDisplay(selectedSize.label)}
+              </span>
             )}
           </motion.p>
           <motion.p
@@ -349,18 +352,14 @@ export default function ProductPage() {
             {product.description}
           </motion.p>
 
+          <FragranceNotesSection notes={product.notes} custom={5} />
+
           {sizeOptions.length > 0 && (
-          <motion.div variants={fadeUp} custom={5} initial="hidden" animate="visible" className="mb-8">
+          <motion.div variants={fadeUp} custom={6} initial="hidden" animate="visible" className="mb-8">
             <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Choose Size</p>
             <div className={`grid gap-2.5 ${sizeGridClass}`}>
               {sizeOptions.map(option => {
-                    const isActive = selectedSize?.label === option.label;
-                const badge =
-                  option.label === '50ml'
-                    ? 'Best Seller'
-                    : option.label === '100ml'
-                      ? 'Best Saver'
-                      : null;
+                const isActive = selectedSize?.label === option.label;
 
                 return (
                   <button
@@ -376,14 +375,12 @@ export default function ProductPage() {
                           : 'border-[#2a2a2a] bg-brand-light-gray text-brand-gray'
                     }`}
                   >
-                    {badge && (
-                      <span className="mb-2 inline-flex items-center gap-1 rounded-full border border-brand-sage/35 bg-brand-sage/10 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.14em] text-brand-sage">
-                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-sage" />
-                        {badge}
-                      </span>
-                    )}
-                    {!badge && <span className="mb-[18px] block" aria-hidden="true" />}
-                    <span className="block w-full text-center text-sm font-medium">{option.label}</span>
+                    <span className="block w-full text-center text-sm font-medium leading-snug">
+                      {formatProductSizeDisplay(option.label)}
+                    </span>
+                    <span className="mt-1 block w-full text-center text-[10px] uppercase tracking-[0.12em] text-brand-gray">
+                      {option.label}
+                    </span>
                     <span className="mt-1 block w-full text-center text-xs">{formatInr(option.price, 0)}</span>
                     {!option.available && (
                       <span className="mt-1 block text-[10px] font-semibold uppercase tracking-wide text-red-700">
@@ -404,7 +401,7 @@ export default function ProductPage() {
 
           <motion.div
             variants={fadeUp}
-            custom={6}
+            custom={7}
             initial="hidden"
             animate="visible"
             className="mb-10 flex items-center gap-3"
@@ -415,19 +412,7 @@ export default function ProductPage() {
             </Button>
           </motion.div>
 
-          <motion.div variants={fadeUp} custom={7} initial="hidden" animate="visible">
-            <Accordion title="Fragrance Notes">
-              <div className="space-y-2">
-                {(['top', 'heart', 'base'] as const).map(layer => (
-                  <div key={layer}>
-                    <span className="text-[10px] font-medium uppercase tracking-widest text-brand-dark">
-                      {layer} notes:{' '}
-                    </span>
-                    <span>{product.notes[layer].join(', ')}</span>
-                  </div>
-                ))}
-              </div>
-            </Accordion>
+          <motion.div variants={fadeUp} custom={8} initial="hidden" animate="visible">
             <Accordion title="How to Apply">
               <div className="space-y-3">
                 <p>

@@ -26,8 +26,8 @@ export default function InspiredByBadge({
 
   const variantClass =
     variant === 'inline'
-      ? 'inline-block px-2.5 py-1 text-[9px] tracking-[0.1em] lg:text-[10px]'
-      : 'pointer-events-none absolute left-2 top-2 z-10 px-2 py-1 text-[8px] tracking-[0.08em] lg:left-2.5 lg:top-2.5 lg:px-2.5 lg:text-[9px]';
+      ? 'inline-block px-2 py-0.5 text-[7px] tracking-[0.08em] lg:text-[8px]'
+      : 'pointer-events-none absolute left-2 top-2 z-10 px-1.5 py-0.5 text-[6px] tracking-[0.06em] lg:left-2 lg:top-2 lg:px-2 lg:text-[7px]';
 
   return (
     <span className={`${base} ${variantClass} ${className}`} title={label}>

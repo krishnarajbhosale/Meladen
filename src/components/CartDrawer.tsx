@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { guardCheckout } from '../api/customerAuth';
 import { useCart } from '../context/CartContext';
+import { formatProductSizeLine } from '../data/products';
 import QuantityStepper from './QuantityStepper';
 import { formatInr } from '../utils/currency';
 
@@ -126,40 +127,42 @@ export default function CartDrawer({ open, onClose }: Props) {
                           </button>
 
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0 pr-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
                                 <p className="truncate font-serif text-xs leading-snug text-brand-dark">{item.product.name}</p>
                                 <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-brand-gray">
                                   {item.product.category}
                                 </p>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => removeFromCart(item.product.id, item.size)}
-                                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-brand-gray transition-colors hover:bg-white/5 hover:text-brand-dark"
-                                aria-label={`Remove ${item.product.name}`}
-                              >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                                </svg>
-                              </button>
+                              <div className="flex flex-shrink-0 items-center gap-2">
+                                <QuantityStepper
+                                  compact
+                                  value={item.quantity}
+                                  onChange={value => updateQty(item.product.id, item.size, value)}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeFromCart(item.product.id, item.size)}
+                                  className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-brand-gray transition-colors hover:bg-white/5 hover:text-brand-dark"
+                                  aria-label={`Remove ${item.product.name}`}
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                  </svg>
+                                </button>
+                              </div>
                             </div>
 
                             <div className="mt-3 flex flex-wrap items-center gap-2">
                               <span className="rounded-full bg-[#1a1814] px-2.5 py-0.5 text-[9px] uppercase tracking-[0.12em] text-brand-dark">
-                                {item.size}
+                                {formatProductSizeLine(item.size)}
                               </span>
                               <span className="text-[9px] text-brand-gray">
                                 {formatInr(item.unitPrice, 0)} each
                               </span>
                             </div>
 
-                            <div className="mt-5 flex items-end justify-between gap-4">
-                              <QuantityStepper
-                                compact
-                                value={item.quantity}
-                                onChange={value => updateQty(item.product.id, item.size, value)}
-                              />
+                            <div className="mt-4 flex justify-end">
                               <div className="text-right">
                                 <p className="text-[9px] uppercase tracking-[0.16em] text-brand-gray">Total</p>
                                 <p className="mt-0.5 font-serif text-sm text-brand-dark">

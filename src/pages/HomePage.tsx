@@ -9,6 +9,9 @@ import heroVideoMp4 from '../assets/Homepagevideo-optimized.mp4';
 import { apiProductToProduct, fetchCategoriesWithProducts } from '../api/catalog';
 import { BENTO_PRODUCT_FILTERS, buildBentoCollectionUrl } from '../data/collections';
 import AutoplayVideo from '../components/AutoplayVideo';
+import HeroIntro from '../components/HeroIntro';
+import HomeUspBar from '../components/HomeUspBar';
+import HomeStatisticsSection from '../components/HomeStatisticsSection';
 import HorizontalProductRail from '../components/HorizontalProductRail';
 import HomeSectionHeading from '../components/HomeSectionHeading';
 import HomeCollectionsSection from '../components/HomeCollectionsSection';
@@ -16,28 +19,10 @@ import OurStorySection from '../components/OurStorySection';
 import CelebPhotosSection from '../components/CelebPhotosSection';
 import CustomerReviewsSection from '../components/CustomerReviewsSection';
 import { pageVariants, fadeUp } from '../animations/variants';
-import { subscribeNewsletter } from '../api/newsletter';
-import { ApiError } from '../api/client';
-
-function newsletterErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) {
-    try {
-      const parsed = JSON.parse(err.message) as { message?: string };
-      if (parsed.message) return parsed.message;
-    } catch {
-      /* plain text body */
-    }
-    return err.message || 'Could not subscribe. Please try again.';
-  }
-  return err instanceof Error ? err.message : 'Could not subscribe. Please try again.';
-}
 
 export default function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState('');
-  const [subscribeLoading, setSubscribeLoading] = useState(false);
-  const [subscribeFeedback, setSubscribeFeedback] = useState<string | null>(null);
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
 
   useEffect(() => {
@@ -71,26 +56,6 @@ export default function HomePage() {
     return source.filter(product => product.isBestseller);
   }, [catalogProducts]);
 
-  const handleNewsletterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = email.trim();
-    if (!trimmed) {
-      setSubscribeFeedback('Please enter your email address.');
-      return;
-    }
-    setSubscribeLoading(true);
-    setSubscribeFeedback(null);
-    try {
-      const res = await subscribeNewsletter(trimmed);
-      setSubscribeFeedback(res.message || 'Thank you for subscribing.');
-      setEmail('');
-    } catch (err) {
-      setSubscribeFeedback(newsletterErrorMessage(err));
-    } finally {
-      setSubscribeLoading(false);
-    }
-  };
-
   return (
     <motion.div variants={pageVariants} initial="hidden" animate="visible" className="relative isolate overflow-x-clip bg-brand-cream">
       <div className="mx-auto w-full max-w-[1500px] px-3 pb-4 pt-0 lg:px-4 lg:pt-4">
@@ -104,7 +69,11 @@ export default function HomePage() {
               preload="auto"
               className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/15 to-black/75" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-black/25 to-black/90" />
+            <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center px-4 pb-5 pt-16 sm:px-5 sm:pb-6 md:px-4 md:pb-5 lg:px-10 lg:pb-10">
+              <HeroIntro overlay />
+              <HomeUspBar overlay />
+            </div>
           </section>
 
           <section className="mt-10 px-3 lg:mt-14 lg:px-4">
@@ -184,105 +153,19 @@ export default function HomePage() {
               subtitle="The latest additions to our olfactory library."
               products={bestSellers}
               headingStyle="collections"
+              showProductRating
             />
           </div>
 
-          <HomeCollectionsSection />
-
-          <OurStorySection />
+          <HomeStatisticsSection />
 
           <CelebPhotosSection />
 
+          <HomeCollectionsSection />
+
           <CustomerReviewsSection />
 
-          <section className="mx-1 mb-4 mt-10 rounded-3xl bg-brand-beige/60 px-7 py-12 text-center lg:mx-0 lg:mt-14 lg:py-20">
-            <motion.p
-              variants={fadeUp}
-              custom={0}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="mb-3 text-[9px] uppercase tracking-[0.2em] text-brand-gray"
-            >
-              Join the Society
-            </motion.p>
-            <motion.h2
-              variants={fadeUp}
-              custom={1}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="mb-2 font-serif text-[1.6rem] font-medium text-brand-dark lg:text-4xl"
-            >
-              Subscribe for Exclusive
-              <br className="lg:hidden" /> Access
-            </motion.h2>
-            <motion.p
-              variants={fadeUp}
-              custom={2}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="mx-auto mb-8 max-w-xs text-[12px] text-brand-gray lg:max-w-sm"
-            >
-              Be the first to discover new collections, atelier events, and members-only offers.
-            </motion.p>
-            <motion.form
-              variants={fadeUp}
-              custom={3}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              onSubmit={handleNewsletterSubmit}
-              className="mx-auto max-w-sm"
-            >
-              <div className="flex items-center gap-2 rounded-full border border-[#2a2a2a] bg-brand-light-gray px-4 py-1.5 shadow-sm">
-                <input
-                  type="email"
-                  placeholder="Your email address"
-                  value={email}
-                  onChange={e => {
-                    setEmail(e.target.value);
-                    if (subscribeFeedback) setSubscribeFeedback(null);
-                  }}
-                  disabled={subscribeLoading}
-                  required
-                  className="flex-1 bg-transparent py-1.5 text-[12px] text-brand-dark outline-none placeholder:text-brand-gray/50 disabled:opacity-60"
-                />
-                <button
-                  type="submit"
-                  disabled={subscribeLoading}
-                  aria-label="Subscribe"
-                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-dark text-brand-cream transition-colors hover:bg-brand-dark/80 disabled:opacity-50"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-              </div>
-              {subscribeFeedback && (
-                <p className="mt-3 text-center text-[11px] leading-relaxed text-brand-gray">{subscribeFeedback}</p>
-              )}
-            </motion.form>
-
-            <motion.div
-              variants={fadeUp}
-              custom={4}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="mt-8 flex justify-center gap-5"
-            >
-              {['instagram', 'tiktok', 'pinterest'].map(s => (
-                <button
-                  key={s}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-brand-beige text-brand-gray transition-colors hover:border-brand-dark hover:text-brand-dark"
-                >
-                  <span className="text-[9px] uppercase tracking-widest">{s[0]}</span>
-                </button>
-              ))}
-            </motion.div>
-          </section>
+          <OurStorySection />
         </div>
       </div>
     </motion.div>

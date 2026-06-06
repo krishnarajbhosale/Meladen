@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type TouchEvent as ReactTouch
 import {
   adminGetStock,
   adminListOrders,
+  adminMarkCodPaymentReceived,
   adminCreatePromoCode,
   adminCreateCategory,
   adminCreateProduct,
@@ -19,6 +20,7 @@ import {
   adminUpdateStock,
   adminUpdateCategory,
   adminUpdateProduct,
+  adminReplaceProductGalleryImage,
   fetchAdminReturnVideoBlobUrl,
   loginAdmin,
 } from '../api/catalog';
@@ -31,6 +33,7 @@ import {
   adminCreateCelebPhoto,
   adminDeleteCelebPhoto,
   adminListCelebPhotos,
+  adminReplaceCelebPhoto,
   celebPhotoImageSrc,
   type CelebPhotoApi,
 } from '../api/celebPhotos';
@@ -136,6 +139,7 @@ type ProductFormState = {
   tag: string;
   isNew: boolean;
   isBestseller: boolean;
+  isPremium: boolean;
   archived: boolean;
 };
 
@@ -179,6 +183,7 @@ function emptyProductForm(defaultCategoryId: number, defaults?: ProductMediaDefa
     tag: '',
     isNew: false,
     isBestseller: false,
+    isPremium: false,
     archived: false,
   };
 }
@@ -198,6 +203,7 @@ export default function AdminPage() {
   const [products, setProducts] = useState<ProductAdminApi[]>([]);
   const [stock, setStock] = useState<StockSummaryApi | null>(null);
   const [orders, setOrders] = useState<OrderApi[]>([]);
+  const [codMarkBusy, setCodMarkBusy] = useState<string | null>(null);
   const [unseenOrderIds, setUnseenOrderIds] = useState<Set<string>>(() => new Set());
   const [promoRows, setPromoRows] = useState<PromoCodeRow[]>([]);
   const [returnRows, setReturnRows] = useState<ReturnRequestRow[]>([]);
@@ -260,6 +266,10 @@ export default function AdminPage() {
     }
   });
   const [selectedImageName, setSelectedImageName] = useState('');
+  const [galleryUploadField, setGalleryUploadField] = useState<
+    'galleryImage1' | 'galleryImage2' | 'galleryImage3' | null
+  >(null);
+  const [celebReplaceId, setCelebReplaceId] = useState<number | null>(null);
 
   const readStatus = (err: unknown): number | null => {
     if (typeof err === 'object' && err !== null && 'status' in err) {
@@ -548,6 +558,19 @@ export default function AdminPage() {
     setToken(null);
   };
 
+  const markCodPaymentDone = async (orderId: string) => {
+    if (!token) return;
+    setCodMarkBusy(orderId);
+    try {
+      const updated = await adminMarkCodPaymentReceived(token, orderId);
+      setOrders(prev => prev.map(o => (o.id === orderId ? updated : o)));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not update COD payment status');
+    } finally {
+      setCodMarkBusy(null);
+    }
+  };
+
   const savePromo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -834,6 +857,16 @@ export default function AdminPage() {
     return Number.isFinite(n) ? n : null;
   };
 
+  const normalizeGalleryPayloadValue = (value: string): string | null => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (trimmed.startsWith('data:')) return trimmed;
+    return trimmed.split('?')[0] ?? trimmed;
+  };
+
+  const gallerySlotForField = (field: 'galleryImage1' | 'galleryImage2' | 'galleryImage3'): 1 | 2 | 3 =>
+    field === 'galleryImage1' ? 1 : field === 'galleryImage2' ? 2 : 3;
+
   const buildProductPayload = () => ({
     categoryId: Number(productForm.categoryId) || categories[0]?.id,
     meladenFragrance: productForm.meladenFragrance,
@@ -857,12 +890,13 @@ export default function AdminPage() {
     imageBase64: productForm.imageBase64 || null,
     imageContentType: productForm.imageContentType || null,
     clearImage: productForm.clearImage,
-    galleryImage1: productForm.galleryImage1 || null,
-    galleryImage2: productForm.galleryImage2 || null,
-    galleryImage3: productForm.galleryImage3 || null,
+    galleryImage1: normalizeGalleryPayloadValue(productForm.galleryImage1),
+    galleryImage2: normalizeGalleryPayloadValue(productForm.galleryImage2),
+    galleryImage3: normalizeGalleryPayloadValue(productForm.galleryImage3),
     tag: productForm.tag || null,
     isNew: productForm.isNew,
     isBestseller: productForm.isBestseller,
+    isPremium: productForm.isPremium,
     archived: productForm.archived,
   });
 
@@ -920,6 +954,7 @@ export default function AdminPage() {
       tag: p.tag ?? '',
       isNew: p.isNew,
       isBestseller: p.isBestseller,
+      isPremium: p.isPremium ?? false,
       archived: Boolean((p as any).archived),
     });
     setSelectedImageName(p.hasImage ? 'Existing image present (choose file to replace)' : '');
@@ -1028,13 +1063,39 @@ export default function AdminPage() {
     field: 'galleryImage1' | 'galleryImage2' | 'galleryImage3',
     file: File | null,
   ) => {
-    if (!file) return;
+    if (!file || !token) return;
+    const slot = gallerySlotForField(field);
     try {
       assertImageFileWithinLimit(file);
-      const dataUrl = await readFileAsDataUrl(file);
-      setProductField(field, dataUrl);
+      setGalleryUploadField(field);
+      if (editingProductId) {
+        const updated = await adminReplaceProductGalleryImage(token, editingProductId, slot, file);
+        const ref =
+          slot === 1 ? updated.galleryImage1 : slot === 2 ? updated.galleryImage2 : updated.galleryImage3;
+        setProductField(field, ref ? `${ref}?v=${Date.now()}` : '');
+      } else {
+        const dataUrl = await readFileAsDataUrl(file);
+        setProductField(field, dataUrl);
+      }
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Image upload failed');
+    } finally {
+      setGalleryUploadField(null);
+    }
+  };
+
+  const replaceCelebPhoto = async (id: number, file: File | null) => {
+    if (!file || !token) return;
+    try {
+      assertImageFileWithinLimit(file);
+      setCelebReplaceId(id);
+      await adminReplaceCelebPhoto(token, id, file);
+      setCelebPhotos(await adminListCelebPhotos(token));
+      setCelebMessage('Photo replaced.');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Photo replace failed');
+    } finally {
+      setCelebReplaceId(null);
     }
   };
 
@@ -1475,8 +1536,19 @@ export default function AdminPage() {
                         Default image {idx + 2}
                       </p>
                       <p className="mb-2 text-[11px] text-[#8a7a66]">Max file size: {MAX_IMAGE_UPLOAD_LABEL}</p>
+                      {editingProductId && (
+                        <p className="mb-2 text-[11px] text-[#8a7a66]">
+                          Replace uploads immediately — no need to save the whole product again.
+                        </p>
+                      )}
+                      {editingProductId && (
+                        <p className="mb-2 text-[11px] text-[#8a7a66]">
+                          Replace uploads immediately — no need to save the whole product again.
+                        </p>
+                      )}
                       {productForm[field] ? (
                         <img
+                          key={productForm[field]}
                           src={resolveProductMediaUrl(productForm[field])}
                           alt={`Preview ${idx + 2}`}
                           className="mb-2 h-28 w-full rounded-md border border-[#e5d7c2] object-cover"
@@ -1487,19 +1559,25 @@ export default function AdminPage() {
                         </div>
                       )}
                       <div className="flex gap-2">
-                        <label className="cursor-pointer rounded-lg border border-[#ccbca7] bg-white px-3 py-2 text-xs font-medium text-[#4e4134]">
-                          Replace
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={e => {
-                              const file = e.target.files?.[0] ?? null;
-                              void onGalleryReplace(field, file);
-                              e.target.value = '';
-                            }}
-                          />
-                        </label>
+                        <input
+                          id={`gallery-file-${field}`}
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={e => {
+                            const file = e.target.files?.[0] ?? null;
+                            void onGalleryReplace(field, file);
+                            e.target.value = '';
+                          }}
+                        />
+                        <button
+                          type="button"
+                          disabled={galleryUploadField === field}
+                          onClick={() => document.getElementById(`gallery-file-${field}`)?.click()}
+                          className="rounded-lg border border-[#ccbca7] bg-white px-3 py-2 text-xs font-medium text-[#4e4134] disabled:opacity-50"
+                        >
+                          {galleryUploadField === field ? 'Uploading…' : 'Replace'}
+                        </button>
                         <input
                           placeholder={
                             productForm[field].startsWith('data:')
@@ -1542,6 +1620,14 @@ export default function AdminPage() {
                         onChange={e => setProductField('isBestseller', e.target.checked)}
                       />
                       Bestseller
+                    </label>
+                    <label className="flex items-center gap-2 text-sm font-medium text-[#4d3f31]">
+                      <input
+                        type="checkbox"
+                        checked={productForm.isPremium}
+                        onChange={e => setProductField('isPremium', e.target.checked)}
+                      />
+                      Premium
                     </label>
                     <label className="col-span-2 flex items-center gap-2 text-sm font-medium text-[#4d3f31]">
                       <input
@@ -1815,6 +1901,28 @@ export default function AdminPage() {
                               <dt className="text-[#9a8b78]">Payment mode</dt>
                               <dd className="font-medium text-[#3a2f25]">{paymentLabel}</dd>
                             </div>
+                            {order.status === 'COD' && (
+                              <div className="mt-3 rounded-lg border border-[#eadfce] bg-[#f7f2ea] px-3 py-2">
+                                <label className="flex cursor-pointer items-start gap-2 text-xs text-[#3a2f25]">
+                                  <input
+                                    type="checkbox"
+                                    className="mt-0.5"
+                                    checked={Boolean(order.codPaymentReceived)}
+                                    disabled={Boolean(order.codPaymentReceived) || codMarkBusy === order.id}
+                                    onChange={() => {
+                                      if (order.codPaymentReceived) return;
+                                      void markCodPaymentDone(order.id);
+                                    }}
+                                  />
+                                  <span>
+                                    <span className="font-semibold">COD payment received</span>
+                                    <span className="mt-0.5 block text-[10px] text-[#7a6b57]">
+                                      Check when cash is collected on delivery. Enables returns for this order.
+                                    </span>
+                                  </span>
+                                </label>
+                              </div>
+                            )}
                             <div className="flex justify-between gap-2 pt-1 text-[#6b5c4b]">
                               <dt>Alcohol used</dt>
                               <dd>{order.alcoholUsedGm} gm</dd>
@@ -2189,15 +2297,38 @@ export default function AdminPage() {
                                 className="h-full w-full object-cover"
                               />
                             </div>
-                            <div className="flex items-center justify-between gap-2 text-[10px] text-[#6b5c4b]">
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-[#6b5c4b]">
                               <span>Order {photo.sortOrder}</span>
-                              <button
-                                type="button"
-                                className="text-red-700 underline"
-                                onClick={() => removeCelebPhoto(Number(photo.id))}
-                              >
-                                Delete
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  id={`celeb-replace-${photo.id}`}
+                                  type="file"
+                                  accept="image/*"
+                                  className="sr-only"
+                                  onChange={e => {
+                                    const file = e.target.files?.[0] ?? null;
+                                    void replaceCelebPhoto(Number(photo.id), file);
+                                    e.target.value = '';
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  disabled={celebReplaceId === Number(photo.id)}
+                                  onClick={() =>
+                                    document.getElementById(`celeb-replace-${photo.id}`)?.click()
+                                  }
+                                  className="text-[#4e4134] underline disabled:opacity-50"
+                                >
+                                  {celebReplaceId === Number(photo.id) ? 'Uploading…' : 'Replace'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-red-700 underline"
+                                  onClick={() => removeCelebPhoto(Number(photo.id))}
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))}

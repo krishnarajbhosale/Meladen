@@ -49,6 +49,12 @@ public class ReturnRequestService {
     if (!orderEmail.equals(normalizedEmail)) {
       throw new IllegalArgumentException("This order does not belong to the provided email");
     }
+    if ("PAYMENT_PENDING".equalsIgnoreCase(order.getStatus())) {
+      throw new IllegalArgumentException("Returns are not available until payment is complete");
+    }
+    if ("COD".equalsIgnoreCase(order.getStatus()) && !order.isCodPaymentReceived()) {
+      throw new IllegalArgumentException("Returns are not available until COD payment is received");
+    }
 
     if (video == null || video.isEmpty()) {
       throw new IllegalArgumentException("A video is required to submit a return request");

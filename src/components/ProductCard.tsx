@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Product, getProductCardListPrice } from '../data/products';
+import { Product, getProductCardListPrice, formatProductSizeDisplay } from '../data/products';
 import { useCart } from '../context/CartContext';
 import { fadeUp } from '../animations/variants';
 import { formatInr } from '../utils/currency';
+import { resolveProductRating } from '../utils/productRating';
 import InspiredByBadge from './InspiredByBadge';
 
 type AddToBagConfig = {
@@ -23,6 +24,8 @@ interface ProductCardProps {
   inRail?: boolean;
   /** Collection grid: centered copy, optional notes line, custom add-to-bag. */
   collectionLayout?: boolean;
+  /** Show star rating line (e.g. Best Sellers rail). */
+  showRating?: boolean;
   /** Parent handles layout motion (e.g. collection page). */
   skipEntranceAnimation?: boolean;
   addToBag?: AddToBagConfig;
@@ -35,6 +38,7 @@ export default function ProductCard({
   tone = 'light',
   inRail = false,
   collectionLayout = false,
+  showRating = false,
   skipEntranceAnimation = false,
   addToBag,
 }: ProductCardProps) {
@@ -43,6 +47,7 @@ export default function ProductCard({
   const navigate = useNavigate();
 
   const listPrice = getProductCardListPrice(product);
+  const rating = showRating ? resolveProductRating(product.id) : null;
   const effectiveTone = collectionLayout ? 'dark' : tone;
   const metaClass = effectiveTone === 'dark' ? 'text-white/45' : 'text-[#888]';
   const titleClass = effectiveTone === 'dark' ? 'text-[#ece8e0]' : 'text-[#b8b3ac]';
@@ -127,12 +132,35 @@ export default function ProductCard({
         >
           {product.name}
         </p>
+        {rating && (
+          <div
+            className={`mb-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 ${collectionLayout ? 'justify-center' : ''}`}
+            aria-label={`${rating.score} out of 5 stars, ${rating.reviewCount} reviews`}
+          >
+            <span className="flex leading-none">
+              {Array.from({ length: 5 }, (_, i) => (
+                <span
+                  key={i}
+                  className={`text-[11px] ${i < rating.starCount ? 'text-gold' : effectiveTone === 'dark' ? 'text-white/15' : 'text-[#444]'}`}
+                  aria-hidden
+                >
+                  ★
+                </span>
+              ))}
+            </span>
+            <span className={`text-[10px] tabular-nums ${metaClass}`}>
+              {rating.score.toFixed(1)} ({rating.reviewCount})
+            </span>
+          </div>
+        )}
         {collectionLayout && product.notes.top.length > 0 && (
           <p className="mb-2 truncate text-[10px] text-brand-gray">{product.notes.top.join(', ')}</p>
         )}
         <p className={`text-sm font-medium ${priceClass}`}>
           {formatInr(listPrice.price, 0)}
-          <span className={`ml-1.5 text-[10px] font-normal ${metaClass}`}>{listPrice.sizeLabel}</span>
+          <span className={`ml-1.5 text-[10px] font-normal ${metaClass}`}>
+            {formatProductSizeDisplay(listPrice.sizeLabel)}
+          </span>
         </p>
         {collectionLayout && addToBag?.disabled && (
           <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-red-400">Out of stock</p>

@@ -113,8 +113,7 @@ export default function LoginPage() {
               <span className="font-medium text-[#e8e4dc]">{getCustomerEmail()}</span>
             </p>
             <p className="text-xs leading-relaxed text-[#8a8580]">
-              Your orders appear under <strong className="text-[#c9a84c]">My orders</strong>. Start a return
-              or exchange from there or below.
+              Your orders appear under <strong className="text-[#c9a84c]">My orders</strong>.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
               <Link
@@ -122,12 +121,6 @@ export default function LoginPage() {
                 className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full bg-gold px-5 py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-black shadow-[0_4px_14px_rgba(201,168,76,0.35)] transition-[filter] hover:brightness-110 sm:flex-initial sm:min-w-[148px]"
               >
                 My orders
-              </Link>
-              <Link
-                to="/returns"
-                className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full border-2 border-[#b8b3ac]/55 bg-transparent px-5 py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e8e4dc] transition-colors hover:border-gold hover:text-gold sm:flex-initial sm:min-w-[148px]"
-              >
-                Returns
               </Link>
               <button
                 type="button"

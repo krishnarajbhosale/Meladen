@@ -406,6 +406,22 @@ public class OrderService {
     return orderRepository.findConfirmedWithItems().stream().map(this::toOrderResponse).toList();
   }
 
+  @Transactional
+  public OrderResponse markCodPaymentReceived(String orderId) {
+    CustomerOrder order =
+        orderRepository
+            .findByIdWithItems(orderId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+    if (!"COD".equalsIgnoreCase(order.getStatus())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only COD orders can be marked as paid");
+    }
+    if (order.isCodPaymentReceived()) {
+      return toOrderResponse(order);
+    }
+    order.setCodPaymentReceived(true);
+    return toOrderResponse(orderRepository.save(order));
+  }
+
   @Transactional(readOnly = true)
   public List<OrderResponse> listOrdersForCustomer(Long customerId) {
     if (customerId == null) {
@@ -482,6 +498,7 @@ public class OrderService {
         o.getAlcoholUsedGm(),
         o.getStatus(),
         o.getPaymentMethod(),
+        o.isCodPaymentReceived(),
         o.getTrackingAwb(),
         o.getTrackingUrl(),
         o.getCreatedAt(),

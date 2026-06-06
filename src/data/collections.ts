@@ -88,19 +88,21 @@ export function resolveHomeCollectionSlug(
 /** Bento "Our Specials" → collection filters (admin product fields). */
 export type BentoProductFilter =
   | { kind: 'idealFor'; value: string; label: string }
-  | { kind: 'mood'; value: string; label: string };
+  | { kind: 'mood'; value: string; label: string }
+  | { kind: 'premium'; label: string };
 
 export const BENTO_PRODUCT_FILTERS = {
   men: { kind: 'idealFor', value: 'Men', label: "Men's" } as const,
   women: { kind: 'idealFor', value: 'Women', label: "Women's" } as const,
   unisex: { kind: 'idealFor', value: 'Unisex', label: 'Unisex' } as const,
-  luxury: { kind: 'mood', value: 'Luxury', label: 'Luxury' } as const,
+  luxury: { kind: 'premium', label: 'Luxury' } as const,
 };
 
 export function buildBentoCollectionUrl(filter: BentoProductFilter): string {
   const params = new URLSearchParams();
   if (filter.kind === 'idealFor') params.set('idealFor', filter.value);
-  else params.set('mood', filter.value);
+  else if (filter.kind === 'mood') params.set('mood', filter.value);
+  else params.set('premium', '1');
   return `/collection?${params.toString()}`;
 }
 

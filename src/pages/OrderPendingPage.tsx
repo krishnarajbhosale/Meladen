@@ -15,6 +15,7 @@ import type { OrderApi } from '../api/types';
 import type { CartItem } from '../context/CartContext';
 import Button from '../components/Button';
 import { pageVariants, fadeUp } from '../animations/variants';
+import { formatProductSizeLine } from '../data/products';
 import { formatInr, formatInrDiscount } from '../utils/currency';
 import { formatShippingAddress } from '../utils/address';
 
@@ -257,7 +258,7 @@ export default function OrderPendingPage() {
                     <div className="min-w-0 flex-1">
                       <p className="font-serif text-sm font-medium text-brand-dark">{item.productName}</p>
                       <p className="mt-1 text-xs text-brand-gray">
-                        {item.size} · Qty {item.quantity} · {formatInr(Number(item.unitPrice), 0)} each
+                        {formatProductSizeLine(item.size)} · Qty {item.quantity} · {formatInr(Number(item.unitPrice), 0)} each
                       </p>
                     </div>
                     <p className="text-sm font-medium text-brand-dark">{formatInr(Number(item.lineTotal))}</p>

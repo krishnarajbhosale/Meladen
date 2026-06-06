@@ -26,6 +26,7 @@ public record OrderResponse(
     BigDecimal alcoholUsedGm,
     String status,
     String paymentMethod,
+    boolean codPaymentReceived,
     String trackingAwb,
     String trackingUrl,
     Instant createdAt,

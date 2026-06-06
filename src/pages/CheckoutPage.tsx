@@ -13,6 +13,7 @@ import CheckoutSummary from '../components/CheckoutSummary';
 import Drawer from '../components/Drawer';
 import { pageVariants, fadeUp } from '../animations/variants';
 import { formatInr } from '../utils/currency';
+import { sanitizePhoneDigits } from '../utils/phone';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -236,7 +237,14 @@ export default function CheckoutPage() {
                 <InputField label="Last Name" value={form.lastName} onChange={set('lastName')} required />
               </div>
               <InputField label="Email" type="email" value={form.email} onChange={set('email')} required />
-              <InputField label="Phone" type="tel" value={form.phone} onChange={set('phone')} />
+              <InputField
+                label="Phone"
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                value={form.phone}
+                onChange={v => set('phone')(sanitizePhoneDigits(v))}
+              />
             </div>
           </motion.div>
 

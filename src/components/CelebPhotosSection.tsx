@@ -47,14 +47,14 @@ function SectionCarousel({
       {showTitle && (
         <h3 className="font-serif text-xl text-brand-dark lg:text-2xl">{section.sectionName}</h3>
       )}
-      <div className="relative overflow-hidden rounded-2xl bg-[#141414]">
-        <div className="relative w-full sm:aspect-[16/10] lg:aspect-[21/9]">
+      <div className="relative mx-auto w-full max-w-[min(100%,420px)] overflow-hidden rounded-2xl border border-white/10 bg-brand-beige/40 lg:max-w-[480px]">
+        <div className="relative aspect-[4/5] w-full bg-[#111111]">
           <AnimatePresence mode="wait" initial={false}>
             <motion.img
               key={String(active.id)}
               src={active.imageUrl}
               alt={section.sectionName}
-              className="block w-full h-auto max-h-[min(85vh,720px)] object-contain object-center sm:absolute sm:inset-0 sm:h-full sm:max-h-none sm:object-cover"
+              className="absolute inset-0 h-full w-full object-contain object-center"
               initial={{ opacity: 0, x: 24 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -24 }}
@@ -64,7 +64,7 @@ function SectionCarousel({
               draggable={false}
             />
           </AnimatePresence>
-          <div className="pointer-events-none absolute inset-0 hidden bg-gradient-to-t from-black/50 via-transparent to-black/15 sm:block" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/15" />
         </div>
 
         {photos.length > 1 && (
@@ -140,7 +140,7 @@ export default function CelebPhotosSection() {
   if (sections.length === 0) return null;
 
   return (
-    <section className="mt-10 border-t border-white/10 bg-black px-5 py-12 lg:mt-12 lg:px-10 lg:py-20 xl:px-16">
+    <section className="mt-10 border-t border-white/10 bg-brand-cream px-5 py-12 lg:mt-12 lg:px-10 lg:py-20 xl:px-16">
       <div className="mx-auto max-w-6xl">
         <motion.div
           variants={fadeUp}

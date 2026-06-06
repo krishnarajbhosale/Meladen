@@ -33,4 +33,5 @@ public record ProductAdminResponse(
     String tag,
     @JsonProperty("isNew") boolean isNew,
     @JsonProperty("isBestseller") boolean isBestseller,
+    @JsonProperty("isPremium") boolean isPremium,
     boolean archived) {}

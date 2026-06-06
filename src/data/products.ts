@@ -29,6 +29,7 @@ export interface Product {
   notes: { top: string[]; heart: string[]; base: string[] };
   isNew?: boolean;
   isBestseller?: boolean;
+  isPremium?: boolean;
   /** When set (from API), cart size picker uses these list prices. */
   price30Ml?: number;
   price50Ml?: number;
@@ -60,6 +61,36 @@ const SIZE_RECIPES: Record<string, { oil: number; alcohol: number }> = {
   '50ml': { oil: 10, alcohol: 30 },
   '100ml': { oil: 20, alcohol: 60 },
 };
+
+export function normalizeProductSizeKey(size: string): string {
+  const normalized = size.trim().toLowerCase().replace(/\s+/g, '');
+  if (normalized === '30ml' || normalized === '30') return '30ml';
+  if (normalized === '50ml' || normalized === '50') return '50ml';
+  if (normalized === '100ml' || normalized === '100') return '100ml';
+  return size.trim();
+}
+
+/** Customer-facing size label for product UI, cart, and checkout. */
+export function formatProductSizeDisplay(sizeLabel: string): string {
+  switch (normalizeProductSizeKey(sizeLabel)) {
+    case '30ml':
+      return 'Starter Size';
+    case '50ml':
+      return 'Most Popular ⭐';
+    case '100ml':
+      return 'Best Value 🔥';
+    default:
+      return sizeLabel;
+  }
+}
+
+/** Volume plus marketing label, e.g. "50ml · Most Popular ⭐". */
+export function formatProductSizeLine(sizeLabel: string): string {
+  const key = normalizeProductSizeKey(sizeLabel);
+  const display = formatProductSizeDisplay(sizeLabel);
+  if (display === sizeLabel) return sizeLabel;
+  return `${key} · ${display}`;
+}
 
 /** List price on product cards — uses 30ml when that size is priced (typical for perfumes). */
 export function getProductCardListPrice(product: Product): { price: number; sizeLabel: string } {

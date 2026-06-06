@@ -34,7 +34,8 @@ public record ProductPublicResponse(
     BigDecimal productOil,
     String concentration,
     @JsonProperty("isNew") boolean isNew,
-    @JsonProperty("isBestseller") boolean isBestseller) {
+    @JsonProperty("isBestseller") boolean isBestseller,
+    @JsonProperty("isPremium") boolean isPremium) {
 
   public record Notes(List<String> top, List<String> heart, List<String> base) {}
 }

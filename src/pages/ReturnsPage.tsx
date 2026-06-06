@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { fetchMyOrders } from '../api/catalog';
@@ -12,6 +12,8 @@ import {
 import { submitReturnRequest } from '../api/returns';
 import InputField from '../components/InputField';
 import Button from '../components/Button';
+import { sanitizePhoneDigits } from '../utils/phone';
+import { canReturnOrExchangeOrder } from '../utils/orderReturns';
 import { pageVariants, fadeUp } from '../animations/variants';
 
 export default function ReturnsPage() {
@@ -45,14 +47,19 @@ export default function ReturnsPage() {
       const data = await fetchMyOrders();
       const list = Array.isArray(data) ? data : [];
       setOrders(list);
-      const latest = list[0];
+      const eligible = list.filter(canReturnOrExchangeOrder);
+      const prefer =
+        preferOrderId && eligible.find(o => o.id === preferOrderId)
+          ? preferOrderId
+          : eligible[0]?.id ?? '';
+      const latest = eligible.find(o => o.id === prefer) ?? eligible[0];
       const email = getCustomerEmail();
       setForm(p => ({
         ...p,
         email: String(email || p.email || '').trim(),
         name: latest?.customerName ? String(latest.customerName) : p.name,
         contactNumber: latest?.customerPhone ? String(latest.customerPhone) : p.contactNumber,
-        orderId: preferOrderId || (latest?.id != null ? String(latest.id) : p.orderId),
+        orderId: prefer || (latest?.id != null ? String(latest.id) : p.orderId),
       }));
     } catch {
       const email = getCustomerEmail();
@@ -70,7 +77,11 @@ export default function ReturnsPage() {
 
   useEffect(() => {
     const id = orderIdFromUrl?.trim();
-    if (id) setForm(p => ({ ...p, orderId: id }));
+    if (!id) return;
+    setForm(p => {
+      if (p.orderId === id) return p;
+      return { ...p, orderId: id };
+    });
   }, [orderIdFromUrl]);
 
   useEffect(() => {
@@ -116,6 +127,11 @@ export default function ReturnsPage() {
     }
   };
 
+  const eligibleOrders = useMemo(
+    () => orders.filter(canReturnOrExchangeOrder),
+    [orders],
+  );
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -123,6 +139,12 @@ export default function ReturnsPage() {
     setDoneMessage(null);
     if (!videoFile) {
       setError('Please attach a video showing the issue. Returns are not accepted without a video.');
+      setSubmitting(false);
+      return;
+    }
+    const selectedOrder = orders.find(o => o.id === form.orderId.trim());
+    if (selectedOrder && !canReturnOrExchangeOrder(selectedOrder)) {
+      setError('Returns are not available until payment is complete for this order.');
       setSubmitting(false);
       return;
     }
@@ -184,7 +206,7 @@ export default function ReturnsPage() {
           showing the problem is required—we cannot process a return without it. Sign in to pre-fill recent orders.
         </p>
 
-        {orders.length > 0 && (
+        {eligibleOrders.length > 0 && (
           <label className="mb-4 block text-xs text-brand-gray">
             <span className="mb-1 block text-[10px] uppercase tracking-widest">Your orders</span>
             <select
@@ -192,7 +214,7 @@ export default function ReturnsPage() {
               value={form.orderId}
               onChange={e => {
                 const id = e.target.value;
-                const o = orders.find(x => x.id === id);
+                const o = eligibleOrders.find(x => x.id === id);
                 setForm(p => ({
                   ...p,
                   orderId: id,
@@ -203,7 +225,7 @@ export default function ReturnsPage() {
               }}
             >
               <option value="">Select order…</option>
-              {orders.map(o => (
+              {eligibleOrders.map(o => (
                 <option key={o.id} value={o.id}>
                   {o.orderNumber} · {new Date(o.createdAt).toLocaleDateString()}
                 </option>
@@ -211,11 +233,24 @@ export default function ReturnsPage() {
             </select>
           </label>
         )}
+        {orders.length > 0 && eligibleOrders.length === 0 && (
+          <p className="mb-4 text-xs text-brand-gray">
+            No eligible orders yet. Complete payment first — pending or unpaid COD orders cannot be returned.
+          </p>
+        )}
 
         <form onSubmit={onSubmit} className="space-y-3">
           <InputField label="Full name" value={form.name} onChange={set('name')} required />
           <InputField label="Email" type="email" value={form.email} onChange={set('email')} required />
-          <InputField label="Phone" type="tel" value={form.contactNumber} onChange={set('contactNumber')} required />
+          <InputField
+            label="Phone"
+            type="tel"
+            inputMode="numeric"
+            maxLength={10}
+            value={form.contactNumber}
+            onChange={v => set('contactNumber')(sanitizePhoneDigits(v))}
+            required
+          />
           <InputField
             label="Order id (UUID from confirmation)"
             value={form.orderId}

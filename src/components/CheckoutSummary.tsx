@@ -1,4 +1,5 @@
 import type { CartItem } from '../context/CartContext';
+import { formatProductSizeLine } from '../data/products';
 import { formatInr, formatInrDiscount } from '../utils/currency';
 
 type AppliedPromo = { code: string; discountAmount: number } | null;
@@ -66,7 +67,7 @@ export default function CheckoutSummary({
               <div className="min-w-0 flex-1">
                 <p className="truncate font-serif text-sm text-brand-dark">{item.product.name}</p>
                 <p className="text-xs text-brand-gray">
-                  {item.size} · Qty {item.quantity}
+                  {formatProductSizeLine(item.size)} · Qty {item.quantity}
                 </p>
               </div>
               <p className="text-sm text-brand-dark">{formatInr(item.unitPrice * item.quantity, 0)}</p>

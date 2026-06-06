@@ -77,6 +77,7 @@ export function apiProductToProduct(p: ProductPublicApi): Product {
     },
     isNew: p.isNew,
     isBestseller: p.isBestseller,
+    isPremium: Boolean(p.isPremium),
     price30Ml: p.price30Ml ?? undefined,
     price50Ml: p.price50Ml ?? undefined,
     price100Ml: p.price100Ml ?? undefined,
@@ -192,6 +193,26 @@ export async function adminUpdateProduct(token: string, id: string, body: Record
   });
 }
 
+export async function adminReplaceProductGalleryImage(
+  token: string,
+  productId: string,
+  slot: 1 | 2 | 3,
+  image: File,
+): Promise<ProductAdminApi> {
+  const form = new FormData();
+  form.append('image', image);
+  const res = await fetch(`${API_BASE_URL}/api/admin/products/${encodeURIComponent(productId)}/gallery/${slot}`, {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: form,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || 'Gallery replace failed');
+  }
+  return res.json() as Promise<ProductAdminApi>;
+}
+
 export async function adminDeleteProduct(token: string, id: string) {
   return fetchJson(`/api/admin/products/${encodeURIComponent(id)}`, {
     method: 'DELETE',
@@ -215,6 +236,13 @@ export async function adminUpdateStock(token: string, alcoholStockGm: number): P
 
 export async function adminListOrders(token: string): Promise<OrderApi[]> {
   return fetchJson<OrderApi[]>('/api/admin/orders', {
+    headers: authHeaders(token),
+  });
+}
+
+export async function adminMarkCodPaymentReceived(token: string, orderId: string): Promise<OrderApi> {
+  return fetchJson<OrderApi>(`/api/admin/orders/${encodeURIComponent(orderId)}/cod-payment-received`, {
+    method: 'PUT',
     headers: authHeaders(token),
   });
 }

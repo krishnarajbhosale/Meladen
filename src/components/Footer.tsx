@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 
 const INSTAGRAM_URL =
-  'https://www.instagram.com/melangesecretofficial?igsh=MTB1c3p3a21xc2Y4aQ==';
+  'https://www.instagram.com/melangesecretofficial?igsh=MXNnMHg3bGo1YmM0bQ==';
+const GOOGLE_URL = 'https://share.google/sw18DIkyzBtXI9EYD';
 
 const footerColumns = [
   {
@@ -15,6 +16,7 @@ const footerColumns = [
     label: 'Support',
     links: [
       { label: 'Terms & Conditions', href: '/policies#terms', internal: true as const },
+      { label: 'Privacy Policy', href: '/policies#privacy', internal: true as const },
       { label: 'Shipping Policy', href: '/policies#shipping', internal: true as const },
       { label: 'Returns & Refund Policy', href: '/policies#returns', internal: true as const },
       { label: 'Law of Jurisdiction', href: '/policies#jurisdiction', internal: true as const },
@@ -35,11 +37,6 @@ export default function Footer() {
           <p className="text-xs tracking-wide text-brand-cream/40">The Art of Fine Fragrance</p>
           <div className="mt-5 space-y-2.5 text-[11px] tracking-wide text-brand-cream/60">
             <p>
-              <a href="tel:+919028980520" className={linkClass}>
-                +91 90289 80520
-              </a>
-            </p>
-            <p>
               <a href="mailto:support.meladen@gmail.com" className={linkClass}>
                 support.meladen@gmail.com
               </a>
@@ -51,7 +48,17 @@ export default function Footer() {
                 rel="noopener noreferrer"
                 className={linkClass}
               >
-                Instagram
+                Insta
+              </a>
+            </p>
+            <p>
+              <a
+                href={GOOGLE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={linkClass}
+              >
+                Google
               </a>
             </p>
           </div>

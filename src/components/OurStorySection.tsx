@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { meladen9 } from '../data/meladenImages';
 import { fadeUp, slideFromLeft, slideFromRight } from '../animations/variants';
+
+const OUR_STORY_IMAGE = '/our-story.jpeg';
 
 const OUR_STORY_PARAGRAPHS = [
   'Founded in 2024, Méladen Luxury Fragrances was created with a vision to craft perfumes that are more than just scents — fragrances that become a lasting part of your identity.',
@@ -15,13 +16,13 @@ const OUR_STORY_PARAGRAPHS = [
 const OUR_STORY_TAGLINE = 'Crafted for lasting impressions. Designed to stay with you.';
 
 const paragraphClass =
-  'text-left text-justify hyphens-auto text-[13px] leading-relaxed text-white/65 lg:text-[14px] lg:leading-[1.75]';
+  'text-left text-justify hyphens-auto font-serif text-[13px] italic leading-relaxed text-white/65 lg:text-[14px] lg:leading-[1.75]';
 
 export default function OurStorySection() {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <section className="mt-10 border-t border-white/10 bg-black px-5 py-12 lg:mt-12 lg:px-10 lg:py-20 xl:px-16">
+    <section className="mt-10 border-t border-white/10 bg-brand-cream px-5 py-12 lg:mt-12 lg:px-10 lg:py-20 xl:px-16">
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-14 xl:gap-16">
         <motion.div
           variants={slideFromLeft}
@@ -31,7 +32,7 @@ export default function OurStorySection() {
           className="lg:sticky lg:top-24"
         >
           <img
-            src={meladen9}
+            src={OUR_STORY_IMAGE}
             alt="Méladen luxury fragrances"
             className="block h-auto w-full rounded-2xl"
             loading="lazy"
@@ -52,7 +53,7 @@ export default function OurStorySection() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="mb-6 text-left font-serif text-[2rem] font-medium leading-tight text-[#f5f0e8] lg:mb-8 lg:text-[2.6rem]"
+            className="mb-6 text-left font-serif text-[2rem] font-medium italic leading-tight text-[#f5f0e8] lg:mb-8 lg:text-[2.6rem]"
           >
             Our Story
           </motion.h2>
@@ -94,7 +95,7 @@ export default function OurStorySection() {
                     initial={{ opacity: 0, x: 24 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.4, delay: OUR_STORY_PARAGRAPHS.length * 0.06, ease: [0.22, 1, 0.36, 1] }}
-                    className="text-center font-serif text-[15px] italic leading-relaxed text-[#c9a84c] lg:text-base"
+                    className="text-center font-serif text-[15px] italic leading-relaxed text-[#e8e4dc] lg:text-base"
                   >
                     {OUR_STORY_TAGLINE}
                   </motion.p>
@@ -106,7 +107,7 @@ export default function OurStorySection() {
           <button
             type="button"
             onClick={() => setExpanded(prev => !prev)}
-            className="mt-5 text-left text-[11px] font-medium uppercase tracking-[0.18em] text-[#c9a84c] transition-colors hover:text-[#e0c878] lg:mt-6"
+            className="mt-5 text-left font-serif text-[11px] italic uppercase tracking-[0.18em] text-[#e8e4dc] transition-colors hover:text-white lg:mt-6"
             aria-expanded={expanded}
           >
             {expanded ? 'Read less' : 'Read more'}

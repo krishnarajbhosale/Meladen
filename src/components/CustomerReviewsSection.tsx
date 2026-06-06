@@ -5,11 +5,26 @@ import {
   fetchPublicCustomerReviews,
   type CustomerReviewApi,
 } from '../api/customerReviews';
-import { MOCK_CUSTOMER_REVIEWS, type CustomerReviewDisplay } from '../data/mockCustomerReviews';
+import { MOCK_CUSTOMER_REVIEWS, resolveReviewStarRating, type CustomerReviewDisplay } from '../data/mockCustomerReviews';
 import { fadeUp } from '../animations/variants';
 
 const SLIDE_MS = 5500;
 const SWIPE_THRESHOLD_PX = 48;
+
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <div
+      className="flex justify-center gap-0.5 text-base leading-none sm:justify-start lg:text-lg"
+      aria-label={`${rating} out of 5 stars`}
+    >
+      {Array.from({ length: 5 }, (_, i) => (
+        <span key={i} className={i < rating ? 'text-gold' : 'text-white/15'} aria-hidden>
+          ★
+        </span>
+      ))}
+    </div>
+  );
+}
 
 function toDisplay(row: CustomerReviewApi): CustomerReviewDisplay {
   return {
@@ -33,7 +48,8 @@ function ReviewCard({ review }: { review: CustomerReviewDisplay }) {
           decoding="async"
         />
       </div>
-      <div className="min-w-0 flex-1 space-y-4">
+      <div className="min-w-0 flex-1 space-y-3 sm:space-y-4">
+        <StarRating rating={resolveReviewStarRating(review)} />
         <p className="font-serif text-lg leading-relaxed text-brand-dark lg:text-xl">
           &ldquo;{review.reviewText}&rdquo;
         </p>
@@ -157,7 +173,7 @@ export default function CustomerReviewsSection() {
   if (!loaded || reviews.length === 0) return null;
 
   return (
-    <section className="mt-10 border-t border-white/10 bg-black px-5 py-12 lg:mt-12 lg:px-10 lg:py-20 xl:px-16">
+    <section className="mt-10 border-t border-white/10 bg-brand-cream px-5 py-12 lg:mt-12 lg:px-10 lg:py-20 xl:px-16">
       <motion.div
         variants={fadeUp}
         initial="hidden"
@@ -173,7 +189,7 @@ export default function CustomerReviewsSection() {
           )}
         </div>
 
-        <div className="min-h-[220px] rounded-2xl border border-white/10 bg-[#141414] px-5 py-10 lg:min-h-[240px] lg:px-12 lg:py-14">
+        <div className="min-h-[220px] rounded-2xl border border-white/10 bg-brand-beige/40 px-5 py-10 lg:min-h-[240px] lg:px-12 lg:py-14">
           <ReviewsCarousel reviews={reviews} />
         </div>
       </motion.div>

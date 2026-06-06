@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { API_BASE_URL } from '../api/client';
 import Button from '../components/Button';
 import type { OrderApi } from '../api/types';
+import { formatProductSizeLine } from '../data/products';
 import { formatInr } from '../utils/currency';
 import { formatShippingAddress } from '../utils/address';
 
@@ -92,7 +93,7 @@ export default function OrderConfirmationPage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-brand-dark">{item.productName}</p>
                       <p className="text-xs text-brand-gray">
-                        {item.size} · Qty {item.quantity}
+                        {formatProductSizeLine(item.size)} · Qty {item.quantity}
                       </p>
                     </div>
                     <p className="text-sm text-brand-dark">{formatInr(Number(item.lineTotal))}</p>
