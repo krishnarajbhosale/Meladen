@@ -7,6 +7,7 @@ interface Props {
   onChange: (v: string) => void;
   required?: boolean;
   maxLength?: number;
+  placeholder?: string;
   inputMode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search';
 }
 
@@ -17,6 +18,7 @@ export default function InputField({
   onChange,
   required,
   maxLength,
+  placeholder,
   inputMode,
 }: Props) {
   const [focused, setFocused] = useState(false);
@@ -32,6 +34,7 @@ export default function InputField({
         onBlur={() => setFocused(false)}
         required={required}
         maxLength={maxLength}
+        placeholder={placeholder}
         inputMode={inputMode}
         className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 pt-5 pb-2 text-sm text-[#b8b3ac] outline-none focus:border-[#c9a84c] transition-colors duration-200"
       />
