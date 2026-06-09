@@ -21,6 +21,8 @@ public class MeladenProperties {
   @Setter
   public static class Mail {
     private String from = "team.meladenperfumes@gmail.com";
+    /** Receives an email when a new order is confirmed (paid, COD, or wallet). */
+    private String adminNotifyTo = "prateek.s149@gmail.com";
   }
 
   @Getter

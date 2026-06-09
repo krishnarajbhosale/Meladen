@@ -5,13 +5,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meladen.config.MeladenProperties;
 import com.meladen.dto.DeliveryQuote;
 import com.meladen.entity.CustomerOrder;
+import com.meladen.util.IndiaPincodeStateResolver;
 import com.meladen.util.ShippingAddressFormatter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URI;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -20,6 +24,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -187,23 +192,29 @@ public class ShiprocketService {
 
   public void createShipmentForOrder(CustomerOrder order) {
     if (!properties.getShiprocket().isEnabled()) {
+      log.info("Shiprocket disabled — skipping order {}", order.getOrderNumber());
       return;
     }
-    String email = properties.getShiprocket().getEmail();
-    String password = properties.getShiprocket().getPassword();
-    if (email == null || email.isBlank() || password == null || password.isBlank()) {
-      log.debug("Shiprocket credentials not configured");
+    if (!hasCredentials()) {
+      log.warn(
+          "Shiprocket credentials not configured — set SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD (use a dedicated API user from Shiprocket Settings > API)");
       return;
     }
     try {
-      String token = getToken(email, password);
+      String token = getToken(properties.getShiprocket().getEmail(), properties.getShiprocket().getPassword());
       JsonNode created = createAdhocOrder(token, order);
-      if (created == null) {
+      validateShiprocketResponse(created);
+
+      JsonNode orderIdNode = created.get("order_id");
+      if (orderIdNode == null || orderIdNode.isNull()) {
+        log.warn(
+            "Shiprocket create order returned no order_id for {} — response: {}",
+            order.getOrderNumber(),
+            created);
         return;
       }
-      if (created.hasNonNull("order_id")) {
-        order.setShiprocketOrderId(String.valueOf(created.get("order_id").asLong()));
-      }
+
+      order.setShiprocketOrderId(orderIdNode.asText());
       JsonNode shipments = created.get("shipments");
       if (shipments != null && shipments.isArray() && !shipments.isEmpty()) {
         JsonNode first = shipments.get(0);
@@ -214,8 +225,18 @@ public class ShiprocketService {
       if (order.getTrackingAwb() != null) {
         order.setTrackingUrl("https://shiprocket.co/tracking/" + order.getTrackingAwb());
       }
+      log.info(
+          "Shiprocket order created for {} — shiprocketOrderId={}",
+          order.getOrderNumber(),
+          order.getShiprocketOrderId());
+    } catch (HttpStatusCodeException e) {
+      log.warn(
+          "Shiprocket HTTP error for {} ({}): {}",
+          order.getOrderNumber(),
+          e.getStatusCode(),
+          e.getResponseBodyAsString());
     } catch (Exception e) {
-      log.warn("Shiprocket shipment failed for {}: {}", order.getOrderNumber(), e.getMessage());
+      log.warn("Shiprocket shipment failed for {}: {}", order.getOrderNumber(), e.getMessage(), e);
     }
   }
 
@@ -238,19 +259,40 @@ public class ShiprocketService {
   }
 
   private JsonNode createAdhocOrder(String token, CustomerOrder order) throws Exception {
+    String pincode = normalizePostcode(order.getPostcode());
+    if (pincode == null) {
+      throw new IllegalStateException("Invalid delivery pincode: " + order.getPostcode());
+    }
+
+    String state = resolveBillingState(order, pincode);
+    if (state == null || state.isBlank()) {
+      throw new IllegalStateException("Could not resolve billing state for pincode " + pincode);
+    }
+
+    int itemUnits = order.getItems().stream().mapToInt(i -> i.getQuantity() == null ? 0 : i.getQuantity()).sum();
+    BigDecimal itemsSubtotal =
+        order.getItems().stream()
+            .map(i -> i.getLineTotal() == null ? BigDecimal.ZERO : i.getLineTotal())
+            .reduce(BigDecimal.ZERO, BigDecimal::add)
+            .setScale(2, RoundingMode.HALF_UP);
+
     String[] nameParts = splitName(order.getCustomerName());
     Map<String, Object> payload = new HashMap<>();
     payload.put("order_id", order.getOrderNumber());
-    payload.put("order_date", order.getCreatedAt().toString().substring(0, 10));
+    payload.put(
+        "order_date",
+        DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.ENGLISH)
+            .withZone(ZoneId.of("Asia/Kolkata"))
+            .format(order.getCreatedAt()));
     payload.put("pickup_location", properties.getShiprocket().getPickupLocation());
     payload.put("billing_customer_name", nameParts[0]);
     payload.put("billing_last_name", nameParts[1]);
     payload.put("billing_address", ShippingAddressFormatter.streetLine(order));
-    payload.put("billing_city", order.getCity());
-    payload.put("billing_pincode", order.getPostcode());
-    payload.put("billing_state", order.getCity());
-    payload.put("billing_country", order.getCountry());
-    payload.put("billing_email", order.getCustomerEmail());
+    payload.put("billing_city", order.getCity().trim());
+    payload.put("billing_pincode", Integer.parseInt(pincode));
+    payload.put("billing_state", state);
+    payload.put("billing_country", normalizeCountry(order.getCountry()));
+    payload.put("billing_email", order.getCustomerEmail().trim());
     payload.put("billing_phone", phoneOrDefault(order.getCustomerPhone()));
     payload.put("shipping_is_billing", true);
     payload.put(
@@ -258,11 +300,11 @@ public class ShiprocketService {
         order.getPaymentMethod() != null && "COD".equalsIgnoreCase(order.getPaymentMethod())
             ? "COD"
             : "Prepaid");
-    payload.put("sub_total", order.getTotal());
+    payload.put("sub_total", itemsSubtotal);
     payload.put("length", 10);
     payload.put("breadth", 10);
     payload.put("height", 10);
-    payload.put("weight", 0.5);
+    payload.put("weight", shipmentWeightKg(itemUnits));
 
     List<Map<String, Object>> orderItems =
         order.getItems().stream()
@@ -272,7 +314,14 @@ public class ShiprocketService {
                   row.put("name", i.getProductName());
                   row.put("sku", i.getProduct().getId());
                   row.put("units", i.getQuantity());
-                  row.put("selling_price", i.getUnitPrice());
+                  row.put("selling_price", i.getUnitPrice().setScale(2, RoundingMode.HALF_UP));
+                  if (i.getHsnCode() != null && !i.getHsnCode().isBlank()) {
+                    try {
+                      row.put("hsn", Integer.parseInt(i.getHsnCode().trim()));
+                    } catch (NumberFormatException ignored) {
+                      // optional field
+                    }
+                  }
                   return row;
                 })
             .toList();
@@ -285,6 +334,37 @@ public class ShiprocketService {
         restTemplate.postForEntity(
             BASE + "/orders/create/adhoc", new HttpEntity<>(payload, headers), String.class);
     return objectMapper.readTree(res.getBody());
+  }
+
+  private String resolveBillingState(CustomerOrder order, String pincode) {
+    if (order.getState() != null && !order.getState().isBlank()) {
+      return order.getState().trim();
+    }
+    return IndiaPincodeStateResolver.resolveState(restTemplate, objectMapper, pincode);
+  }
+
+  private static String normalizeCountry(String country) {
+    if (country == null || country.isBlank()) {
+      return "India";
+    }
+    String trimmed = country.trim();
+    if (trimmed.equalsIgnoreCase("in") || trimmed.equalsIgnoreCase("india")) {
+      return "India";
+    }
+    return trimmed;
+  }
+
+  private static void validateShiprocketResponse(JsonNode json) {
+    if (json == null || json.isNull()) {
+      throw new IllegalStateException("Empty Shiprocket response");
+    }
+    if (json.has("status_code")) {
+      int code = json.get("status_code").asInt();
+      if (code >= 400) {
+        String message = json.path("message").asText("Unknown Shiprocket error");
+        throw new IllegalStateException("Shiprocket API error " + code + ": " + message);
+      }
+    }
   }
 
   private static String[] splitName(String full) {

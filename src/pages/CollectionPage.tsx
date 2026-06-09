@@ -7,7 +7,12 @@ import { pageVariants, fadeUp } from '../animations/variants';
 import { apiProductToProduct, fetchCategoriesWithProducts, fetchPublicStock } from '../api/catalog';
 import type { CategoryWithProductsApi } from '../api/types';
 import type { Product } from '../data/products';
-import { slugifyCategoryName, categorySlugMatches, productFieldMatches } from '../data/collections';
+import {
+  slugifyCategoryName,
+  categorySlugMatches,
+  matchesLuxuryBentoFilter,
+  productFieldMatches,
+} from '../data/collections';
 import { formatInr } from '../utils/currency';
 import ProductCard from '../components/ProductCard';
 
@@ -169,7 +174,7 @@ export default function CollectionPage() {
 
     const filterProduct = (p: Product) => {
       if (filterIdealFor && !productFieldMatches(p.idealFor, filterIdealFor)) return false;
-      if (filterPremium && !p.isPremium) return false;
+      if (filterPremium && !matchesLuxuryBentoFilter(p)) return false;
       if (filterMood && !productFieldMatches(p.mood, filterMood)) return false;
       if (selectedConc.length > 0 && !selectedConc.includes(p.category)) return false;
       if (p.price > maxPrice) return false;

@@ -42,6 +42,16 @@ public class OrderMailService {
     send(order.getCustomerEmail(), subject, html, null, null);
   }
 
+  public void sendAdminNewOrderNotification(CustomerOrder order) {
+    String adminTo = properties.getMail().getAdminNotifyTo();
+    if (adminTo == null || adminTo.isBlank()) {
+      return;
+    }
+    String subject = "Meladen — New order · " + order.getOrderNumber();
+    String html = buildAdminNewOrderEmail(order);
+    send(adminTo.trim(), subject, html, null, null);
+  }
+
   public void sendOrderConfirmedEmail(CustomerOrder order) {
     boolean cod = order.getPaymentMethod() != null && "COD".equalsIgnoreCase(order.getPaymentMethod());
     String subject =
@@ -113,6 +123,76 @@ public class OrderMailService {
       log.warn("Failed to send email to {}: {}", to, e.getMessage(), e);
       return false;
     }
+  }
+
+  private String buildAdminNewOrderEmail(CustomerOrder order) {
+    StringBuilder itemRows = new StringBuilder();
+    for (CustomerOrderItem i : order.getItems()) {
+      itemRows.append(
+          "<tr><td style=\"padding:8px 0;border-bottom:1px solid #eee;font-size:14px;color:#333;\">"
+              + escape(i.getProductName())
+              + " · "
+              + escape(i.getSizeLabel())
+              + " × "
+              + i.getQuantity()
+              + "</td><td style=\"padding:8px 0;border-bottom:1px solid #eee;font-size:14px;color:#333;text-align:right;\">₹"
+              + money(i.getLineTotal())
+              + "</td></tr>");
+    }
+
+    return """
+        <!DOCTYPE html>
+        <html lang="en">
+        <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+        <body style="margin:0;padding:0;background:#f5f5f5;font-family:Georgia,'Times New Roman',serif;">
+        <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;">
+        <tr><td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="100%%" style="max-width:560px;background:#fff;border:1px solid #e5e5e5;border-radius:12px;">
+        <tr><td style="padding:28px 24px;">
+        <p style="margin:0 0 6px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#888;">Méladen Admin</p>
+        <h1 style="margin:0 0 8px;font-size:22px;font-weight:500;color:#111;">New order received</h1>
+        <p style="margin:0 0 20px;font-size:14px;color:#666;">Order <strong style="color:#c9a84c;">%s</strong> · %s</p>
+        <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+        <tr><td style="padding:4px 0;font-size:13px;color:#888;">Customer</td>
+        <td style="padding:4px 0;font-size:13px;color:#111;text-align:right;">%s</td></tr>
+        <tr><td style="padding:4px 0;font-size:13px;color:#888;">Email</td>
+        <td style="padding:4px 0;font-size:13px;color:#111;text-align:right;">%s</td></tr>
+        <tr><td style="padding:4px 0;font-size:13px;color:#888;">Phone</td>
+        <td style="padding:4px 0;font-size:13px;color:#111;text-align:right;">%s</td></tr>
+        <tr><td style="padding:4px 0;font-size:13px;color:#888;">Payment</td>
+        <td style="padding:4px 0;font-size:13px;color:#111;text-align:right;">%s</td></tr>
+        <tr><td style="padding:4px 0;font-size:13px;color:#888;">Status</td>
+        <td style="padding:4px 0;font-size:13px;color:#111;text-align:right;">%s</td></tr>
+        </table>
+        <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#888;">Items</p>
+        <table role="presentation" width="100%%" cellpadding="0" cellspacing="0">%s</table>
+        <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="margin-top:16px;">
+        <tr><td style="padding:8px 0;font-size:15px;font-weight:600;color:#111;border-top:1px solid #eee;">Total</td>
+        <td style="padding:8px 0;font-size:15px;font-weight:600;color:#c9a84c;text-align:right;border-top:1px solid #eee;">₹%s</td></tr>
+        </table>
+        <p style="margin:20px 0 0;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#888;">Ship to</p>
+        <p style="margin:6px 0 0;font-size:14px;line-height:1.6;color:#333;">
+        %s<br>%s<br>%s, %s<br>%s
+        </p>
+        </td></tr></table>
+        </td></tr></table>
+        </body></html>
+        """
+        .formatted(
+            escape(order.getOrderNumber()),
+            formatOrderDate(order.getCreatedAt()),
+            escape(order.getCustomerName()),
+            escape(order.getCustomerEmail()),
+            escape(order.getCustomerPhone() != null ? order.getCustomerPhone() : "—"),
+            escape(paymentLabel(order)),
+            escape(order.getStatus() != null ? order.getStatus().replace('_', ' ') : "—"),
+            itemRows,
+            money(order.getTotal()),
+            escape(order.getCustomerName()),
+            escape(ShippingAddressFormatter.streetLine(order)),
+            escape(order.getCity()),
+            escape(order.getPostcode()),
+            escape(order.getCountry()));
   }
 
   private String buildProfessionalEmail(

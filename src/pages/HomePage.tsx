@@ -70,11 +70,12 @@ export default function HomePage() {
               className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-black/25 to-black/90" />
-            <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center px-4 pb-5 pt-16 sm:px-5 sm:pb-6 md:px-4 md:pb-5 lg:px-10 lg:pb-10">
+            <div className="absolute inset-x-0 bottom-[10%] z-10 flex flex-col items-center px-4 sm:px-5 md:px-4 lg:px-10">
               <HeroIntro overlay />
-              <HomeUspBar overlay />
             </div>
           </section>
+
+          <HomeUspBar />
 
           <section className="mt-10 px-3 lg:mt-14 lg:px-4">
             <motion.div variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}>

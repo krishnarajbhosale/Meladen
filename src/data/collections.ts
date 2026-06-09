@@ -146,3 +146,16 @@ export function productFieldMatches(value: string | undefined, target: string): 
   }
   return tokens.some(part => genderTokenMatches(part, t) || part === t);
 }
+
+/** Bento "Luxury" tile: concentration is Premium/Luxury OR mood is Luxury. */
+export function matchesLuxuryBentoFilter(product: {
+  concentration?: string;
+  mood?: string;
+  isPremium?: boolean;
+}): boolean {
+  if (product.isPremium) return true;
+  if (productFieldMatches(product.concentration, 'premium')) return true;
+  if (productFieldMatches(product.concentration, 'luxury')) return true;
+  if (productFieldMatches(product.mood, 'luxury')) return true;
+  return false;
+}

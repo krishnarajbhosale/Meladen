@@ -27,6 +27,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -44,6 +46,7 @@ public class OrderService {
   private final PromoCodeService promoCodeService;
   private final WalletService walletService;
   private final OrderMailService orderMailService;
+  private final OrderPostConfirmService orderPostConfirmService;
   private final RazorpayService razorpayService;
   private final ShiprocketService shiprocketService;
   private final OrderNumberService orderNumberService;
@@ -165,6 +168,12 @@ public class OrderService {
   }
 
   private OrderResponse finalizeConfirmedOrder(CustomerOrder order, Long customerId, String status) {
+    CustomerOrder saved = persistConfirmedOrder(order, customerId, status);
+    schedulePostConfirmDispatch(saved.getId());
+    return toOrderResponse(saved);
+  }
+
+  private CustomerOrder persistConfirmedOrder(CustomerOrder order, Long customerId, String status) {
     PlaceOrderRequest snapshot = orderToSnapshotRequest(order);
     ComputedOrder computed = computeOrder(snapshot, customerId);
     applyInventory(computed);
@@ -178,10 +187,21 @@ public class OrderService {
     order.setWalletDiscount(computed.walletUse());
     order.setTotal(computed.finalTotal());
     order.setStatus(status);
-    shiprocketService.createShipmentForOrder(order);
-    CustomerOrder saved = orderRepository.save(order);
-    orderMailService.sendOrderConfirmedEmail(saved);
-    return toOrderResponse(saved);
+    return orderRepository.save(order);
+  }
+
+  private void schedulePostConfirmDispatch(String orderId) {
+    if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+      orderPostConfirmService.dispatch(orderId);
+      return;
+    }
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            orderPostConfirmService.dispatch(orderId);
+          }
+        });
   }
 
   private void applyInventory(ComputedOrder computed) {
@@ -309,6 +329,7 @@ public class OrderService {
     order.setAddress(request.address().trim());
     order.setNearestLandmark(trimToNull(request.nearestLandmark()));
     order.setCity(request.city().trim());
+    order.setState(trimToNull(request.state()));
     order.setPostcode(request.postcode().trim());
     order.setCountry(request.country().trim());
     order.setSubtotal(computed.subtotal());
@@ -362,6 +383,7 @@ public class OrderService {
         order.getAddress(),
         order.getNearestLandmark(),
         order.getCity(),
+        order.getState(),
         order.getPostcode(),
         order.getCountry(),
         items,
@@ -484,6 +506,7 @@ public class OrderService {
         o.getAddress(),
         o.getNearestLandmark(),
         o.getCity(),
+        o.getState(),
         o.getPostcode(),
         o.getCountry(),
         o.getSubtotal(),

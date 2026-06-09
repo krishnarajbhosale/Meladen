@@ -18,6 +18,7 @@ public record PlaceOrderRequest(
     @NotBlank String address,
     String nearestLandmark,
     @NotBlank String city,
+    String state,
     @NotBlank String postcode,
     @NotBlank String country,
     @NotEmpty List<@Valid OrderItemRequest> items,

@@ -3,9 +3,11 @@ package com.meladen.service;
 import com.meladen.dto.CelebPhotoResponse;
 import com.meladen.entity.CelebPhoto;
 import com.meladen.repository.CelebPhotoRepository;
+import com.meladen.repository.CelebPhotoSummary;
 import com.meladen.util.UploadSizeValidator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CelebPhotoService {
 
   private final CelebPhotoRepository repository;
@@ -21,9 +24,12 @@ public class CelebPhotoService {
 
   @Transactional(readOnly = true)
   public List<CelebPhotoResponse> listPublic() {
-    return repository.findAllByOrderBySectionNameAscSortOrderAscIdAsc().stream()
-        .map(this::toResponse)
-        .toList();
+    try {
+      return repository.findAllSummaries().stream().map(this::toResponse).toList();
+    } catch (Exception e) {
+      log.error("Failed to list celeb photos: {}", e.getMessage(), e);
+      throw e;
+    }
   }
 
   @Transactional(readOnly = true)
@@ -113,11 +119,19 @@ public class CelebPhotoService {
   }
 
   private CelebPhotoResponse toResponse(CelebPhoto row) {
+    return toResponse(row.getId(), row.getSectionName(), row.getSortOrder());
+  }
+
+  private CelebPhotoResponse toResponse(CelebPhotoSummary row) {
+    return toResponse(row.getId(), row.getSectionName(), row.getSortOrder());
+  }
+
+  private CelebPhotoResponse toResponse(Long id, String sectionName, Integer sortOrder) {
     return new CelebPhotoResponse(
-        row.getId(),
-        row.getSectionName(),
-        row.getSortOrder() != null ? row.getSortOrder() : 0,
-        "/api/public/celeb-photos/" + row.getId() + "/image");
+        id,
+        sectionName,
+        sortOrder != null ? sortOrder : 0,
+        "/api/public/celeb-photos/" + id + "/image");
   }
 
   public record ImagePayload(byte[] bytes, String contentType) {}

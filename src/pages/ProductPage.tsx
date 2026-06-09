@@ -189,9 +189,7 @@ export default function ProductPage() {
 
   const handleAdd = () => {
     if (!selectedSize || selectedUnavailable) return;
-    for (let i = 0; i < qty; i++) {
-      addToCart(product, selectedSize.label, selectedSize.price);
-    }
+    addToCart(product, selectedSize.label, selectedSize.price, qty);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };

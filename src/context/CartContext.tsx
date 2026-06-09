@@ -1,6 +1,17 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Product } from '../data/products';
+import {
+  CUSTOMER_AUTH_CHANGED_EVENT,
+  getCustomerEmail,
+  isCustomerLoggedIn,
+} from '../api/customerAuth';
+import {
+  clearPersistedCart,
+  loadPersistedCart,
+  savePersistedCart,
+} from '../utils/cartStorage';
+import { useToast } from './ToastContext';
 
 export interface CartItem {
   product: Product;
@@ -11,7 +22,7 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product, size?: string, unitPrice?: number) => void;
+  addToCart: (product: Product, size?: string, unitPrice?: number, quantity?: number) => void;
   removeFromCart: (id: string, size: string) => void;
   updateQty: (id: string, size: string, qty: number) => void;
   clearCart: () => void;
@@ -21,20 +32,58 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | null>(null);
 
-export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+function readLoggedInCart(): CartItem[] {
+  if (!isCustomerLoggedIn()) return [];
+  const email = getCustomerEmail();
+  return email ? loadPersistedCart(email) : [];
+}
 
-  const addToCart = (product: Product, size = product.size, unitPrice = product.price) => {
+export function CartProvider({ children }: { children: ReactNode }) {
+  const [items, setItems] = useState<CartItem[]>(() => readLoggedInCart());
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    const onAuthChanged = () => {
+      if (isCustomerLoggedIn()) {
+        const email = getCustomerEmail();
+        setItems(email ? loadPersistedCart(email) : []);
+        return;
+      }
+      setItems([]);
+    };
+
+    window.addEventListener(CUSTOMER_AUTH_CHANGED_EVENT, onAuthChanged);
+    return () => window.removeEventListener(CUSTOMER_AUTH_CHANGED_EVENT, onAuthChanged);
+  }, []);
+
+  useEffect(() => {
+    if (!isCustomerLoggedIn()) return;
+    const email = getCustomerEmail();
+    if (!email) return;
+    savePersistedCart(email, items);
+  }, [items]);
+
+  const addToCart = (
+    product: Product,
+    size = product.size,
+    unitPrice = product.price,
+    quantity = 1,
+  ) => {
+    const qty = Math.max(1, quantity);
     setItems(prev => {
       const existing = prev.find(i => i.product.id === product.id && i.size === size);
       if (existing)
         return prev.map(i =>
           i.product.id === product.id && i.size === size
-            ? { ...i, quantity: i.quantity + 1 }
+            ? { ...i, quantity: i.quantity + qty }
             : i,
         );
-      return [...prev, { product, size, unitPrice, quantity: 1 }];
+      return [...prev, { product, size, unitPrice, quantity: qty }];
     });
+    const label = product.name.length > 36 ? `${product.name.slice(0, 33)}…` : product.name;
+    showToast(
+      qty > 1 ? `Added ${qty} × ${label} to bag` : `Added ${label} to bag`,
+    );
   };
 
   const removeFromCart = (id: string, size: string) =>
@@ -49,7 +98,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const clearCart = () => setItems([]);
+  const clearCart = () => {
+    setItems([]);
+    if (isCustomerLoggedIn()) {
+      const email = getCustomerEmail();
+      if (email) clearPersistedCart(email);
+    }
+  };
 
   const total = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
   const count = items.reduce((sum, i) => sum + i.quantity, 0);

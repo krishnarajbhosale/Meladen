@@ -64,7 +64,9 @@ export default function HorizontalProductRail({
   }, []);
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType !== 'mouse' || event.button !== 0) return;
+    // Mouse: use nav buttons / trackpad scroll so product card clicks still work on desktop.
+    if (event.pointerType === 'mouse') return;
+    if (event.button !== 0) return;
     const rail = railRef.current;
     if (!rail) return;
     dragState.current = {
@@ -174,7 +176,7 @@ export default function HorizontalProductRail({
       <div
         ref={railRef}
         data-rail-scroll
-        className="flex cursor-grab snap-x snap-proximity gap-4 overflow-x-auto overscroll-x-contain pb-2 pl-1 pr-4 touch-pan-x [-webkit-overflow-scrolling:touch] [scrollbar-width:none] active:cursor-grabbing lg:snap-mandatory lg:scroll-smooth [&::-webkit-scrollbar]:hidden"
+        className="flex cursor-grab snap-x snap-proximity gap-4 overflow-x-auto overscroll-x-contain pb-2 pl-1 pr-4 touch-pan-x [-webkit-overflow-scrolling:touch] [scrollbar-width:none] active:cursor-grabbing lg:cursor-default lg:snap-mandatory lg:scroll-smooth [&::-webkit-scrollbar]:hidden"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}

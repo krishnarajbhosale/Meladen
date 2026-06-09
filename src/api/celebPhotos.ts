@@ -1,4 +1,4 @@
-import { API_BASE_URL, authHeaders, fetchJson } from './client';
+import { API_BASE_URL, authHeaders, fetchJson, formatHttpError } from './client';
 
 export interface CelebPhotoApi {
   id: number;
@@ -42,7 +42,7 @@ export async function adminCreateCelebPhoto(
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || 'Upload failed');
+    throw new Error(formatHttpError(res.status, text, 'Upload failed'));
   }
   return res.json() as Promise<CelebPhotoApi>;
 }
@@ -64,7 +64,7 @@ export async function adminReplaceCelebPhoto(token: string, id: number, image: F
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || 'Photo replace failed');
+    throw new Error(formatHttpError(res.status, text, 'Photo replace failed'));
   }
   return res.json() as Promise<CelebPhotoApi>;
 }

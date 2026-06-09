@@ -103,8 +103,17 @@ export default function OrderPendingPage() {
       }
 
       if (paymentMethod === 'cod') {
-        const confirmed = await confirmCodOrder(orderId);
-        navigate('/order-confirmation', { state: { order: confirmed } });
+        try {
+          const confirmed = await confirmCodOrder(orderId);
+          navigate('/order-confirmation', { state: { order: confirmed } });
+        } catch (codErr) {
+          const refreshed = await fetchPublicOrder(orderId).catch(() => null);
+          if (refreshed && (refreshed.status === 'COD' || refreshed.status === 'PAID')) {
+            navigate('/order-confirmation', { state: { order: refreshed } });
+            return;
+          }
+          throw codErr;
+        }
         return;
       }
 
@@ -148,7 +157,15 @@ export default function OrderPendingPage() {
         navigate('/login', { state: { from: `/order-pending/${orderId}` } });
         return;
       }
-      setError(err instanceof Error ? err.message : 'Payment could not start');
+      const message =
+        err instanceof ApiError
+          ? err.status === 500
+            ? 'Something went wrong while confirming your order. If payment was not taken, check My Orders or try again in a moment.'
+            : err.message
+          : err instanceof Error
+            ? err.message
+            : 'Payment could not start';
+      setError(message);
       setPaying(false);
     }
   };

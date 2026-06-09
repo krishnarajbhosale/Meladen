@@ -446,8 +446,15 @@ export default function AdminPage() {
       .then(rows => {
         if (!cancelled) setCelebPhotos(rows);
       })
-      .catch(() => {
-        if (!cancelled) setCelebPhotos([]);
+      .catch(err => {
+        if (!cancelled) {
+          setCelebPhotos([]);
+          setCelebMessage(
+            err instanceof Error
+              ? err.message
+              : 'Could not load celeb photos. Restart the backend after deploy so the celeb_photos table is created.',
+          );
+        }
       });
     return () => {
       cancelled = true;
@@ -2261,7 +2268,12 @@ export default function AdminPage() {
                     type="button"
                     onClick={async () => {
                       if (!token) return;
-                      setCelebPhotos(await adminListCelebPhotos(token));
+                      try {
+                        setCelebPhotos(await adminListCelebPhotos(token));
+                        setCelebMessage(null);
+                      } catch (err) {
+                        setCelebMessage(err instanceof Error ? err.message : 'Could not refresh celeb photos.');
+                      }
                     }}
                     className="rounded-full border border-[#c8b89f] bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#4b3f32]"
                   >

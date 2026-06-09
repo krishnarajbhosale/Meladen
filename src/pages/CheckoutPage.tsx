@@ -42,8 +42,9 @@ export default function CheckoutPage() {
     address: '',
     nearestLandmark: '',
     city: '',
+    state: '',
     postcode: '',
-    country: '',
+    country: 'India',
   });
 
   const set = (key: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [key]: v }));
@@ -168,6 +169,7 @@ export default function CheckoutPage() {
         address: form.address,
         nearestLandmark: form.nearestLandmark.trim() || null,
         city: form.city,
+        state: form.state.trim() || null,
         postcode: form.postcode,
         country: form.country,
         promoCode: appliedPromo?.code ?? null,
@@ -270,9 +272,12 @@ export default function CheckoutPage() {
               />
               <div className="grid grid-cols-2 gap-3">
                 <InputField label="City" value={form.city} onChange={set('city')} required />
-                <InputField label="Postcode" value={form.postcode} onChange={set('postcode')} required />
+                <InputField label="State" value={form.state} onChange={set('state')} placeholder="e.g. Delhi" />
               </div>
-              <InputField label="Country" value={form.country} onChange={set('country')} required />
+              <div className="grid grid-cols-2 gap-3">
+                <InputField label="Postcode" value={form.postcode} onChange={set('postcode')} required />
+                <InputField label="Country" value={form.country} onChange={set('country')} required />
+              </div>
             </div>
           </motion.div>
 

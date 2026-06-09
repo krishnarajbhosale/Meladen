@@ -33,7 +33,7 @@ export default function Footer() {
     <footer className="bg-brand-dark px-5 py-14 lg:px-10 xl:px-20">
       <div className="mb-10 flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-16">
         <div className="max-w-sm">
-          <p className="mb-1 font-serif text-2xl uppercase tracking-[0.2em] text-brand-cream">Meladen</p>
+          <p className="mb-1 font-serif text-2xl uppercase tracking-[0.2em] text-brand-cream">Méladen</p>
           <p className="text-xs tracking-wide text-brand-cream/40">The Art of Fine Fragrance</p>
           <div className="mt-5 space-y-2.5 text-[11px] tracking-wide text-brand-cream/60">
             <p>
@@ -87,7 +87,7 @@ export default function Footer() {
       </div>
 
       <div className="flex flex-col gap-2 border-t border-brand-cream/10 pt-6 lg:flex-row lg:justify-between">
-        <p className="text-[10px] text-brand-cream/30">© 2026 Meladen. All rights reserved.</p>
+        <p className="text-[10px] text-brand-cream/30">© 2026 Méladen. All rights reserved.</p>
         <p className="text-[10px] text-brand-cream/30">India</p>
       </div>
     </footer>

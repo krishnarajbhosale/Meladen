@@ -50,6 +50,9 @@ public class CustomerOrder {
   @Column(nullable = false, length = 200)
   private String city;
 
+  @Column(length = 120)
+  private String state;
+
   @Column(nullable = false, length = 100)
   private String postcode;
 

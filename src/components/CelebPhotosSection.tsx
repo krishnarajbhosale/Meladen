@@ -149,8 +149,10 @@ export default function CelebPhotosSection() {
           viewport={{ once: true, margin: '-60px' }}
           className="mb-10 text-center lg:mb-12"
         >
-          <p className="mb-2 text-[10px] uppercase tracking-[0.22em] text-brand-gray">In the spotlight</p>
           <h2 className="font-serif text-2xl font-medium text-brand-dark lg:text-4xl">Celebrity Moments</h2>
+          <p className="mx-auto mt-3 max-w-md text-[11px] leading-relaxed text-brand-gray lg:text-xs">
+            Moments From Exhibitions &amp; Events Visited Our Stall
+          </p>
           {!usingApi && (
             <p className="mt-2 text-[10px] uppercase tracking-widest text-brand-gray/80">Preview gallery</p>
           )}

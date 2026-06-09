@@ -14,6 +14,7 @@ public record OrderResponse(
     String address,
     String nearestLandmark,
     String city,
+    String state,
     String postcode,
     String country,
     BigDecimal subtotal,

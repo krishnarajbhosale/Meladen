@@ -10,7 +10,7 @@ import type {
   ReturnRequestRow,
   StockSummaryApi,
 } from './types';
-import { API_BASE_URL, ApiError, authHeaders, fetchJson } from './client';
+import { API_BASE_URL, ApiError, authHeaders, fetchJson, formatHttpError } from './client';
 import { customerAuthHeaders, isCustomerLoggedIn } from './customerAuth';
 import type { Product } from '../data/products';
 import { meladen1 } from '../data/meladenImages';
@@ -208,7 +208,7 @@ export async function adminReplaceProductGalleryImage(
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || 'Gallery replace failed');
+    throw new Error(formatHttpError(res.status, text, 'Gallery replace failed'));
   }
   return res.json() as Promise<ProductAdminApi>;
 }
