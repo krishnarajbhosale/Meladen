@@ -61,10 +61,10 @@ function SectionCarousel({
               src={active.imageUrl}
               alt={section.sectionName}
               className="absolute inset-0 h-full w-full cursor-grab object-contain object-center active:cursor-grabbing"
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -24 }}
-              transition={{ duration: 0.65, ease: [0.4, 0, 0.2, 1] }}
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
               loading="lazy"
               decoding="async"
               draggable={false}
