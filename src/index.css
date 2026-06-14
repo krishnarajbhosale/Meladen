@@ -41,3 +41,46 @@ body {
 .text-gold { color: #c9a84c; }
 .bg-gold { background-color: #c9a84c; }
 .border-gold { border-color: #c9a84c; }
+
+/* ── Glittery gold button ── */
+@keyframes gold-shine {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+@keyframes gold-sweep {
+  0%        { transform: translateX(-130%) skewX(-20deg); }
+  55%, 100% { transform: translateX(260%) skewX(-20deg); }
+}
+
+.btn-gold-glitter {
+  /* Caller provides the positioning context (relative/absolute); we just clip. */
+  overflow: hidden;
+  color: #1a1200;
+  background-image: linear-gradient(
+    110deg,
+    #b8860b 0%, #e2c46a 22%, #fff3c4 42%, #f0d27e 55%, #c9a84c 78%, #b8860b 100%
+  );
+  background-size: 220% 100%;
+  animation: gold-shine 4.5s linear infinite;
+  box-shadow: 0 4px 18px rgba(201, 168, 76, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.btn-gold-glitter::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 32%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  filter: blur(3px);
+  transform: translateX(-130%) skewX(-20deg);
+  animation: gold-sweep 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+.btn-gold-glitter:hover {
+  box-shadow: 0 6px 26px rgba(201, 168, 76, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-gold-glitter { animation: none; }
+  .btn-gold-glitter::after { animation: none; opacity: 0; }
+}

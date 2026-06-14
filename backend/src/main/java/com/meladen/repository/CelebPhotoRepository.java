@@ -9,7 +9,8 @@ public interface CelebPhotoRepository extends JpaRepository<CelebPhoto, Long> {
 
   @Query(
       """
-      SELECT c.id AS id, c.sectionName AS sectionName, c.sortOrder AS sortOrder
+      SELECT c.id AS id, c.sectionName AS sectionName, c.personName AS personName,
+             c.personPosition AS personPosition, c.sortOrder AS sortOrder
       FROM CelebPhoto c
       ORDER BY c.sectionName ASC, c.sortOrder ASC, c.id ASC
       """)

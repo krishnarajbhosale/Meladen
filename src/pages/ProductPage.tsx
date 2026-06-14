@@ -9,6 +9,9 @@ import Button from '../components/Button';
 import InspiredByBadge from '../components/InspiredByBadge';
 import HorizontalProductRail from '../components/HorizontalProductRail';
 import QuantityStepper from '../components/QuantityStepper';
+import FloatingReviewNotification from '../components/FloatingReviewNotification';
+import StarRating from '../components/StarRating';
+import { resolveProductRating } from '../utils/productRating';
 import { pageVariants, fadeUp } from '../animations/variants';
 import { apiProductToProduct, fetchCategoriesWithProducts, fetchPublicProduct, fetchPublicStock } from '../api/catalog';
 import { category2Matches } from '../data/collections';
@@ -135,29 +138,56 @@ export default function ProductPage() {
 
   const imageCount = Math.max(galleryImages.length, 1);
   const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
   const SWIPE_THRESHOLD_PX = 48;
+  const [zoomed, setZoomed] = useState(false);
+  const [zoomOrigin, setZoomOrigin] = useState('50% 50%');
+  const hoverCapable = useRef(
+    typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches,
+  );
 
   const showPrevImage = useCallback(() => {
+    setZoomed(false);
     setActiveImg(i => (i - 1 + imageCount) % imageCount);
   }, [imageCount]);
 
   const showNextImage = useCallback(() => {
+    setZoomed(false);
     setActiveImg(i => (i + 1) % imageCount);
   }, [imageCount]);
 
-  const onGalleryTouchStart = (event: React.TouchEvent) => {
-    touchStartX.current = event.touches[0]?.clientX ?? null;
+  const updateZoomOrigin = (clientX: number, clientY: number, rect: DOMRect) => {
+    const x = Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100));
+    const y = Math.min(100, Math.max(0, ((clientY - rect.top) / rect.height) * 100));
+    setZoomOrigin(`${x}% ${y}%`);
   };
 
-  const onGalleryTouchEnd = (event: React.TouchEvent) => {
+  const onZoomMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!hoverCapable.current || !zoomed) return;
+    updateZoomOrigin(event.clientX, event.clientY, event.currentTarget.getBoundingClientRect());
+  };
+
+  const onGalleryTouchStart = (event: React.TouchEvent) => {
+    touchStartX.current = event.touches[0]?.clientX ?? null;
+    touchStartY.current = event.touches[0]?.clientY ?? null;
+  };
+
+  const onGalleryTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
     if (touchStartX.current === null) return;
-    const endX = event.changedTouches[0]?.clientX;
-    if (endX == null) return;
-    const delta = endX - touchStartX.current;
+    const touch = event.changedTouches[0];
+    const startX = touchStartX.current;
     touchStartX.current = null;
-    if (Math.abs(delta) < SWIPE_THRESHOLD_PX) return;
-    if (delta < 0) showNextImage();
-    else showPrevImage();
+    touchStartY.current = null;
+    if (!touch) return;
+    const delta = touch.clientX - startX;
+    if (Math.abs(delta) >= SWIPE_THRESHOLD_PX) {
+      if (delta < 0) showNextImage();
+      else showPrevImage();
+      return;
+    }
+    // Tap (not a swipe) → toggle zoom centred on the tap point.
+    updateZoomOrigin(touch.clientX, touch.clientY, event.currentTarget.getBoundingClientRect());
+    setZoomed(z => !z);
   };
 
   if (loading) {
@@ -176,6 +206,7 @@ export default function ProductPage() {
     );
   }
 
+  const rating = resolveProductRating(product.id);
   const sizeOptions = getProductSizeAvailability(product, alcoholStockGm);
   const firstAvailable = sizeOptions.find(option => option.available) ?? null;
   const selectedSize =
@@ -217,9 +248,14 @@ export default function ProductPage() {
       <div className="px-5 pb-12 lg:grid lg:grid-cols-2 lg:items-start lg:gap-16 lg:px-16 xl:px-24">
         <div>
           <div
-            className="relative mb-3 h-[340px] touch-pan-y overflow-hidden rounded-3xl bg-brand-light-gray lg:h-[580px]"
+            className={`relative mb-3 h-[340px] touch-pan-y overflow-hidden rounded-3xl bg-brand-light-gray lg:h-[580px] ${
+              zoomed ? 'lg:cursor-zoom-out' : 'lg:cursor-zoom-in'
+            }`}
             onTouchStart={onGalleryTouchStart}
             onTouchEnd={onGalleryTouchEnd}
+            onMouseEnter={() => hoverCapable.current && setZoomed(true)}
+            onMouseLeave={() => hoverCapable.current && setZoomed(false)}
+            onMouseMove={onZoomMouseMove}
           >
             <AnimatePresence mode="wait" initial={false}>
               <motion.img
@@ -227,8 +263,9 @@ export default function ProductPage() {
                 src={galleryImages[activeImg]}
                 alt={product.name}
                 className="h-full w-full object-contain p-3"
+                style={{ transformOrigin: zoomOrigin }}
                 initial={{ opacity: 0, x: 24 }}
-                animate={{ opacity: 1, x: 0 }}
+                animate={{ opacity: 1, x: 0, scale: zoomed ? 2 : 1 }}
                 exit={{ opacity: 0, x: -24 }}
                 transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                 draggable={false}
@@ -340,6 +377,18 @@ export default function ProductPage() {
               </span>
             )}
           </motion.p>
+          <motion.div
+            variants={fadeUp}
+            custom={3.5}
+            initial="hidden"
+            animate="visible"
+            className="mb-5 flex items-center gap-2"
+          >
+            <StarRating score={rating.score} className="text-sm" emptyClass="text-[#444]" />
+            <span className="text-xs text-brand-gray">
+              {rating.reviewCount} review{rating.reviewCount === 1 ? '' : 's'}
+            </span>
+          </motion.div>
           <motion.p
             variants={fadeUp}
             custom={4}
@@ -376,10 +425,9 @@ export default function ProductPage() {
                     <span className="block w-full text-center text-sm font-medium leading-snug">
                       {formatProductSizeDisplay(option.label)}
                     </span>
-                    <span className="mt-1 block w-full text-center text-[10px] uppercase tracking-[0.12em] text-brand-gray">
+                    <span className="mt-1 block w-full text-center text-xs uppercase tracking-[0.12em] text-white">
                       {option.label}
                     </span>
-                    <span className="mt-1 block w-full text-center text-xs">{formatInr(option.price, 0)}</span>
                     {!option.available && (
                       <span className="mt-1 block text-[10px] font-semibold uppercase tracking-wide text-red-700">
                         Out of stock
@@ -405,25 +453,37 @@ export default function ProductPage() {
             className="mb-10 flex items-center gap-3"
           >
             <QuantityStepper value={qty} onChange={setQty} />
-            <Button onClick={handleAdd} fullWidth className="flex-1" disabled={selectedUnavailable}>
+            <Button onClick={handleAdd} variant="gold" fullWidth className="flex-1" disabled={selectedUnavailable}>
               {selectedUnavailable ? 'Out of Stock' : added ? 'Added to Bag' : 'Add to Bag'}
             </Button>
           </motion.div>
 
           <motion.div variants={fadeUp} custom={8} initial="hidden" animate="visible">
             <Accordion title="How to Apply">
-              <div className="space-y-3">
-                <p>
-                  Spray the perfume from a distance of approximately 6 inches onto your clothing to
-                  help prevent oil stains. If you wish to apply it directly to your skin, we
-                  recommend performing a patch test first to ensure compatibility with your skin
-                  type.
-                </p>
-                <p>
-                  For the best performance and long-lasting fragrance experience, apply 8–10 sprays on
-                  your clothes and pulse points.
-                </p>
-              </div>
+              {product.howToApply?.trim() ? (
+                <div className="space-y-3">
+                  {product.howToApply
+                    .trim()
+                    .split(/\r?\n+/)
+                    .filter(line => line.trim().length > 0)
+                    .map((line, i) => (
+                      <p key={i}>{line.trim()}</p>
+                    ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p>
+                    Spray the perfume from a distance of approximately 6 inches onto your clothing to
+                    help prevent oil stains. If you wish to apply it directly to your skin, we
+                    recommend performing a patch test first to ensure compatibility with your skin
+                    type.
+                  </p>
+                  <p>
+                    For the best performance and long-lasting fragrance experience, apply 8–10 sprays on
+                    your clothes and pulse points.
+                  </p>
+                </div>
+              )}
             </Accordion>
             <Accordion title="More Information">
               {product.moreInformation?.trim() ? (
@@ -456,6 +516,8 @@ export default function ProductPage() {
           tone="dark"
         />
       )}
+
+      <FloatingReviewNotification />
     </motion.div>
   );
 }

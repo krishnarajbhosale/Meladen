@@ -34,6 +34,10 @@ export interface Product {
   price30Ml?: number;
   price50Ml?: number;
   price100Ml?: number;
+  /** Named non-ml variants priced individually (finished products). */
+  priceGel?: number;
+  priceAttar?: number;
+  priceCarPerfume?: number;
   inspiredBy?: string;
   luxuryDescription?: string;
   mood?: string;
@@ -41,6 +45,7 @@ export interface Product {
   season?: string;
   idealFor?: string;
   moreInformation?: string;
+  howToApply?: string;
   searchKeywords?: string;
   category2?: string;
   productOil?: number;
@@ -60,13 +65,24 @@ const SIZE_RECIPES: Record<string, { oil: number; alcohol: number }> = {
   '30ml': { oil: 6, alcohol: 18 },
   '50ml': { oil: 10, alcohol: 30 },
   '100ml': { oil: 20, alcohol: 60 },
+  // Finished products: each unit uses 1 of product oil, no alcohol.
+  'Perfume Gel': { oil: 1, alcohol: 0 },
+  Attar: { oil: 1, alcohol: 0 },
+  'Car Perfume': { oil: 1, alcohol: 0 },
 };
+
+export const SIZE_PERFUME_GEL = 'Perfume Gel';
+export const SIZE_ATTAR = 'Attar';
+export const SIZE_CAR_PERFUME = 'Car Perfume';
 
 export function normalizeProductSizeKey(size: string): string {
   const normalized = size.trim().toLowerCase().replace(/\s+/g, '');
   if (normalized === '30ml' || normalized === '30') return '30ml';
   if (normalized === '50ml' || normalized === '50') return '50ml';
   if (normalized === '100ml' || normalized === '100') return '100ml';
+  if (normalized === 'perfumegel' || normalized === 'gel') return SIZE_PERFUME_GEL;
+  if (normalized === 'attar') return SIZE_ATTAR;
+  if (normalized === 'carperfume' || normalized === 'car') return SIZE_CAR_PERFUME;
   return size.trim();
 }
 
@@ -109,6 +125,9 @@ export function getProductSizeOptions(product: Product): ProductSizeOption[] {
   if (product.price30Ml != null) options.push({ label: '30ml', price: product.price30Ml });
   if (product.price50Ml != null) options.push({ label: '50ml', price: product.price50Ml });
   if (product.price100Ml != null) options.push({ label: '100ml', price: product.price100Ml });
+  if (product.priceGel != null) options.push({ label: SIZE_PERFUME_GEL, price: product.priceGel });
+  if (product.priceAttar != null) options.push({ label: SIZE_ATTAR, price: product.priceAttar });
+  if (product.priceCarPerfume != null) options.push({ label: SIZE_CAR_PERFUME, price: product.priceCarPerfume });
   if (options.length > 0) return options;
 
   // Legacy/demo products with only a single list price
@@ -128,11 +147,10 @@ export function getProductSizeAvailability(
     if (!recipe) return { ...option, available: true };
     const oil = product.productOil;
     const alcohol = alcoholStockGm;
-    const hasBothStocks = oil != null && alcohol != null;
-    return {
-      ...option,
-      available: Boolean(hasBothStocks && oil >= recipe.oil && alcohol >= recipe.alcohol),
-    };
+    // Only the stocks a recipe actually consumes gate availability.
+    const oilOk = recipe.oil <= 0 || (oil != null && oil >= recipe.oil);
+    const alcoholOk = recipe.alcohol <= 0 || (alcohol != null && alcohol >= recipe.alcohol);
+    return { ...option, available: oilOk && alcoholOk };
   });
 }
 

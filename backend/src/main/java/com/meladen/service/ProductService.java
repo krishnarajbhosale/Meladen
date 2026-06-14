@@ -217,6 +217,9 @@ public class ProductService {
         toNullableInt(p.getPrice30Ml()),
         toNullableInt(p.getPrice50Ml()),
         toNullableInt(p.getPrice100Ml()),
+        toNullableInt(p.getPriceGel()),
+        toNullableInt(p.getPriceAttar()),
+        toNullableInt(p.getPriceCarPerfume()),
         nullToEmpty(p.getInspiredBy()),
         nullToEmpty(p.getLuxuryDescription()),
         nullToEmpty(p.getMood()),
@@ -224,6 +227,7 @@ public class ProductService {
         nullToEmpty(p.getSeason()),
         nullToEmpty(p.getIdealFor()),
         nullToEmpty(p.getMoreInformation()),
+        nullToEmpty(p.getHowToApply()),
         nullToEmpty(p.getSearchKeywords()),
         nullToEmpty(p.getCategory2()),
         p.getProductOil(),
@@ -249,10 +253,14 @@ public class ProductService {
         p.getPrice30Ml(),
         p.getPrice50Ml(),
         p.getPrice100Ml(),
+        p.getPriceGel(),
+        p.getPriceAttar(),
+        p.getPriceCarPerfume(),
         p.getNotesTop(),
         p.getNotesMiddle(),
         p.getNotesBase(),
         p.getMoreInformation(),
+        p.getHowToApply(),
         p.getSearchKeywords(),
         p.getCategory2(),
         p.getProductOil(),
@@ -281,10 +289,14 @@ public class ProductService {
     p.setPrice30Ml(r.price30Ml());
     p.setPrice50Ml(r.price50Ml());
     p.setPrice100Ml(r.price100Ml());
+    p.setPriceGel(r.priceGel());
+    p.setPriceAttar(r.priceAttar());
+    p.setPriceCarPerfume(r.priceCarPerfume());
     p.setNotesTop(r.notesTop());
     p.setNotesMiddle(r.notesMiddle());
     p.setNotesBase(r.notesBase());
     p.setMoreInformation(r.moreInformation());
+    p.setHowToApply(r.howToApply());
     p.setSearchKeywords(r.searchKeywords());
     p.setCategory2(r.category2());
     p.setProductOil(r.productOil());
@@ -460,6 +472,9 @@ public class ProductService {
     if (p.getPrice50Ml() != null) return p.getPrice50Ml();
     if (p.getPrice30Ml() != null) return p.getPrice30Ml();
     if (p.getPrice100Ml() != null) return p.getPrice100Ml();
+    if (p.getPriceGel() != null) return p.getPriceGel();
+    if (p.getPriceAttar() != null) return p.getPriceAttar();
+    if (p.getPriceCarPerfume() != null) return p.getPriceCarPerfume();
     return BigDecimal.ZERO;
   }
 
@@ -470,6 +485,9 @@ public class ProductService {
     if (p.getPrice50Ml() != null) return "50ml";
     if (p.getPrice30Ml() != null) return "30ml";
     if (p.getPrice100Ml() != null) return "100ml";
+    if (p.getPriceGel() != null) return "Perfume Gel";
+    if (p.getPriceAttar() != null) return "Attar";
+    if (p.getPriceCarPerfume() != null) return "Car Perfume";
     return "50ml";
   }
 

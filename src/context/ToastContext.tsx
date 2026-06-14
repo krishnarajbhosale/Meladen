@@ -28,9 +28,9 @@ function ToastViewport({ toasts }: { toasts: ToastItem[] }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
             transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-            className="pointer-events-auto max-w-sm rounded-2xl border border-[#c9a84c]/30 bg-[#141414]/95 px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-md"
+            className="pointer-events-auto max-w-md rounded-2xl border border-[#c9a84c]/40 bg-[#141414]/95 px-6 py-4 shadow-[0_16px_48px_rgba(0,0,0,0.5)] backdrop-blur-md"
           >
-            <p className="text-center text-[11px] font-medium tracking-wide text-[#f5f0e8]">{toast.message}</p>
+            <p className="text-center text-sm font-medium tracking-wide text-[#f5f0e8]">{toast.message}</p>
           </motion.div>
         ))}
       </AnimatePresence>
@@ -46,7 +46,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts(prev => [...prev, { id, message }]);
     window.setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 2800);
+    }, 4500);
   }, []);
 
   return (

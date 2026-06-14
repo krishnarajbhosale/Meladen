@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   customerLogout,
   getCustomerEmail,
@@ -22,6 +22,7 @@ export default function LoginPage() {
   const [messageTone, setMessageTone] = useState<'success' | 'error' | 'info'>('info');
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const signedIn = isCustomerLoggedIn();
 
@@ -78,6 +79,7 @@ export default function LoginPage() {
     setOtp('');
     setDevOtp(null);
     setMessage(null);
+    setConfirmLogout(false);
   };
 
   return (
@@ -124,7 +126,7 @@ export default function LoginPage() {
               </Link>
               <button
                 type="button"
-                onClick={onLogout}
+                onClick={() => setConfirmLogout(true)}
                 className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full border-2 border-[#5c5852] bg-[#1a1a1a] px-5 py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e8e4dc] transition-colors hover:border-[#8a8580] sm:flex-initial sm:min-w-[148px]"
               >
                 Sign out
@@ -190,6 +192,54 @@ export default function LoginPage() {
           </form>
         )}
       </motion.div>
+
+      <AnimatePresence>
+        {confirmLogout && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-5 backdrop-blur-sm"
+            onClick={() => setConfirmLogout(false)}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="signout-title"
+              initial={{ opacity: 0, scale: 0.94, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full max-w-sm rounded-[1.75rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#101010)] p-6 text-center shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <h2 id="signout-title" className="font-serif text-lg font-medium text-[#e8e4dc]">
+                Sign out?
+              </h2>
+              <p className="mt-2 text-xs leading-relaxed text-[#8a8580]">
+                Are you sure you want to sign out of your account?
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                <button
+                  type="button"
+                  onClick={() => setConfirmLogout(false)}
+                  className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full border-2 border-[#5c5852] bg-[#1a1a1a] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e8e4dc] transition-colors hover:border-[#8a8580] sm:flex-initial sm:min-w-[130px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full border-2 border-red-500/55 bg-red-500/10 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-red-200 transition-colors hover:border-red-400 hover:text-red-100 sm:flex-initial sm:min-w-[130px]"
+                >
+                  Sign out
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

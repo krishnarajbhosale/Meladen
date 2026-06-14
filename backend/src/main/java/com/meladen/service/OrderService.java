@@ -208,7 +208,9 @@ public class OrderService {
     InventoryStock stock = getOrCreateStock();
     for (ResolvedOrderItem row : computed.resolved()) {
       Product p = row.product();
-      p.setProductOil(p.getProductOil().subtract(row.oilUsedGm()).setScale(2, RoundingMode.HALF_UP));
+      if (p.getProductOil() != null && row.oilUsedGm().signum() > 0) {
+        p.setProductOil(p.getProductOil().subtract(row.oilUsedGm()).setScale(2, RoundingMode.HALF_UP));
+      }
     }
     stock.setAlcoholStockGm(
         stock.getAlcoholStockGm().subtract(computed.totalAlcoholRequired()).setScale(2, RoundingMode.HALF_UP));
@@ -240,13 +242,15 @@ public class OrderService {
       BigDecimal alcoholRequired = recipe.alcoholPerUnitGm().multiply(qtyDecimal);
       BigDecimal lineTotal = item.unitPrice().multiply(qtyDecimal).setScale(2, RoundingMode.HALF_UP);
 
-      if (product.getProductOil() == null) {
-        throw new ResponseStatusException(
-            HttpStatus.BAD_REQUEST, "Product oil stock not set for " + product.getMeladenFragrance());
-      }
-      if (product.getProductOil().compareTo(oilRequired) < 0) {
-        throw new ResponseStatusException(
-            HttpStatus.BAD_REQUEST, "Insufficient product oil for " + product.getMeladenFragrance());
+      if (oilRequired.signum() > 0) {
+        if (product.getProductOil() == null) {
+          throw new ResponseStatusException(
+              HttpStatus.BAD_REQUEST, "Product oil stock not set for " + product.getMeladenFragrance());
+        }
+        if (product.getProductOil().compareTo(oilRequired) < 0) {
+          throw new ResponseStatusException(
+              HttpStatus.BAD_REQUEST, "Insufficient product oil for " + product.getMeladenFragrance());
+        }
       }
 
       subtotal = subtotal.add(lineTotal);
@@ -449,7 +453,10 @@ public class OrderService {
     if (customerId == null) {
       return List.of();
     }
+    // Only show orders the customer has actually committed to: paid online or
+    // confirmed as COD. Orders still awaiting payment stay hidden.
     return orderRepository.findByCustomerIdWithItems(customerId).stream()
+        .filter(o -> !"PAYMENT_PENDING".equalsIgnoreCase(o.getStatus()))
         .map(this::toOrderResponse)
         .toList();
   }
@@ -556,14 +563,25 @@ public class OrderService {
 
   private SizeRecipe sizeRecipe(String raw) {
     String value = raw == null ? "" : raw.toLowerCase(Locale.ROOT).replace(" ", "");
+    if (value.contains("100")) {
+      return new SizeRecipe("100ml", new BigDecimal("20"), new BigDecimal("60"));
+    }
     if (value.contains("30")) {
       return new SizeRecipe("30ml", new BigDecimal("6"), new BigDecimal("18"));
     }
     if (value.contains("50")) {
       return new SizeRecipe("50ml", new BigDecimal("10"), new BigDecimal("30"));
     }
-    if (value.contains("100")) {
-      return new SizeRecipe("100ml", new BigDecimal("20"), new BigDecimal("60"));
+    // Finished products: each unit deducts 1 from product oil (no alcohol).
+    // When product oil reaches 0, the variant shows out of stock.
+    if (value.contains("gel")) {
+      return new SizeRecipe("Perfume Gel", BigDecimal.ONE, BigDecimal.ZERO);
+    }
+    if (value.contains("attar")) {
+      return new SizeRecipe("Attar", BigDecimal.ONE, BigDecimal.ZERO);
+    }
+    if (value.contains("car")) {
+      return new SizeRecipe("Car Perfume", BigDecimal.ONE, BigDecimal.ZERO);
     }
     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported size: " + raw);
   }

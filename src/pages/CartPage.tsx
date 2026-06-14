@@ -100,9 +100,9 @@ export default function CartPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
                     transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1], delay: i * 0.04 }}
-                    className="py-8"
+                    className="py-4"
                   >
-                    <div className="flex gap-5 lg:gap-6">
+                    <div className="flex gap-4 lg:gap-5">
                       <button
                         type="button"
                         className="h-24 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-[#141414] transition-transform hover:scale-[1.02] lg:h-28 lg:w-24"
@@ -135,7 +135,7 @@ export default function CartPage() {
                           </button>
                         </div>
 
-                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
                           <span className="rounded-full bg-[#1a1814] px-2.5 py-0.5 text-[9px] uppercase tracking-[0.12em] text-brand-dark">
                             {formatProductSizeLine(item.size)}
                           </span>
@@ -144,9 +144,9 @@ export default function CartPage() {
                           </span>
                         </div>
 
-                        <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                           <div>
-                            <p className="mb-2 text-[9px] uppercase tracking-[0.16em] text-brand-gray">Quantity</p>
+                            <p className="mb-1.5 text-[9px] uppercase tracking-[0.16em] text-brand-gray">Quantity</p>
                             <QuantityStepper
                               compact
                               value={item.quantity}

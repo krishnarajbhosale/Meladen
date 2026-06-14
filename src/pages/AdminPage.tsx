@@ -122,10 +122,14 @@ type ProductFormState = {
   price30Ml: string;
   price50Ml: string;
   price100Ml: string;
+  priceGel: string;
+  priceAttar: string;
+  priceCarPerfume: string;
   notesTop: string;
   notesMiddle: string;
   notesBase: string;
   moreInformation: string;
+  howToApply: string;
   searchKeywords: string;
   category2: string;
   productOil: string;
@@ -166,10 +170,14 @@ function emptyProductForm(defaultCategoryId: number, defaults?: ProductMediaDefa
     price30Ml: '',
     price50Ml: '',
     price100Ml: '',
+    priceGel: '',
+    priceAttar: '',
+    priceCarPerfume: '',
     notesTop: '',
     notesMiddle: '',
     notesBase: '',
     moreInformation: '',
+    howToApply: '',
     searchKeywords: '',
     category2: '',
     productOil: '',
@@ -210,6 +218,8 @@ export default function AdminPage() {
   const [newsletterRows, setNewsletterRows] = useState<NewsletterSubscriberRow[]>([]);
   const [celebPhotos, setCelebPhotos] = useState<CelebPhotoApi[]>([]);
   const [celebSectionName, setCelebSectionName] = useState('');
+  const [celebPersonName, setCelebPersonName] = useState('');
+  const [celebPersonPosition, setCelebPersonPosition] = useState('');
   const [celebSortOrder, setCelebSortOrder] = useState('0');
   const [celebUploading, setCelebUploading] = useState(false);
   const [celebMessage, setCelebMessage] = useState<string | null>(null);
@@ -642,9 +652,18 @@ export default function AdminPage() {
     setCelebUploading(true);
     setCelebMessage(null);
     try {
-      await adminCreateCelebPhoto(token, celebSectionName, Number(celebSortOrder) || 0, file);
+      await adminCreateCelebPhoto(
+        token,
+        celebSectionName,
+        Number(celebSortOrder) || 0,
+        file,
+        celebPersonName,
+        celebPersonPosition,
+      );
       setCelebPhotos(await adminListCelebPhotos(token));
       setCelebSectionName('');
+      setCelebPersonName('');
+      setCelebPersonPosition('');
       setCelebSortOrder('0');
       if (fileInput) fileInput.value = '';
       setCelebMessage('Photo uploaded. It will appear on the homepage under that section name.');
@@ -886,10 +905,14 @@ export default function AdminPage() {
     price30Ml: toNum(productForm.price30Ml),
     price50Ml: toNum(productForm.price50Ml),
     price100Ml: toNum(productForm.price100Ml),
+    priceGel: toNum(productForm.priceGel),
+    priceAttar: toNum(productForm.priceAttar),
+    priceCarPerfume: toNum(productForm.priceCarPerfume),
     notesTop: productForm.notesTop || null,
     notesMiddle: productForm.notesMiddle || null,
     notesBase: productForm.notesBase || null,
     moreInformation: productForm.moreInformation || null,
+    howToApply: productForm.howToApply || null,
     searchKeywords: productForm.searchKeywords || null,
     category2: productForm.category2 || null,
     productOil: toNum(productForm.productOil),
@@ -944,10 +967,14 @@ export default function AdminPage() {
       price30Ml: p.price30Ml != null ? String(p.price30Ml) : '',
       price50Ml: p.price50Ml != null ? String(p.price50Ml) : '',
       price100Ml: p.price100Ml != null ? String(p.price100Ml) : '',
+      priceGel: p.priceGel != null ? String(p.priceGel) : '',
+      priceAttar: p.priceAttar != null ? String(p.priceAttar) : '',
+      priceCarPerfume: p.priceCarPerfume != null ? String(p.priceCarPerfume) : '',
       notesTop: p.notesTop ?? '',
       notesMiddle: p.notesMiddle ?? '',
       notesBase: p.notesBase ?? '',
       moreInformation: p.moreInformation ?? '',
+      howToApply: p.howToApply ?? '',
       searchKeywords: p.searchKeywords ?? '',
       category2: p.category2 ?? '',
       productOil: p.productOil != null ? String(p.productOil) : '',
@@ -1463,12 +1490,21 @@ export default function AdminPage() {
               {activeProductTab === 'Pricing & Notes' && (
                 <div className="space-y-3">
                   <div className="grid grid-cols-3 gap-2">
-                    {(['price30Ml', 'price50Ml', 'price100Ml'] as const).map(field => (
+                    {(
+                      [
+                        ['price30Ml', '30ml price'],
+                        ['price50Ml', '50ml price'],
+                        ['price100Ml', '100ml price'],
+                        ['priceGel', 'Perfume Gel price'],
+                        ['priceAttar', 'Attar price'],
+                        ['priceCarPerfume', 'Car Perfume price'],
+                      ] as const
+                    ).map(([field, label]) => (
                       <input
                         key={field}
                         type="number"
                         step="0.01"
-                        placeholder={field}
+                        placeholder={label}
                         value={productForm[field]}
                         onChange={e => setProductField(field, e.target.value)}
                         className="w-full rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-2 py-2 text-sm text-[#251d15] outline-none focus:border-[#8c7458] focus:ring-1 focus:ring-[#d7c4aa]"
@@ -1488,6 +1524,13 @@ export default function AdminPage() {
                     placeholder="More information"
                     value={productForm.moreInformation}
                     onChange={e => setProductField('moreInformation', e.target.value)}
+                    className="w-full rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-3 py-2 text-sm text-[#251d15] outline-none focus:border-[#8c7458] focus:ring-1 focus:ring-[#d7c4aa]"
+                    rows={3}
+                  />
+                  <textarea
+                    placeholder="How to apply (leave blank to use the default instructions)"
+                    value={productForm.howToApply}
+                    onChange={e => setProductField('howToApply', e.target.value)}
                     className="w-full rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-3 py-2 text-sm text-[#251d15] outline-none focus:border-[#8c7458] focus:ring-1 focus:ring-[#d7c4aa]"
                     rows={3}
                   />
@@ -2238,6 +2281,24 @@ export default function AdminPage() {
                       className="mt-1 w-full rounded-lg border border-[#dbcdb8] px-3 py-2 text-sm"
                     />
                   </label>
+                  <label className="block text-sm text-[#4b3f32]">
+                    Name
+                    <input
+                      value={celebPersonName}
+                      onChange={e => setCelebPersonName(e.target.value)}
+                      placeholder="e.g. Priya Sharma"
+                      className="mt-1 w-full rounded-lg border border-[#dbcdb8] px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="block text-sm text-[#4b3f32]">
+                    Position
+                    <input
+                      value={celebPersonPosition}
+                      onChange={e => setCelebPersonPosition(e.target.value)}
+                      placeholder="e.g. Actor"
+                      className="mt-1 w-full rounded-lg border border-[#dbcdb8] px-3 py-2 text-sm"
+                    />
+                  </label>
                 </div>
                 <label className="block text-sm text-[#4b3f32]">
                   Photo (max 5 MB)
@@ -2290,6 +2351,8 @@ export default function AdminPage() {
                     celebPhotos.map(row => ({
                       id: row.id,
                       sectionName: row.sectionName,
+                      personName: row.personName,
+                      personPosition: row.personPosition,
                       sortOrder: row.sortOrder,
                       imageUrl: celebPhotoImageSrc(row),
                     })),
@@ -2305,10 +2368,20 @@ export default function AdminPage() {
                             <div className="aspect-[4/5] overflow-hidden rounded-lg bg-[#f5f0e8]">
                               <img
                                 src={photo.imageUrl}
-                                alt={group.sectionName}
+                                alt={photo.personName || group.sectionName}
                                 className="h-full w-full object-cover"
                               />
                             </div>
+                            {(photo.personName || photo.personPosition) && (
+                              <div className="leading-tight">
+                                {photo.personName && (
+                                  <p className="text-xs font-semibold text-[#241d14]">{photo.personName}</p>
+                                )}
+                                {photo.personPosition && (
+                                  <p className="text-[10px] text-[#6b5c4b]">{photo.personPosition}</p>
+                                )}
+                              </div>
+                            )}
                             <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-[#6b5c4b]">
                               <span>Order {photo.sortOrder}</span>
                               <div className="flex items-center gap-2">

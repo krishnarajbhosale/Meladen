@@ -6,6 +6,8 @@ import celeb4 from '../assets/5.jpeg';
 export type CelebPhotoDisplay = {
   id: number | string;
   sectionName: string;
+  personName: string | null;
+  personPosition: string | null;
   sortOrder: number;
   imageUrl: string;
 };
@@ -17,11 +19,11 @@ export type CelebPhotoSectionGroup = {
 
 /** Preview uses one section so the homepage shows a single slider (not duplicate blocks). */
 export const MOCK_CELEB_PHOTOS: CelebPhotoDisplay[] = [
-  { id: 'mock-1', sectionName: 'Gallery', sortOrder: 0, imageUrl: celeb1 },
-  { id: 'mock-2', sectionName: 'Gallery', sortOrder: 1, imageUrl: celeb2 },
-  { id: 'mock-3', sectionName: 'Gallery', sortOrder: 2, imageUrl: celeb3 },
-  { id: 'mock-4', sectionName: 'Gallery', sortOrder: 3, imageUrl: celeb4 },
-  { id: 'mock-5', sectionName: 'Gallery', sortOrder: 4, imageUrl: celeb1 },
+  { id: 'mock-1', sectionName: 'Gallery', personName: null, personPosition: null, sortOrder: 0, imageUrl: celeb1 },
+  { id: 'mock-2', sectionName: 'Gallery', personName: null, personPosition: null, sortOrder: 1, imageUrl: celeb2 },
+  { id: 'mock-3', sectionName: 'Gallery', personName: null, personPosition: null, sortOrder: 2, imageUrl: celeb3 },
+  { id: 'mock-4', sectionName: 'Gallery', personName: null, personPosition: null, sortOrder: 3, imageUrl: celeb4 },
+  { id: 'mock-5', sectionName: 'Gallery', personName: null, personPosition: null, sortOrder: 4, imageUrl: celeb1 },
 ];
 
 export function groupCelebPhotos(items: CelebPhotoDisplay[]): CelebPhotoSectionGroup[] {

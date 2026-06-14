@@ -19,7 +19,7 @@ export default function Button({
     primary: 'bg-[#b8b3ac] text-[#0f0f0f] hover:bg-[#a8a39c]',
     outline: 'border border-[#b8b3ac]/20 text-[#b8b3ac] hover:border-[#c9a84c] hover:text-[#c9a84c]',
     ghost: 'text-[#b8b3ac] underline underline-offset-4 hover:text-[#c9a84c]',
-    gold: 'bg-[#c9a84c] text-black hover:bg-[#e2c97e]',
+    gold: 'btn-gold-glitter relative',
   };
 
   return (

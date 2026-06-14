@@ -52,7 +52,10 @@ export default function App() {
     <MobileContainer>
       <ScrollToTop />
       {showChrome && <Navbar />}
-      <AnimatePresence mode="wait">
+      <AnimatePresence
+        mode="wait"
+        onExitComplete={() => window.scrollTo({ top: 0, left: 0, behavior: 'auto' })}
+      >
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<HomePage />} />
           <Route path="/collection" element={<CollectionPage />} />

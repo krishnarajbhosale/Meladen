@@ -7,22 +7,18 @@ import {
 } from '../api/customerReviews';
 import { MOCK_CUSTOMER_REVIEWS, resolveReviewStarRating, type CustomerReviewDisplay } from '../data/mockCustomerReviews';
 import { fadeUp } from '../animations/variants';
+import StarRating from './StarRating';
 
 const SLIDE_MS = 5500;
 const SWIPE_THRESHOLD_PX = 48;
 
-function StarRating({ rating }: { rating: number }) {
+function ReviewStars({ rating }: { rating: number }) {
   return (
-    <div
-      className="flex justify-center gap-0.5 text-base leading-none sm:justify-start lg:text-lg"
-      aria-label={`${rating} out of 5 stars`}
-    >
-      {Array.from({ length: 5 }, (_, i) => (
-        <span key={i} className={i < rating ? 'text-gold' : 'text-white/15'} aria-hidden>
-          ★
-        </span>
-      ))}
-    </div>
+    <StarRating
+      score={rating}
+      className="justify-center gap-0.5 text-base sm:justify-start lg:text-lg"
+      emptyClass="text-white/15"
+    />
   );
 }
 
@@ -49,7 +45,7 @@ function ReviewCard({ review }: { review: CustomerReviewDisplay }) {
         />
       </div>
       <div className="min-w-0 flex-1 space-y-3 sm:space-y-4">
-        <StarRating rating={resolveReviewStarRating(review)} />
+        <ReviewStars rating={resolveReviewStarRating(review)} />
         <p className="font-serif text-lg leading-relaxed text-brand-dark lg:text-xl">
           &ldquo;{review.reviewText}&rdquo;
         </p>
@@ -119,22 +115,6 @@ function ReviewsCarousel({ reviews }: { reviews: CustomerReviewDisplay[] }) {
           <ReviewCard review={active} />
         </motion.div>
       </AnimatePresence>
-
-      {sorted.length > 1 && (
-        <div className="mt-8 flex justify-center gap-2">
-          {sorted.map((review, i) => (
-            <button
-              key={String(review.id)}
-              type="button"
-              aria-label={`Show review ${i + 1}`}
-              onClick={() => setIndex(i)}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === index ? 'w-6 bg-brand-dark' : 'w-1.5 bg-white/30'
-              }`}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -173,7 +153,7 @@ export default function CustomerReviewsSection() {
   if (!loaded || reviews.length === 0) return null;
 
   return (
-    <section className="mt-10 border-t border-white/10 bg-brand-cream px-5 py-12 lg:mt-12 lg:px-10 lg:py-20 xl:px-16">
+    <section className="mt-10 bg-brand-cream px-5 py-12 lg:mt-12 lg:px-10 lg:py-20 xl:px-16">
       <motion.div
         variants={fadeUp}
         initial="hidden"

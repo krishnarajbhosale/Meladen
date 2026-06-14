@@ -3,17 +3,21 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import { ApiError } from '../api/client';
-import { placePublicOrder, fetchShippingQuote } from '../api/catalog';
+import { placePublicOrder, fetchShippingQuote, fetchMyOrders } from '../api/catalog';
 import { getCustomerEmail, isCustomerLoggedIn } from '../api/customerAuth';
 import { validatePromoCode } from '../api/promo';
 import { getMyWallet } from '../api/wallet';
 import InputField from '../components/InputField';
+import SelectField from '../components/SelectField';
+import { INDIA_COUNTRY, INDIAN_STATES, citiesForState } from '../data/indiaLocations';
 import Button from '../components/Button';
 import CheckoutSummary from '../components/CheckoutSummary';
 import Drawer from '../components/Drawer';
 import { pageVariants, fadeUp } from '../animations/variants';
 import { formatInr } from '../utils/currency';
 import { sanitizePhoneDigits } from '../utils/phone';
+
+const CITY_NOT_LISTED = 'Other (city not listed)';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -49,9 +53,64 @@ export default function CheckoutPage() {
 
   const set = (key: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [key]: v }));
 
+  // City is a dropdown driven by the chosen state; "Other" falls back to a text input.
+  const [cityCustom, setCityCustom] = useState(false);
+  const cityOptions = citiesForState(form.state);
+
+  const onStateChange = (v: string) => {
+    setForm(f => ({ ...f, state: v, city: '' }));
+    setCityCustom(false);
+  };
+
+  const onCityChange = (v: string) => {
+    if (v === CITY_NOT_LISTED) {
+      setCityCustom(true);
+      set('city')('');
+      return;
+    }
+    set('city')(v);
+  };
+
   useEffect(() => {
     const em = getCustomerEmail();
     if (em) setForm(f => ({ ...f, email: em }));
+  }, []);
+
+  // Prefill the form from the customer's most recent order (name, phone, address…).
+  useEffect(() => {
+    if (!isCustomerLoggedIn()) return;
+    let cancelled = false;
+    void fetchMyOrders()
+      .then(orders => {
+        if (cancelled || orders.length === 0) return;
+        const latest = orders[0]; // API returns newest first
+        const [firstName = '', ...rest] = (latest.customerName ?? '').trim().split(/\s+/);
+        const lastName = rest.join(' ');
+        const validState =
+          latest.state && INDIAN_STATES.includes(latest.state) ? latest.state : '';
+        const prefillCity = (latest.city ?? '').trim();
+        const cityInList = validState ? citiesForState(validState).includes(prefillCity) : false;
+        setCityCustom(Boolean(prefillCity) && !cityInList);
+        // Only fill fields the user hasn't already typed into.
+        setForm(f => ({
+          ...f,
+          firstName: f.firstName || firstName,
+          lastName: f.lastName || lastName,
+          email: f.email || latest.customerEmail || '',
+          phone: f.phone || (latest.customerPhone ?? ''),
+          apartmentHouseNumber: f.apartmentHouseNumber || (latest.apartmentHouseNumber ?? ''),
+          address: f.address || latest.address || '',
+          nearestLandmark: f.nearestLandmark || (latest.nearestLandmark ?? ''),
+          city: f.city || prefillCity,
+          state: f.state || validState,
+          postcode: f.postcode || latest.postcode || '',
+          country: f.country || latest.country || 'India',
+        }));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -270,14 +329,49 @@ export default function CheckoutPage() {
                 value={form.nearestLandmark}
                 onChange={set('nearestLandmark')}
               />
+              <SelectField
+                label="State"
+                value={form.state}
+                onChange={onStateChange}
+                options={INDIAN_STATES}
+                placeholder="Select state"
+                required
+              />
               <div className="grid grid-cols-2 gap-3">
-                <InputField label="City" value={form.city} onChange={set('city')} required />
-                <InputField label="State" value={form.state} onChange={set('state')} placeholder="e.g. Delhi" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+                {cityCustom ? (
+                  <div>
+                    <InputField label="City" value={form.city} onChange={set('city')} required />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCityCustom(false);
+                        set('city')('');
+                      }}
+                      className="mt-1 text-[10px] tracking-wide text-[#c9a84c] underline underline-offset-2"
+                    >
+                      Choose from list
+                    </button>
+                  </div>
+                ) : (
+                  <SelectField
+                    label="City"
+                    value={form.city}
+                    onChange={onCityChange}
+                    options={[...cityOptions, CITY_NOT_LISTED]}
+                    placeholder="Select city"
+                    disabled={!form.state}
+                    required
+                  />
+                )}
                 <InputField label="Postcode" value={form.postcode} onChange={set('postcode')} required />
-                <InputField label="Country" value={form.country} onChange={set('country')} required />
               </div>
+              <SelectField
+                label="Country"
+                value={form.country}
+                onChange={set('country')}
+                options={[INDIA_COUNTRY]}
+                required
+              />
             </div>
           </motion.div>
 

@@ -60,7 +60,7 @@ export default function HomePage() {
     <motion.div variants={pageVariants} initial="hidden" animate="visible" className="relative isolate overflow-x-clip bg-brand-cream">
       <div className="mx-auto w-full max-w-[1500px] px-3 pb-4 pt-0 lg:px-4 lg:pt-4">
         <div className="min-w-0">
-          <section className="relative -mx-3 mb-8 h-[calc(100vh-4rem)] h-[calc(100svh-4rem)] w-[calc(100%+1.5rem)] max-w-[100vw] overflow-hidden rounded-none bg-black lg:mx-0 lg:mb-10 lg:h-[96vh] lg:w-full lg:max-w-none lg:rounded-3xl">
+          <section className="relative -mx-3 mb-0 h-[calc(100vh-4rem)] h-[calc(100svh-4rem)] w-[calc(100%+1.5rem)] max-w-[100vw] overflow-hidden rounded-none bg-black lg:mx-0 lg:mb-0 lg:h-[96vh] lg:w-full lg:max-w-none lg:rounded-3xl">
             <AutoplayVideo
               sources={[
                 { src: heroVideo, type: 'video/webm' },
@@ -70,7 +70,7 @@ export default function HomePage() {
               className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-black/25 to-black/90" />
-            <div className="absolute inset-x-0 bottom-[10%] z-10 flex flex-col items-center px-4 sm:px-5 md:px-4 lg:px-10">
+            <div className="absolute inset-x-0 bottom-6 z-10 flex flex-col items-center px-4 sm:px-5 md:px-4 lg:bottom-10 lg:px-10">
               <HeroIntro overlay />
             </div>
           </section>
@@ -155,6 +155,8 @@ export default function HomePage() {
               products={bestSellers}
               headingStyle="collections"
               showProductRating
+              itemWidthClass="w-[63vw] min-w-[63vw] max-w-[63vw] lg:w-[240px] lg:min-w-[240px] lg:max-w-[240px]"
+              itemImageHeightClass="h-[67vw] lg:h-[300px]"
             />
           </div>
 

@@ -38,6 +38,19 @@ function readLoggedInCart(): CartItem[] {
   return email ? loadPersistedCart(email) : [];
 }
 
+/** Combine two carts, summing quantities for the same product + size. */
+function mergeCarts(base: CartItem[], incoming: CartItem[]): CartItem[] {
+  const merged = base.map(item => ({ ...item }));
+  for (const item of incoming) {
+    const existing = merged.find(
+      i => i.product.id === item.product.id && i.size === item.size,
+    );
+    if (existing) existing.quantity += item.quantity;
+    else merged.push({ ...item });
+  }
+  return merged;
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => readLoggedInCart());
   const { showToast } = useToast();
@@ -46,7 +59,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const onAuthChanged = () => {
       if (isCustomerLoggedIn()) {
         const email = getCustomerEmail();
-        setItems(email ? loadPersistedCart(email) : []);
+        // Merge the guest cart (in-memory) into the account's saved cart so
+        // items added before signing in are not lost.
+        setItems(prev => (email ? mergeCarts(loadPersistedCart(email), prev) : prev));
         return;
       }
       setItems([]);

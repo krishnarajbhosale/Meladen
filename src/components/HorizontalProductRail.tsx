@@ -19,7 +19,14 @@ interface HorizontalProductRailProps {
   headingStyle?: 'default' | 'collections';
   /** Show star rating on each product card. */
   showProductRating?: boolean;
+  /** Width classes for each rail item; default shows ~2 cards on mobile. */
+  itemWidthClass?: string;
+  /** Override product image height to keep proportions when items are wider. */
+  itemImageHeightClass?: string;
 }
+
+const DEFAULT_ITEM_WIDTH =
+  'w-[188px] min-w-[188px] max-w-[188px] lg:w-[220px] lg:min-w-[220px] lg:max-w-[220px]';
 
 const CARD_GAP_PX = 16;
 
@@ -32,15 +39,11 @@ export default function HorizontalProductRail({
   tone = 'light',
   headingStyle = 'default',
   showProductRating = false,
+  itemWidthClass = DEFAULT_ITEM_WIDTH,
+  itemImageHeightClass,
 }: HorizontalProductRailProps) {
   const navigate = useNavigate();
   const railRef = useRef<HTMLDivElement>(null);
-  const dragState = useRef<{ active: boolean; startX: number; scrollLeft: number; pointerId: number | null }>({
-    active: false,
-    startX: 0,
-    scrollLeft: 0,
-    pointerId: null,
-  });
 
   const getScrollStep = useCallback(() => {
     const rail = railRef.current;
@@ -56,54 +59,10 @@ export default function HorizontalProductRail({
     rail.scrollBy({ left: direction * getScrollStep(), behavior: 'smooth' });
   };
 
-  const endDrag = useCallback(() => {
-    const rail = railRef.current;
-    dragState.current.active = false;
-    dragState.current.pointerId = null;
-    rail?.classList.remove('cursor-grabbing');
-  }, []);
-
-  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    // Mouse: use nav buttons / trackpad scroll so product card clicks still work on desktop.
-    if (event.pointerType === 'mouse') return;
-    if (event.button !== 0) return;
-    const rail = railRef.current;
-    if (!rail) return;
-    dragState.current = {
-      active: true,
-      startX: event.clientX,
-      scrollLeft: rail.scrollLeft,
-      pointerId: event.pointerId,
-    };
-    rail.classList.add('cursor-grabbing');
-    rail.setPointerCapture(event.pointerId);
-  };
-
-  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    const rail = railRef.current;
-    const state = dragState.current;
-    if (!rail || !state.active || state.pointerId !== event.pointerId) return;
-    const delta = event.clientX - state.startX;
-    rail.scrollLeft = state.scrollLeft - delta;
-  };
-
-  const onPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (dragState.current.pointerId === event.pointerId) {
-      endDrag();
-      railRef.current?.releasePointerCapture(event.pointerId);
-    }
-  };
-
-  const onPointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (dragState.current.pointerId === event.pointerId) {
-      endDrag();
-    }
-  };
-
   const isDark = tone === 'dark';
   const sectionClass = isDark
-    ? 'relative mt-10 border-t border-white/10 bg-brand-cream px-1 pb-10 pt-12 sm:px-3 lg:mt-12 lg:px-2 lg:pb-12 lg:pt-14 xl:px-4'
-    : 'relative mt-10 border-t border-white/10 bg-brand-cream px-1 pb-10 pt-12 sm:px-3 lg:mt-12 lg:px-2 lg:pb-12 lg:pt-14 xl:px-4';
+    ? 'relative mt-10 bg-brand-cream px-1 pb-10 pt-12 sm:px-3 lg:mt-12 lg:px-2 lg:pb-12 lg:pt-14 xl:px-4'
+    : 'relative mt-10 bg-brand-cream px-1 pb-10 pt-12 sm:px-3 lg:mt-12 lg:px-2 lg:pb-12 lg:pt-14 xl:px-4';
   const headingClass = isDark
     ? 'font-serif text-[1.4rem] font-medium text-[#f5f0e8] lg:text-3xl'
     : 'font-serif text-[1.4rem] font-medium text-brand-dark lg:text-3xl';
@@ -176,18 +135,13 @@ export default function HorizontalProductRail({
       <div
         ref={railRef}
         data-rail-scroll
-        className="flex cursor-grab snap-x snap-proximity gap-4 overflow-x-auto overscroll-x-contain pb-2 pl-1 pr-4 touch-pan-x [-webkit-overflow-scrolling:touch] [scrollbar-width:none] active:cursor-grabbing lg:cursor-default lg:snap-mandatory lg:scroll-smooth [&::-webkit-scrollbar]:hidden"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerLeave={endDrag}
-        onPointerCancel={onPointerCancel}
+        className="flex snap-x snap-proximity gap-4 overflow-x-auto overscroll-x-contain pb-2 pl-1 pr-4 touch-pan-x touch-pan-y [-webkit-overflow-scrolling:touch] [scrollbar-width:none] lg:snap-mandatory lg:scroll-smooth [&::-webkit-scrollbar]:hidden"
       >
         {products.slice(0, maxProducts).map((product, index) => (
           <div
             key={`${product.id}-${index}`}
             data-rail-item
-            className="w-[188px] min-w-[188px] max-w-[188px] shrink-0 snap-start lg:w-[220px] lg:min-w-[220px] lg:max-w-[220px]"
+            className={`${itemWidthClass} shrink-0 snap-start`}
           >
             <ProductCard
               product={product}
@@ -196,6 +150,7 @@ export default function HorizontalProductRail({
               inRail
               showRating={showProductRating}
               cardClassName="w-full max-w-full"
+              imageHeightClass={itemImageHeightClass}
             />
           </div>
         ))}
@@ -205,7 +160,7 @@ export default function HorizontalProductRail({
             type="button"
             data-rail-item
             onClick={() => navigate('/collection')}
-            className="flex h-[286px] w-[188px] snap-start flex-shrink-0 flex-col items-center justify-center rounded-[1.75rem] border border-brand-beige bg-brand-light-gray text-center transition-all duration-300 hover:-translate-y-1 lg:h-[368px] lg:w-[220px]"
+            className={`${itemWidthClass} flex h-[286px] snap-start flex-shrink-0 flex-col items-center justify-center rounded-[1.75rem] border border-brand-beige bg-brand-light-gray text-center transition-all duration-300 hover:-translate-y-1 lg:h-[368px]`}
           >
             <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-brand-dark text-brand-cream">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">

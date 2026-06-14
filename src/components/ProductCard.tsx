@@ -7,6 +7,7 @@ import { fadeUp } from '../animations/variants';
 import { formatInr } from '../utils/currency';
 import { resolveProductRating } from '../utils/productRating';
 import InspiredByBadge from './InspiredByBadge';
+import StarRating from './StarRating';
 
 type AddToBagConfig = {
   onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
@@ -28,6 +29,8 @@ interface ProductCardProps {
   showRating?: boolean;
   /** Parent handles layout motion (e.g. collection page). */
   skipEntranceAnimation?: boolean;
+  /** Override the image height (e.g. to keep proportions when the card is wider). */
+  imageHeightClass?: string;
   addToBag?: AddToBagConfig;
 }
 
@@ -40,6 +43,7 @@ export default function ProductCard({
   collectionLayout = false,
   showRating = false,
   skipEntranceAnimation = false,
+  imageHeightClass,
   addToBag,
 }: ProductCardProps) {
   const [hovered, setHovered] = useState(false);
@@ -57,12 +61,11 @@ export default function ProductCard({
     inRail || collectionLayout ? '' : 'transition-transform duration-300 ease-in-out hover:scale-[1.02]'
   } ${cardClassName}`;
 
-  const imageHeights = collectionLayout ? 'h-[200px] lg:h-[260px]' : 'h-[200px] lg:h-[280px]';
+  const imageHeights =
+    imageHeightClass ?? (collectionLayout ? 'h-[200px] lg:h-[260px]' : 'h-[200px] lg:h-[280px]');
   const addButtonClass = addToBag?.disabled
     ? 'bg-red-200 text-red-800 cursor-not-allowed'
-    : collectionLayout
-      ? 'bg-brand-sage text-black hover:bg-brand-sage/90'
-      : 'bg-[#c9a84c] text-black';
+    : 'btn-gold-glitter';
 
   const cardContent = (
     <>
@@ -137,17 +140,11 @@ export default function ProductCard({
             className={`mb-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 ${collectionLayout ? 'justify-center' : ''}`}
             aria-label={`${rating.score} out of 5 stars, ${rating.reviewCount} reviews`}
           >
-            <span className="flex leading-none">
-              {Array.from({ length: 5 }, (_, i) => (
-                <span
-                  key={i}
-                  className={`text-[11px] ${i < rating.starCount ? 'text-gold' : effectiveTone === 'dark' ? 'text-white/15' : 'text-[#444]'}`}
-                  aria-hidden
-                >
-                  ★
-                </span>
-              ))}
-            </span>
+            <StarRating
+              score={rating.score}
+              className="text-[11px]"
+              emptyClass={effectiveTone === 'dark' ? 'text-white/15' : 'text-[#444]'}
+            />
             <span className={`text-[10px] tabular-nums ${metaClass}`}>
               {rating.score.toFixed(1)} ({rating.reviewCount})
             </span>

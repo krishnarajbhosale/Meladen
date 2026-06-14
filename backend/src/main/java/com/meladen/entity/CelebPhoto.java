@@ -27,6 +27,12 @@ public class CelebPhoto {
   @Column(name = "section_name", nullable = false, length = 200)
   private String sectionName;
 
+  @Column(name = "person_name", length = 200)
+  private String personName;
+
+  @Column(name = "person_position", length = 200)
+  private String personPosition;
+
   @Column(name = "sort_order", nullable = false)
   private Integer sortOrder = 0;
 

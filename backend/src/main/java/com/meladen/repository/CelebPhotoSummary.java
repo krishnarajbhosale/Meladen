@@ -6,5 +6,9 @@ public interface CelebPhotoSummary {
 
   String getSectionName();
 
+  String getPersonName();
+
+  String getPersonPosition();
+
   Integer getSortOrder();
 }

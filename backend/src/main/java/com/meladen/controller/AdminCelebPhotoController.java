@@ -33,17 +33,22 @@ public class AdminCelebPhotoController {
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public CelebPhotoResponse create(
       @RequestParam("sectionName") String sectionName,
+      @RequestParam(value = "personName", required = false) String personName,
+      @RequestParam(value = "personPosition", required = false) String personPosition,
       @RequestParam(value = "sortOrder", required = false) Integer sortOrder,
       @RequestPart("image") MultipartFile image) {
-    return celebPhotoService.create(sectionName, sortOrder, image);
+    return celebPhotoService.create(sectionName, personName, personPosition, sortOrder, image);
   }
 
   @PutMapping("/{id}")
   public CelebPhotoResponse updateMeta(
       @PathVariable Long id,
       @RequestParam(value = "sectionName", required = false) String sectionName,
+      @RequestParam(value = "personName", required = false) String personName,
+      @RequestParam(value = "personPosition", required = false) String personPosition,
       @RequestParam(value = "sortOrder", required = false) Integer sortOrder) {
-    return celebPhotoService.updateMeta(id, sectionName, sortOrder);
+    return celebPhotoService.updateMeta(
+        id, sectionName, personName, personPosition, sortOrder);
   }
 
   @PutMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

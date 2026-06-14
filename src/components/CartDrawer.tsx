@@ -112,7 +112,7 @@ export default function CartDrawer({ open, onClose }: Props) {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                         transition={{ duration: 0.25 }}
-                        className="py-6 first:pt-0"
+                        className="py-3.5 first:pt-0"
                       >
                         <div className="flex gap-4">
                           <button
@@ -153,22 +153,18 @@ export default function CartDrawer({ open, onClose }: Props) {
                               </div>
                             </div>
 
-                            <div className="mt-3 flex flex-wrap items-center gap-2">
-                              <span className="rounded-full bg-[#1a1814] px-2.5 py-0.5 text-[9px] uppercase tracking-[0.12em] text-brand-dark">
-                                {formatProductSizeLine(item.size)}
-                              </span>
-                              <span className="text-[9px] text-brand-gray">
-                                {formatInr(item.unitPrice, 0)} each
-                              </span>
-                            </div>
-
-                            <div className="mt-4 flex justify-end">
-                              <div className="text-right">
-                                <p className="text-[9px] uppercase tracking-[0.16em] text-brand-gray">Total</p>
-                                <p className="mt-0.5 font-serif text-sm text-brand-dark">
-                                  {formatInr(item.unitPrice * item.quantity)}
-                                </p>
+                            <div className="mt-2 flex items-start justify-between gap-2">
+                              <div className="flex min-w-0 flex-col items-start gap-1">
+                                <span className="whitespace-nowrap text-[9px] uppercase tracking-[0.12em] text-brand-dark">
+                                  {formatProductSizeLine(item.size)}
+                                </span>
+                                <span className="text-[9px] text-brand-gray">
+                                  {formatInr(item.unitPrice, 0)} each
+                                </span>
                               </div>
+                              <p className="flex-shrink-0 font-serif text-sm text-brand-dark">
+                                {formatInr(item.unitPrice * item.quantity)}
+                              </p>
                             </div>
                           </div>
                         </div>

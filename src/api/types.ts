@@ -27,6 +27,9 @@ export interface ProductPublicApi {
   price30Ml: number | null;
   price50Ml: number | null;
   price100Ml: number | null;
+  priceGel: number | null;
+  priceAttar: number | null;
+  priceCarPerfume: number | null;
   inspiredBy: string;
   luxuryDescription: string;
   mood: string;
@@ -34,6 +37,7 @@ export interface ProductPublicApi {
   season: string;
   idealFor: string;
   moreInformation: string;
+  howToApply: string;
   searchKeywords: string;
   category2: string;
   productOil: number | null;
@@ -68,10 +72,14 @@ export interface ProductAdminApi {
   price30Ml: number | null;
   price50Ml: number | null;
   price100Ml: number | null;
+  priceGel: number | null;
+  priceAttar: number | null;
+  priceCarPerfume: number | null;
   notesTop: string | null;
   notesMiddle: string | null;
   notesBase: string | null;
   moreInformation: string | null;
+  howToApply: string | null;
   searchKeywords: string | null;
   category2: string | null;
   productOil: number | null;
@@ -124,6 +132,7 @@ export interface OrderApi {
   address: string;
   nearestLandmark?: string | null;
   city: string;
+  state?: string | null;
   postcode: string;
   country: string;
   subtotal: number;

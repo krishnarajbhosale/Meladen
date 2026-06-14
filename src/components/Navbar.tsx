@@ -67,6 +67,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const lastScrollY = useRef(0);
+  const pinHeaderRef = useRef(false);
   const categoryMenuRef = useRef<HTMLDivElement>(null);
   const [customerSignedIn, setCustomerSignedIn] = useState(() => isCustomerLoggedIn());
 
@@ -81,9 +82,20 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
+    pinHeaderRef.current = mobileSearchOpen || menuOpen;
+    if (pinHeaderRef.current) setHeaderVisible(true);
+  }, [mobileSearchOpen, menuOpen]);
+
+  useEffect(() => {
     const onScroll = () => {
       const currentScrollY = window.scrollY;
       setScrolled(currentScrollY > 10);
+
+      // Keep the header pinned while the mobile search or side menu is open.
+      if (pinHeaderRef.current) {
+        lastScrollY.current = currentScrollY;
+        return;
+      }
 
       if (currentScrollY < 24) {
         setHeaderVisible(true);
@@ -182,7 +194,10 @@ export default function Navbar() {
           mobileSearchOpen ? 'z-[100]' : ''
         } ${scrolled ? 'shadow-[0_1px_12px_rgba(0,0,0,0.5)]' : ''}`}
         initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: headerVisible ? 1 : 0.98, y: headerVisible ? 0 : -108 }}
+        animate={{
+          opacity: headerVisible || mobileSearchOpen || menuOpen ? 1 : 0.98,
+          y: headerVisible || mobileSearchOpen || menuOpen ? 0 : -108,
+        }}
         transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
       >
         <div className="relative mx-auto flex h-16 max-w-7xl items-center px-5 lg:grid lg:grid-cols-[auto_1fr_auto] lg:gap-8 lg:px-10">
@@ -220,7 +235,7 @@ export default function Navbar() {
 
           <Link
             to="/"
-            className={`absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden transition-all duration-200 lg:hidden ${
+            className={`absolute left-1/2 top-1/2 z-40 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden transition-all duration-200 lg:hidden ${
               mobileSearchOpen ? 'h-10 w-28' : 'h-12 w-32'
             }`}
             aria-label="Meladen home"

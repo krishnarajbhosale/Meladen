@@ -10,11 +10,15 @@ import {
 import { fadeUp } from '../animations/variants';
 
 const SLIDE_MS = 4500;
+/** Min horizontal drag distance (px) to count as a swipe. */
+const SWIPE_THRESHOLD = 60;
 
 function toDisplay(row: CelebPhotoApi): CelebPhotoDisplay {
   return {
     id: row.id,
     sectionName: row.sectionName,
+    personName: row.personName,
+    personPosition: row.personPosition,
     sortOrder: row.sortOrder,
     imageUrl: celebPhotoImageSrc(row),
   };
@@ -41,6 +45,8 @@ function SectionCarousel({
   if (photos.length === 0) return null;
 
   const active = photos[index] ?? photos[0];
+  const goNext = () => setIndex(i => (i + 1) % photos.length);
+  const goPrev = () => setIndex(i => (i - 1 + photos.length) % photos.length);
 
   return (
     <div className="space-y-4">
@@ -48,13 +54,13 @@ function SectionCarousel({
         <h3 className="font-serif text-xl text-brand-dark lg:text-2xl">{section.sectionName}</h3>
       )}
       <div className="relative mx-auto w-full max-w-[min(100%,420px)] overflow-hidden rounded-2xl border border-white/10 bg-brand-beige/40 lg:max-w-[480px]">
-        <div className="relative aspect-[4/5] w-full bg-[#111111]">
-          <AnimatePresence mode="wait" initial={false}>
+        <div className="relative aspect-[4/5] w-full touch-pan-y bg-[#111111]">
+          <AnimatePresence initial={false}>
             <motion.img
               key={String(active.id)}
               src={active.imageUrl}
               alt={section.sectionName}
-              className="absolute inset-0 h-full w-full object-contain object-center"
+              className="absolute inset-0 h-full w-full cursor-grab object-contain object-center active:cursor-grabbing"
               initial={{ opacity: 0, x: 24 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -24 }}
@@ -62,6 +68,14 @@ function SectionCarousel({
               loading="lazy"
               decoding="async"
               draggable={false}
+              drag={photos.length > 1 ? 'x' : false}
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.25}
+              dragMomentum={false}
+              onDragEnd={(_, info) => {
+                if (info.offset.x <= -SWIPE_THRESHOLD) goNext();
+                else if (info.offset.x >= SWIPE_THRESHOLD) goPrev();
+              }}
             />
           </AnimatePresence>
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/15" />
@@ -69,26 +83,6 @@ function SectionCarousel({
 
         {photos.length > 1 && (
           <>
-            <button
-              type="button"
-              aria-label="Previous photo"
-              onClick={() => setIndex(i => (i - 1 + photos.length) % photos.length)}
-              className="absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              aria-label="Next photo"
-              onClick={() => setIndex(i => (i + 1) % photos.length)}
-              className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </button>
             <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
               {photos.map((photo, i) => (
                 <button
@@ -105,6 +99,29 @@ function SectionCarousel({
           </>
         )}
       </div>
+
+      {photos.some(p => p.personName || p.personPosition) && (
+        <div className="mx-auto flex min-h-[2.75rem] max-w-[480px] items-start justify-center text-center">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={String(active.id)}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            >
+              {active.personName && (
+                <p className="font-serif text-base text-brand-dark lg:text-lg">{active.personName}</p>
+              )}
+              {active.personPosition && (
+                <p className="mt-0.5 text-[11px] uppercase tracking-widest text-brand-gray">
+                  {active.personPosition}
+                </p>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }
@@ -140,7 +157,7 @@ export default function CelebPhotosSection() {
   if (sections.length === 0) return null;
 
   return (
-    <section className="mt-10 border-t border-white/10 bg-brand-cream px-5 py-12 lg:mt-12 lg:px-10 lg:py-20 xl:px-16">
+    <section className="mt-10 bg-brand-cream px-5 py-12 lg:mt-12 lg:px-10 lg:py-20 xl:px-16">
       <div className="mx-auto max-w-6xl">
         <motion.div
           variants={fadeUp}

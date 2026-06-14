@@ -61,6 +61,15 @@ public class Product {
   @Column(name = "price_100_ml", precision = 12, scale = 2)
   private BigDecimal price100Ml;
 
+  @Column(name = "price_gel", precision = 12, scale = 2)
+  private BigDecimal priceGel;
+
+  @Column(name = "price_attar", precision = 12, scale = 2)
+  private BigDecimal priceAttar;
+
+  @Column(name = "price_car_perfume", precision = 12, scale = 2)
+  private BigDecimal priceCarPerfume;
+
   @Lob
   @Column(name = "notes_top", columnDefinition = "TEXT")
   private String notesTop;
@@ -76,6 +85,10 @@ public class Product {
   @Lob
   @Column(name = "more_information", columnDefinition = "TEXT")
   private String moreInformation;
+
+  @Lob
+  @Column(name = "how_to_apply", columnDefinition = "TEXT")
+  private String howToApply;
 
   @Lob
   @Column(name = "search_keywords", columnDefinition = "TEXT")

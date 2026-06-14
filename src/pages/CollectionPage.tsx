@@ -248,11 +248,11 @@ export default function CollectionPage() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96 }}
         transition={{ duration: 0.3, delay: i * 0.04 }}
-        className="overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[#141414]"
+        className="min-w-0"
       >
         <ProductCard
           product={p}
-          collectionLayout
+          showRating
           skipEntranceAnimation
           cardClassName="w-full"
           addToBag={{
@@ -404,7 +404,11 @@ export default function CollectionPage() {
                       <p className="mt-2 text-[12px] text-brand-gray max-w-2xl leading-relaxed">{section.description}</p>
                     )}
                   </div>
-                  <motion.div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-5" layout>
+                  <motion.div
+                    key={`${section.key}-${sort}`}
+                    className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-5"
+                    layout
+                  >
                     <AnimatePresence mode="popLayout">
                       {section.items.map((p, i) => renderProductCard(p, i))}
                     </AnimatePresence>
@@ -419,7 +423,11 @@ export default function CollectionPage() {
                   <div className="mb-6 border-b border-brand-beige pb-4">
                     <h2 className="font-serif text-2xl lg:text-3xl font-medium text-brand-dark">{section.title}</h2>
                   </div>
-                  <motion.div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-5" layout>
+                  <motion.div
+                    key={`${section.key}-${sort}-${page}`}
+                    className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-5"
+                    layout
+                  >
                     <AnimatePresence mode="popLayout">
                       {section.items
                         .filter(p => paginatedFlat.some(pp => pp.id === p.id))

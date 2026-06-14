@@ -54,20 +54,38 @@ public class CelebPhotoService {
   }
 
   @Transactional
-  public CelebPhotoResponse create(String sectionName, Integer sortOrder, MultipartFile image) {
+  public CelebPhotoResponse create(
+      String sectionName,
+      String personName,
+      String personPosition,
+      Integer sortOrder,
+      MultipartFile image) {
     String name = normalizeSectionName(sectionName);
     CelebPhoto row = new CelebPhoto();
     row.setSectionName(name);
+    row.setPersonName(trimToNull(personName));
+    row.setPersonPosition(trimToNull(personPosition));
     row.setSortOrder(sortOrder != null ? sortOrder : 0);
     applyImage(row, image);
     return toResponse(repository.save(row));
   }
 
   @Transactional
-  public CelebPhotoResponse updateMeta(Long id, String sectionName, Integer sortOrder) {
+  public CelebPhotoResponse updateMeta(
+      Long id,
+      String sectionName,
+      String personName,
+      String personPosition,
+      Integer sortOrder) {
     CelebPhoto row = load(id);
     if (sectionName != null && !sectionName.isBlank()) {
       row.setSectionName(normalizeSectionName(sectionName));
+    }
+    if (personName != null) {
+      row.setPersonName(trimToNull(personName));
+    }
+    if (personPosition != null) {
+      row.setPersonPosition(trimToNull(personPosition));
     }
     if (sortOrder != null) {
       row.setSortOrder(sortOrder);
@@ -118,18 +136,39 @@ public class CelebPhotoService {
     return raw.trim();
   }
 
+  private static String trimToNull(String raw) {
+    if (raw == null) {
+      return null;
+    }
+    String trimmed = raw.trim();
+    return trimmed.isEmpty() ? null : trimmed;
+  }
+
   private CelebPhotoResponse toResponse(CelebPhoto row) {
-    return toResponse(row.getId(), row.getSectionName(), row.getSortOrder());
+    return toResponse(
+        row.getId(),
+        row.getSectionName(),
+        row.getPersonName(),
+        row.getPersonPosition(),
+        row.getSortOrder());
   }
 
   private CelebPhotoResponse toResponse(CelebPhotoSummary row) {
-    return toResponse(row.getId(), row.getSectionName(), row.getSortOrder());
+    return toResponse(
+        row.getId(),
+        row.getSectionName(),
+        row.getPersonName(),
+        row.getPersonPosition(),
+        row.getSortOrder());
   }
 
-  private CelebPhotoResponse toResponse(Long id, String sectionName, Integer sortOrder) {
+  private CelebPhotoResponse toResponse(
+      Long id, String sectionName, String personName, String personPosition, Integer sortOrder) {
     return new CelebPhotoResponse(
         id,
         sectionName,
+        personName,
+        personPosition,
         sortOrder != null ? sortOrder : 0,
         "/api/public/celeb-photos/" + id + "/image");
   }

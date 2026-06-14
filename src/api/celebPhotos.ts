@@ -3,6 +3,8 @@ import { API_BASE_URL, authHeaders, fetchJson, formatHttpError } from './client'
 export interface CelebPhotoApi {
   id: number;
   sectionName: string;
+  personName: string | null;
+  personPosition: string | null;
   sortOrder: number;
   imageUrl: string;
 }
@@ -30,9 +32,13 @@ export async function adminCreateCelebPhoto(
   sectionName: string,
   sortOrder: number,
   image: File,
+  personName = '',
+  personPosition = '',
 ): Promise<CelebPhotoApi> {
   const form = new FormData();
   form.append('sectionName', sectionName.trim());
+  form.append('personName', personName.trim());
+  form.append('personPosition', personPosition.trim());
   form.append('sortOrder', String(sortOrder));
   form.append('image', image);
   const res = await fetch(`${API_BASE_URL}/api/admin/celeb-photos`, {
