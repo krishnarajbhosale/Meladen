@@ -153,7 +153,7 @@ export default function CustomerReviewsSection() {
   if (!loaded || reviews.length === 0) return null;
 
   return (
-    <section className="mt-10 bg-brand-cream px-5 py-12 lg:mt-12 lg:px-10 lg:py-20 xl:px-16">
+    <section className="mt-4 bg-brand-cream px-5 py-12 lg:mt-6 lg:px-10 lg:py-20 xl:px-16">
       <motion.div
         variants={fadeUp}
         initial="hidden"

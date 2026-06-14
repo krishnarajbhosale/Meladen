@@ -16,7 +16,7 @@ export default function HomeStatisticsSection() {
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: '-40px' }}
-      className="mt-10 bg-brand-beige/50 px-5 py-10 lg:mt-12 lg:px-10 lg:py-12 xl:px-16"
+      className="mt-4 bg-brand-beige/50 px-5 py-10 lg:mt-6 lg:px-10 lg:py-12 xl:px-16"
       aria-label="Customer statistics"
     >
       <div className="mx-auto max-w-6xl">

@@ -61,8 +61,8 @@ export default function HorizontalProductRail({
 
   const isDark = tone === 'dark';
   const sectionClass = isDark
-    ? 'relative mt-10 bg-brand-cream px-1 pb-10 pt-12 sm:px-3 lg:mt-12 lg:px-2 lg:pb-12 lg:pt-14 xl:px-4'
-    : 'relative mt-10 bg-brand-cream px-1 pb-10 pt-12 sm:px-3 lg:mt-12 lg:px-2 lg:pb-12 lg:pt-14 xl:px-4';
+    ? 'relative mt-4 bg-brand-cream px-1 pb-10 pt-12 sm:px-3 lg:mt-6 lg:px-2 lg:pb-12 lg:pt-14 xl:px-4'
+    : 'relative mt-4 bg-brand-cream px-1 pb-10 pt-12 sm:px-3 lg:mt-6 lg:px-2 lg:pb-12 lg:pt-14 xl:px-4';
   const headingClass = isDark
     ? 'font-serif text-[1.4rem] font-medium text-[#f5f0e8] lg:text-3xl'
     : 'font-serif text-[1.4rem] font-medium text-brand-dark lg:text-3xl';

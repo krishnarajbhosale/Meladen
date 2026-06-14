@@ -22,7 +22,7 @@ export default function OurStorySection() {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <section className="mt-10 bg-brand-cream px-5 py-12 lg:mt-12 lg:px-10 lg:py-20 xl:px-16">
+    <section className="mt-4 bg-brand-cream px-5 py-12 lg:mt-6 lg:px-10 lg:py-20 xl:px-16">
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-14 xl:gap-16">
         <motion.div
           variants={slideFromLeft}

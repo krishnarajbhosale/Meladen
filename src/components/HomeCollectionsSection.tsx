@@ -30,7 +30,7 @@ export default function HomeCollectionsSection() {
   }, []);
 
   return (
-    <section className="mt-10 px-3 lg:mt-14 lg:px-4">
+    <section className="mt-4 px-3 lg:mt-6 lg:px-4">
       <motion.div
         variants={fadeUp}
         custom={0}

@@ -13,6 +13,13 @@ const SLIDE_MS = 4500;
 /** Min horizontal drag distance (px) to count as a swipe. */
 const SWIPE_THRESHOLD = 60;
 
+/** Direction-aware slide: next (dir 1) enters from the right, prev (dir -1) from the left. */
+const slideVariants = {
+  enter: (dir: number) => ({ x: dir >= 0 ? '100%' : '-100%' }),
+  center: { x: 0 },
+  exit: (dir: number) => ({ x: dir >= 0 ? '-100%' : '100%' }),
+};
+
 function toDisplay(row: CelebPhotoApi): CelebPhotoDisplay {
   return {
     id: row.id,
@@ -33,10 +40,12 @@ function SectionCarousel({
 }) {
   const photos = section.photos;
   const [index, setIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
 
   useEffect(() => {
     if (photos.length <= 1) return;
     const timer = window.setInterval(() => {
+      setDirection(1);
       setIndex(current => (current + 1) % photos.length);
     }, SLIDE_MS);
     return () => window.clearInterval(timer);
@@ -45,8 +54,18 @@ function SectionCarousel({
   if (photos.length === 0) return null;
 
   const active = photos[index] ?? photos[0];
-  const goNext = () => setIndex(i => (i + 1) % photos.length);
-  const goPrev = () => setIndex(i => (i - 1 + photos.length) % photos.length);
+  const goNext = () => {
+    setDirection(1);
+    setIndex(i => (i + 1) % photos.length);
+  };
+  const goPrev = () => {
+    setDirection(-1);
+    setIndex(i => (i - 1 + photos.length) % photos.length);
+  };
+  const goTo = (i: number) => {
+    setDirection(i >= index ? 1 : -1);
+    setIndex(i);
+  };
 
   return (
     <div className="space-y-4">
@@ -55,15 +74,17 @@ function SectionCarousel({
       )}
       <div className="relative mx-auto w-full max-w-[min(100%,420px)] overflow-hidden rounded-2xl border border-white/10 bg-brand-beige/40 lg:max-w-[480px]">
         <div className="relative aspect-[4/5] w-full touch-pan-y bg-[#111111]">
-          <AnimatePresence initial={false}>
+          <AnimatePresence initial={false} custom={direction}>
             <motion.img
               key={String(active.id)}
               src={active.imageUrl}
               alt={section.sectionName}
               className="absolute inset-0 h-full w-full cursor-grab object-contain object-center active:cursor-grabbing"
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
               transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
               loading="lazy"
               decoding="async"
@@ -89,7 +110,7 @@ function SectionCarousel({
                   key={String(photo.id)}
                   type="button"
                   aria-label={`Show photo ${i + 1}`}
-                  onClick={() => setIndex(i)}
+                  onClick={() => goTo(i)}
                   className={`h-1.5 rounded-full transition-all duration-300 ${
                     i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/40'
                   }`}
@@ -157,7 +178,7 @@ export default function CelebPhotosSection() {
   if (sections.length === 0) return null;
 
   return (
-    <section className="mt-10 bg-brand-cream px-5 py-12 lg:mt-12 lg:px-10 lg:py-20 xl:px-16">
+    <section className="mt-4 bg-brand-cream px-5 py-12 lg:mt-6 lg:px-10 lg:py-20 xl:px-16">
       <div className="mx-auto max-w-6xl">
         <motion.div
           variants={fadeUp}
