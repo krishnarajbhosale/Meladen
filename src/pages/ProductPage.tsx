@@ -382,12 +382,19 @@ export default function ProductPage() {
             custom={3.5}
             initial="hidden"
             animate="visible"
-            className="mb-5 flex items-center gap-2"
+            className="mb-5"
           >
-            <StarRating score={rating.score} className="text-sm" emptyClass="text-[#444]" />
-            <span className="text-xs text-brand-gray">
-              {rating.reviewCount} review{rating.reviewCount === 1 ? '' : 's'}
-            </span>
+            <div className="flex items-center gap-2">
+              <StarRating score={rating.score} className="text-sm" emptyClass="text-[#444]" />
+              <span className="text-xs text-brand-gray">
+                {rating.reviewCount} review{rating.reviewCount === 1 ? '' : 's'}
+              </span>
+            </div>
+            {(product.category ?? '').toLowerCase().includes('perfume') && (
+              <p className="mt-1.5 text-xs uppercase tracking-[0.12em] text-brand-sage">
+                Extrait de Parfum (30% oil)
+              </p>
+            )}
           </motion.div>
           <motion.p
             variants={fadeUp}
