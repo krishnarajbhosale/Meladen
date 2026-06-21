@@ -353,20 +353,20 @@ export default function ProductPage() {
           >
             {getProductDisplayCategory(product)}
           </motion.p>
-          {product.inspiredBy?.trim() ? (
-            <motion.div variants={fadeUp} custom={1} initial="hidden" animate="visible" className="mb-2">
-              <InspiredByBadge inspiredBy={product.inspiredBy} variant="meta" />
-            </motion.div>
-          ) : null}
           <motion.h1
             variants={fadeUp}
-            custom={2}
+            custom={1}
             initial="hidden"
             animate="visible"
             className="mb-2 font-serif text-3xl font-medium text-brand-dark lg:text-5xl"
           >
             {product.name}
           </motion.h1>
+          {product.inspiredBy?.trim() ? (
+            <motion.div variants={fadeUp} custom={2} initial="hidden" animate="visible" className="mb-3">
+              <InspiredByBadge inspiredBy={product.inspiredBy} variant="meta" />
+            </motion.div>
+          ) : null}
           <motion.p
             variants={fadeUp}
             custom={3}
