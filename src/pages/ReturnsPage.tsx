@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { fetchMyOrders } from '../api/catalog';
 import type { OrderApi } from '../api/types';
@@ -37,6 +37,7 @@ export default function ReturnsPage() {
     issueText: '',
   });
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [policyAccepted, setPolicyAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [doneMessage, setDoneMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -142,6 +143,11 @@ export default function ReturnsPage() {
       setSubmitting(false);
       return;
     }
+    if (!policyAccepted) {
+      setError('Please confirm that you have read and accepted the Return & Refund Policy.');
+      setSubmitting(false);
+      return;
+    }
     const selectedOrder = orders.find(o => o.id === form.orderId.trim());
     if (selectedOrder && !canReturnOrExchangeOrder(selectedOrder)) {
       setError('Returns are not available until payment is complete for this order.');
@@ -159,6 +165,7 @@ export default function ReturnsPage() {
       });
       setDoneMessage('Your return request was submitted. We will follow up by email.');
       setVideoFile(null);
+      setPolicyAccepted(false);
       setForm(p => ({ ...p, issueText: '' }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Submit failed');
@@ -284,9 +291,31 @@ export default function ReturnsPage() {
               <p className="mt-1 text-[11px] text-[#8a8580]">Upload a short clip of the product or packaging issue.</p>
             )}
           </div>
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#333] bg-[#141414] px-3 py-3">
+            <input
+              type="checkbox"
+              checked={policyAccepted}
+              onChange={e => setPolicyAccepted(e.target.checked)}
+              required
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#c9a84c]"
+            />
+            <span className="text-xs leading-relaxed text-[#d4cfc6]">
+              I have read, understood, and accepted the{' '}
+              <Link
+                to="/policies/returns"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-[#c9a84c] underline underline-offset-2 hover:text-[#dfc06a]"
+                onClick={e => e.stopPropagation()}
+              >
+                Return &amp; Refund Policy
+              </Link>{' '}
+              and its terms and conditions.
+            </span>
+          </label>
           {error && <p className="text-sm text-red-400">{error}</p>}
           {doneMessage && <p className="text-sm text-emerald-300/90">{doneMessage}</p>}
-          <Button type="submit" fullWidth disabled={submitting || !videoFile}>
+          <Button type="submit" fullWidth disabled={submitting || !videoFile || !policyAccepted}>
             {submitting ? 'Submitting…' : 'Submit request'}
           </Button>
         </form>

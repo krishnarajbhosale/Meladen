@@ -97,8 +97,6 @@ export default function ProductCard({
           />
         )}
 
-        <InspiredByBadge inspiredBy={product.inspiredBy} className="z-20" />
-
         <button
           type="button"
           disabled={addToBag?.disabled}
@@ -133,6 +131,11 @@ export default function ProductCard({
         >
           {getProductDisplayCategory(product)}
         </p>
+        {product.inspiredBy?.trim() ? (
+          <div className={`mb-1 ${collectionLayout ? 'flex justify-center' : ''}`}>
+            <InspiredByBadge inspiredBy={product.inspiredBy} variant="meta" />
+          </div>
+        ) : null}
         <p
           className={`mb-1 line-clamp-2 font-serif font-medium leading-tight ${titleClass} ${
             collectionLayout ? 'text-sm lg:text-base' : 'text-sm'

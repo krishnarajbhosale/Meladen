@@ -278,8 +278,6 @@ export default function ProductPage() {
               />
             </AnimatePresence>
 
-            <InspiredByBadge inspiredBy={product.inspiredBy} className="z-20" />
-
             {imageCount > 1 && (
               <>
                 <button
