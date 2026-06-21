@@ -21,6 +21,7 @@ import {
   adminUpdateCategory,
   adminUpdateProduct,
   adminReplaceProductGalleryImage,
+  adminDeleteProductGalleryImage,
   fetchAdminReturnVideoBlobUrl,
   loginAdmin,
 } from '../api/catalog';
@@ -277,6 +278,9 @@ export default function AdminPage() {
   });
   const [selectedImageName, setSelectedImageName] = useState('');
   const [galleryUploadField, setGalleryUploadField] = useState<
+    'galleryImage1' | 'galleryImage2' | 'galleryImage3' | null
+  >(null);
+  const [galleryDeleteField, setGalleryDeleteField] = useState<
     'galleryImage1' | 'galleryImage2' | 'galleryImage3' | null
   >(null);
   const [celebReplaceId, setCelebReplaceId] = useState<number | null>(null);
@@ -1118,6 +1122,27 @@ export default function AdminPage() {
     }
   };
 
+  const onGalleryDelete = async (field: 'galleryImage1' | 'galleryImage2' | 'galleryImage3') => {
+    const imageNumber = gallerySlotForField(field) + 1;
+    if (!confirm(`Remove gallery image ${imageNumber}?`)) return;
+
+    if (editingProductId && token) {
+      const slot = gallerySlotForField(field);
+      try {
+        setGalleryDeleteField(field);
+        await adminDeleteProductGalleryImage(token, editingProductId, slot);
+        setProductField(field, '');
+      } catch (e) {
+        alert(e instanceof Error ? e.message : 'Could not remove gallery image');
+      } finally {
+        setGalleryDeleteField(null);
+      }
+      return;
+    }
+
+    setProductField(field, '');
+  };
+
   const replaceCelebPhoto = async (id: number, file: File | null) => {
     if (!file || !token) return;
     try {
@@ -1588,12 +1613,7 @@ export default function AdminPage() {
                       <p className="mb-2 text-[11px] text-[#8a7a66]">Max file size: {MAX_IMAGE_UPLOAD_LABEL}</p>
                       {editingProductId && (
                         <p className="mb-2 text-[11px] text-[#8a7a66]">
-                          Replace uploads immediately — no need to save the whole product again.
-                        </p>
-                      )}
-                      {editingProductId && (
-                        <p className="mb-2 text-[11px] text-[#8a7a66]">
-                          Replace uploads immediately — no need to save the whole product again.
+                          Replace or delete uploads immediately — no need to save the whole product again.
                         </p>
                       )}
                       {productForm[field] ? (
@@ -1622,11 +1642,23 @@ export default function AdminPage() {
                         />
                         <button
                           type="button"
-                          disabled={galleryUploadField === field}
+                          disabled={galleryUploadField === field || galleryDeleteField === field}
                           onClick={() => document.getElementById(`gallery-file-${field}`)?.click()}
                           className="rounded-lg border border-[#ccbca7] bg-white px-3 py-2 text-xs font-medium text-[#4e4134] disabled:opacity-50"
                         >
                           {galleryUploadField === field ? 'Uploading…' : 'Replace'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={
+                            !productForm[field] ||
+                            galleryUploadField === field ||
+                            galleryDeleteField === field
+                          }
+                          onClick={() => void onGalleryDelete(field)}
+                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-800 disabled:opacity-50"
+                        >
+                          {galleryDeleteField === field ? 'Removing…' : 'Delete'}
                         </button>
                         <input
                           placeholder={

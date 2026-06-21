@@ -97,7 +97,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
     const label = product.name.length > 36 ? `${product.name.slice(0, 33)}…` : product.name;
     showToast(
-      qty > 1 ? `Added ${qty} × ${label} to bag` : `Added ${label} to bag`,
+      qty > 1 ? `Added ${qty} × ${label} to cart` : `Added ${label} to cart`,
     );
   };
 

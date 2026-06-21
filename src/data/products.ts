@@ -75,6 +75,11 @@ export const SIZE_PERFUME_GEL = 'Perfume Gel';
 export const SIZE_ATTAR = 'Attar';
 export const SIZE_CAR_PERFUME = 'Car Perfume';
 
+/** Sub-category label above the product name (e.g. Adventure). Falls back to main category. */
+export function getProductDisplayCategory(product: Pick<Product, 'category2' | 'category'>): string {
+  return product.category2?.trim() || product.category;
+}
+
 export function normalizeProductSizeKey(size: string): string {
   const normalized = size.trim().toLowerCase().replace(/\s+/g, '');
   if (normalized === '30ml' || normalized === '30') return '30ml';

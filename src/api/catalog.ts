@@ -217,6 +217,22 @@ export async function adminReplaceProductGalleryImage(
   return res.json() as Promise<ProductAdminApi>;
 }
 
+export async function adminDeleteProductGalleryImage(
+  token: string,
+  productId: string,
+  slot: 1 | 2 | 3,
+): Promise<ProductAdminApi> {
+  const res = await fetch(`${API_BASE_URL}/api/admin/products/${encodeURIComponent(productId)}/gallery/${slot}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(formatHttpError(res.status, text, 'Gallery delete failed'));
+  }
+  return res.json() as Promise<ProductAdminApi>;
+}
+
 export async function adminDeleteProduct(token: string, id: string) {
   return fetchJson(`/api/admin/products/${encodeURIComponent(id)}`, {
     method: 'DELETE',

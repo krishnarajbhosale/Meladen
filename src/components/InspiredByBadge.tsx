@@ -8,8 +8,8 @@ export function inspiredByBadgeLabel(inspiredBy: string): string {
 type Props = {
   inspiredBy?: string | null;
   className?: string;
-  /** overlay = on product image; inline = in product detail text column */
-  variant?: 'overlay' | 'inline';
+  /** overlay = on product image; meta = under category on cards/detail; inline = compact detail */
+  variant?: 'overlay' | 'meta' | 'inline';
 };
 
 /** Gold pill for inspired-by label on cards and product page. */
@@ -25,9 +25,11 @@ export default function InspiredByBadge({
     'block max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-full bg-[#c9a84c] font-semibold uppercase leading-none tracking-[0.08em] text-black shadow-sm';
 
   const variantClass =
-    variant === 'inline'
-      ? 'inline-block px-2 py-0.5 text-[7px] tracking-[0.08em] lg:text-[8px]'
-      : 'pointer-events-none absolute left-2 top-2 z-10 px-1.5 py-0.5 text-[6px] tracking-[0.06em] lg:left-2 lg:top-2 lg:px-2 lg:text-[7px]';
+    variant === 'meta'
+      ? 'inline-block max-w-full px-2 py-0.5 text-[8px] tracking-[0.1em] lg:text-[9px]'
+      : variant === 'inline'
+        ? 'inline-block px-2 py-0.5 text-[7px] tracking-[0.08em] lg:text-[8px]'
+        : 'pointer-events-none absolute left-2 top-2 z-10 px-1.5 py-0.5 text-[6px] tracking-[0.06em] lg:left-2 lg:top-2 lg:px-2 lg:text-[7px]';
 
   return (
     <span className={`${base} ${variantClass} ${className}`} title={label}>

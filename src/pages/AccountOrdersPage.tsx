@@ -213,21 +213,19 @@ export default function AccountOrdersPage() {
                 ))}
               </ul>
               <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-[#2a2a2a] pt-5">
-                <Link
-                  to={order.trackingUrl ? `/track/${encodeURIComponent(order.id)}` : '#'}
-                  onClick={e => {
-                    if (!order.trackingUrl) e.preventDefault();
-                  }}
-                  aria-disabled={!order.trackingUrl}
-                  className={`inline-flex min-h-[44px] items-center justify-center rounded-full border-2 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
-                    order.trackingUrl
-                      ? 'border-emerald-500/55 text-emerald-200 hover:border-emerald-300 hover:text-emerald-100'
-                      : 'border-[#2a2a2a] text-brand-gray opacity-60'
-                  }`}
-                  title={order.trackingUrl ? 'Track on Shiprocket' : 'Tracking not available yet'}
-                >
-                  Track order
-                </Link>
+                {(order.status === 'PAID' || order.status === 'COD') && (
+                  <Link
+                    to={`/track/${encodeURIComponent(order.id)}`}
+                    className={`inline-flex min-h-[44px] items-center justify-center rounded-full border-2 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+                      order.trackingUrl
+                        ? 'border-emerald-500/55 text-emerald-200 hover:border-emerald-300 hover:text-emerald-100'
+                        : 'border-[#b8b3ac]/50 text-[#e8e4dc] hover:border-gold hover:text-gold'
+                    }`}
+                    title={order.trackingUrl ? 'Track on Shiprocket' : 'Check tracking status'}
+                  >
+                    Track order
+                  </Link>
+                )}
                 <Link
                   to="/collection"
                   className="inline-flex min-h-[44px] items-center justify-center rounded-full border-2 border-[#b8b3ac]/50 bg-transparent px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e8e4dc] transition-colors hover:border-gold hover:text-gold"

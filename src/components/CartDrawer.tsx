@@ -45,7 +45,7 @@ export default function CartDrawer({ open, onClose }: Props) {
             <div className="px-6 py-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[9px] uppercase tracking-[0.2em] text-brand-gray">Shopping Bag</p>
+                  <p className="text-[9px] uppercase tracking-[0.2em] text-brand-gray">Shopping Cart</p>
                   <div className="mt-2 flex items-center gap-3">
                     <h2 className="font-serif text-xl text-brand-dark">Your Cart</h2>
                     <span className="text-[9px] uppercase tracking-[0.14em] text-brand-gray">

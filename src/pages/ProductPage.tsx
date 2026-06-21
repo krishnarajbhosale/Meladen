@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { products, getProductSizeAvailability, formatProductSizeDisplay, type Product } from '../data/products';
+import {
+  products,
+  getProductDisplayCategory,
+  getProductSizeAvailability,
+  formatProductSizeDisplay,
+  type Product,
+} from '../data/products';
 import { useCart } from '../context/CartContext';
 import Accordion from '../components/Accordion';
 import FragranceNotesSection from '../components/FragranceNotesSection';
@@ -347,11 +353,11 @@ export default function ProductPage() {
             animate="visible"
             className="mb-1 text-[10px] uppercase tracking-[0.2em] text-brand-gray"
           >
-            {product.category}
+            {getProductDisplayCategory(product)}
           </motion.p>
           {product.inspiredBy?.trim() ? (
             <motion.div variants={fadeUp} custom={1} initial="hidden" animate="visible" className="mb-2">
-              <InspiredByBadge inspiredBy={product.inspiredBy} variant="inline" />
+              <InspiredByBadge inspiredBy={product.inspiredBy} variant="meta" />
             </motion.div>
           ) : null}
           <motion.h1
@@ -461,7 +467,7 @@ export default function ProductPage() {
           >
             <QuantityStepper value={qty} onChange={setQty} />
             <Button onClick={handleAdd} variant="gold" fullWidth className="flex-1" disabled={selectedUnavailable}>
-              {selectedUnavailable ? 'Out of Stock' : added ? 'Added to Bag' : 'Add to Bag'}
+              {selectedUnavailable ? 'Out of Stock' : added ? 'Added to Cart' : 'Add to Cart'}
             </Button>
           </motion.div>
 

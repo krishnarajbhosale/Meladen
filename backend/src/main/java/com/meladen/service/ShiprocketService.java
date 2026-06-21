@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -132,6 +133,19 @@ public class ShiprocketService {
       BigDecimal declaredValue,
       boolean cod)
       throws Exception {
+    return selectCheapestCourier(token, pickupPostcode, deliveryPostcode, weightKg, declaredValue, cod)
+        .map(CourierSelection::totalRate)
+        .orElse(null);
+  }
+
+  private Optional<CourierSelection> selectCheapestCourier(
+      String token,
+      String pickupPostcode,
+      String deliveryPostcode,
+      BigDecimal weightKg,
+      BigDecimal declaredValue,
+      boolean cod)
+      throws Exception {
     URI uri =
         UriComponentsBuilder.fromHttpUrl(BASE + "/courier/serviceability/")
             .queryParam("pickup_postcode", pickupPostcode)
@@ -150,21 +164,34 @@ public class ShiprocketService {
     JsonNode root = objectMapper.readTree(res.getBody());
     JsonNode couriers = root.path("data").path("available_courier_companies");
     if (!couriers.isArray() || couriers.isEmpty()) {
-      return null;
+      return Optional.empty();
     }
 
-    BigDecimal min = null;
+    CourierSelection best = null;
     for (JsonNode courier : couriers) {
       BigDecimal candidate = courierRate(courier);
       if (candidate == null) {
         continue;
       }
-      if (min == null || candidate.compareTo(min) < 0) {
-        min = candidate;
+      int courierCompanyId = courierCompanyId(courier);
+      if (best == null || candidate.compareTo(best.totalRate()) < 0) {
+        best = new CourierSelection(courierCompanyId, candidate);
       }
     }
-    return min;
+    return Optional.ofNullable(best);
   }
+
+  private static int courierCompanyId(JsonNode courier) {
+    if (courier.hasNonNull("courier_company_id")) {
+      return courier.get("courier_company_id").asInt();
+    }
+    if (courier.hasNonNull("courier_id")) {
+      return courier.get("courier_id").asInt();
+    }
+    return courier.path("id").asInt(0);
+  }
+
+  private record CourierSelection(int courierCompanyId, BigDecimal totalRate) {}
 
   private BigDecimal courierRate(JsonNode courier) {
     if (courier.hasNonNull("rate")) {
@@ -215,20 +242,41 @@ public class ShiprocketService {
       }
 
       order.setShiprocketOrderId(orderIdNode.asText());
-      JsonNode shipments = created.get("shipments");
-      if (shipments != null && shipments.isArray() && !shipments.isEmpty()) {
-        JsonNode first = shipments.get(0);
-        if (first.hasNonNull("awb")) {
-          order.setTrackingAwb(first.get("awb").asText());
-        }
+
+      Long shipmentId = parseShipmentId(created);
+      String awb = parseAwbFromCreateResponse(created);
+      Integer courierId = null;
+
+      String pickup = normalizePostcode(properties.getShiprocket().getPickupPostcode());
+      String delivery = normalizePostcode(order.getPostcode());
+      if (pickup != null && delivery != null) {
+        int itemUnits =
+            order.getItems().stream().mapToInt(i -> i.getQuantity() == null ? 0 : i.getQuantity()).sum();
+        BigDecimal weight = shipmentWeightKg(itemUnits);
+        BigDecimal declared =
+            order.getSubtotal() != null ? order.getSubtotal().max(BigDecimal.ZERO) : BigDecimal.ZERO;
+        boolean cod =
+            order.getPaymentMethod() != null && "COD".equalsIgnoreCase(order.getPaymentMethod());
+        Optional<CourierSelection> courier =
+            selectCheapestCourier(token, pickup, delivery, weight, declared, cod);
+        courierId = courier.map(CourierSelection::courierCompanyId).filter(id -> id > 0).orElse(null);
       }
-      if (order.getTrackingAwb() != null) {
-        order.setTrackingUrl("https://shiprocket.co/tracking/" + order.getTrackingAwb());
+
+      if (shipmentId != null && (awb == null || awb.isBlank())) {
+        awb = assignAwb(token, shipmentId, courierId);
       }
+
+      if (awb != null && !awb.isBlank()) {
+        order.setTrackingAwb(awb.trim());
+        String trackUrl = fetchTrackingUrl(token, shipmentId, awb.trim());
+        order.setTrackingUrl(trackUrl);
+      }
+
       log.info(
-          "Shiprocket order created for {} — shiprocketOrderId={}",
+          "Shiprocket order created for {} — shiprocketOrderId={}, awb={}",
           order.getOrderNumber(),
-          order.getShiprocketOrderId());
+          order.getShiprocketOrderId(),
+          order.getTrackingAwb());
     } catch (HttpStatusCodeException e) {
       log.warn(
           "Shiprocket HTTP error for {} ({}): {}",
@@ -365,6 +413,104 @@ public class ShiprocketService {
         throw new IllegalStateException("Shiprocket API error " + code + ": " + message);
       }
     }
+  }
+
+  private static Long parseShipmentId(JsonNode created) {
+    if (created.hasNonNull("shipment_id")) {
+      return created.get("shipment_id").asLong();
+    }
+    JsonNode shipments = created.get("shipments");
+    if (shipments != null && shipments.isArray() && !shipments.isEmpty()) {
+      JsonNode first = shipments.get(0);
+      if (first.hasNonNull("id")) {
+        return first.get("id").asLong();
+      }
+      if (first.hasNonNull("shipment_id")) {
+        return first.get("shipment_id").asLong();
+      }
+    }
+    return null;
+  }
+
+  private static String parseAwbFromCreateResponse(JsonNode created) {
+    if (created.hasNonNull("awb_code")) {
+      return created.get("awb_code").asText();
+    }
+    JsonNode shipments = created.get("shipments");
+    if (shipments != null && shipments.isArray() && !shipments.isEmpty()) {
+      JsonNode first = shipments.get(0);
+      if (first.hasNonNull("awb")) {
+        return first.get("awb").asText();
+      }
+      if (first.hasNonNull("awb_code")) {
+        return first.get("awb_code").asText();
+      }
+    }
+    return null;
+  }
+
+  private String assignAwb(String token, long shipmentId, Integer courierId) throws Exception {
+    Map<String, Object> body = new HashMap<>();
+    body.put("shipment_id", shipmentId);
+    if (courierId != null && courierId > 0) {
+      body.put("courier_id", courierId);
+    }
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.setBearerAuth(token);
+    ResponseEntity<String> res =
+        restTemplate.postForEntity(
+            BASE + "/courier/assign/awb", new HttpEntity<>(body, headers), String.class);
+    JsonNode root = objectMapper.readTree(res.getBody());
+    if (root.path("awb_assign_status").asInt(0) != 1) {
+      log.warn("Shiprocket AWB assign failed for shipment {}: {}", shipmentId, root);
+      return null;
+    }
+
+    String awb = root.path("response").path("data").path("awb_code").asText(null);
+    if (awb == null || awb.isBlank()) {
+      awb = root.path("awb_code").asText(null);
+    }
+    if (awb == null || awb.isBlank()) {
+      awb = root.path("response").path("awb_code").asText(null);
+    }
+    if (awb == null || awb.isBlank()) {
+      log.warn("Shiprocket AWB assign returned no awb_code for shipment {}: {}", shipmentId, root);
+      return null;
+    }
+    return awb.trim();
+  }
+
+  private String fetchTrackingUrl(String token, Long shipmentId, String awb) {
+    if (shipmentId != null) {
+      try {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        ResponseEntity<String> res =
+            restTemplate.exchange(
+                BASE + "/courier/track/shipment/" + shipmentId,
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class);
+        JsonNode root = objectMapper.readTree(res.getBody());
+        String trackUrl = root.path("tracking_data").path("track_url").asText(null);
+        if (trackUrl != null && !trackUrl.isBlank()) {
+          return normalizeTrackingUrl(trackUrl);
+        }
+      } catch (Exception e) {
+        log.debug("Shiprocket track/shipment lookup failed for {}: {}", shipmentId, e.getMessage());
+      }
+    }
+    return buildTrackingUrl(awb);
+  }
+
+  private static String buildTrackingUrl(String awb) {
+    return "https://shiprocket.co/tracking/" + awb.trim();
+  }
+
+  private static String normalizeTrackingUrl(String raw) {
+    return raw.replace("shiprocket.co//tracking/", "shiprocket.co/tracking/").trim();
   }
 
   private static String[] splitName(String full) {

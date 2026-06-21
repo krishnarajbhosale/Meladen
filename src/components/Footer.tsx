@@ -19,11 +19,11 @@ const footerColumns = [
   {
     label: 'Support',
     links: [
-      { label: 'Terms & Conditions', href: '/policies#terms', internal: true as const },
-      { label: 'Privacy Policy', href: '/policies#privacy', internal: true as const },
-      { label: 'Shipping Policy', href: '/policies#shipping', internal: true as const },
-      { label: 'Returns & Refund Policy', href: '/policies#returns', internal: true as const },
-      { label: 'Law of Jurisdiction', href: '/policies#jurisdiction', internal: true as const },
+      { label: 'Terms & Conditions', href: '/policies/terms', internal: true as const },
+      { label: 'Privacy Policy', href: '/policies/privacy', internal: true as const },
+      { label: 'Shipping Policy', href: '/policies/shipping', internal: true as const },
+      { label: 'Returns & Refund Policy', href: '/policies/returns', internal: true as const },
+      { label: 'Law of Jurisdiction', href: '/policies/jurisdiction', internal: true as const },
       { label: 'Return Request', href: '/returns', internal: true as const },
       { label: 'Contact Support', href: 'mailto:support.meladen@gmail.com', internal: false as const },
     ],

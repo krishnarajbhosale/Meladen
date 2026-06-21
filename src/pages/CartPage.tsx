@@ -67,7 +67,7 @@ export default function CartPage() {
                 />
               </svg>
             </div>
-            <p className="mb-2 font-serif text-3xl text-brand-dark">Your bag is empty</p>
+            <p className="mb-2 font-serif text-3xl text-brand-dark">Your cart is empty</p>
             <p className="mb-6 max-w-sm text-sm leading-relaxed text-brand-gray">
               Discover our curated collection of fine fragrances.
             </p>
@@ -79,7 +79,7 @@ export default function CartPage() {
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-10">
             <section className="space-y-0 divide-y divide-[#1f1f1f]/90">
               <div className="pb-8">
-                <p className="text-[9px] uppercase tracking-[0.2em] text-brand-gray">Shopping Bag</p>
+                <p className="text-[9px] uppercase tracking-[0.2em] text-brand-gray">Shopping Cart</p>
                 <div className="mt-3 flex items-start justify-between gap-4">
                   <h1 className="font-serif text-2xl text-brand-dark lg:text-3xl">Review Your Selection</h1>
                   <button

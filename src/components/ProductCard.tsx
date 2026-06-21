@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Product, getProductCardListPrice, formatProductSizeDisplay } from '../data/products';
+import {
+  Product,
+  getProductCardListPrice,
+  getProductDisplayCategory,
+  formatProductSizeDisplay,
+} from '../data/products';
 import { useCart } from '../context/CartContext';
 import { fadeUp } from '../animations/variants';
 import { formatInr } from '../utils/currency';
@@ -113,7 +118,7 @@ export default function ProductCard({
             addToCart(product, listPrice.sizeLabel, listPrice.price);
           }}
         >
-          {addToBag?.label ?? 'Add to Bag'}
+          {addToBag?.label ?? 'Add to Cart'}
         </button>
       </div>
 
@@ -126,7 +131,7 @@ export default function ProductCard({
             collectionLayout ? 'text-[9px] tracking-[0.2em]' : 'text-[10px]'
           }`}
         >
-          {product.category}
+          {getProductDisplayCategory(product)}
         </p>
         <p
           className={`mb-1 line-clamp-2 font-serif font-medium leading-tight ${titleClass} ${

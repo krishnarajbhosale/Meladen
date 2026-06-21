@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { API_BASE_URL } from '../api/client';
 import Button from '../components/Button';
@@ -113,11 +113,32 @@ export default function OrderConfirmationPage() {
           {(order.trackingUrl || order.trackingAwb) && (
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-200">
               {order.trackingAwb && <p className="font-medium">AWB: {order.trackingAwb}</p>}
-              {order.trackingUrl && (
-                <a href={order.trackingUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block underline">
+              {order.trackingUrl ? (
+                <a
+                  href={order.trackingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-block underline"
+                >
                   Track on Shiprocket
                 </a>
+              ) : (
+                <Link to={`/track/${encodeURIComponent(order.id)}`} className="mt-1 inline-block underline">
+                  Track order
+                </Link>
               )}
+            </div>
+          )}
+
+          {!order.trackingUrl && (order.status === 'PAID' || order.status === 'COD') && (
+            <div className="rounded-xl border border-[#252525] bg-[#141414] px-4 py-3 text-sm text-brand-gray">
+              <p>Tracking will appear in My Orders once your shipment is booked.</p>
+              <Link
+                to={`/track/${encodeURIComponent(order.id)}`}
+                className="mt-2 inline-block text-gold underline underline-offset-2"
+              >
+                Check tracking status
+              </Link>
             </div>
           )}
         </motion.div>

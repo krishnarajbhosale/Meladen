@@ -51,6 +51,11 @@ public class AdminProductController {
     return productService.replaceGalleryImage(id, slot, image);
   }
 
+  @DeleteMapping("/{id}/gallery/{slot}")
+  public ProductAdminResponse deleteGalleryImage(@PathVariable String id, @PathVariable int slot) {
+    return productService.deleteGalleryImage(id, slot);
+  }
+
   @DeleteMapping("/{id}")
   public void delete(@PathVariable String id) {
     productService.delete(id);

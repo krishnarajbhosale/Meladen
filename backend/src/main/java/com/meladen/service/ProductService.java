@@ -162,6 +162,19 @@ public class ProductService {
   }
 
   @Transactional
+  public ProductAdminResponse deleteGalleryImage(String id, int slot) {
+    if (slot < 1 || slot > 3) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid gallery slot");
+    }
+    Product p =
+        productRepository
+            .findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    clearGallerySlot(p, slot);
+    return toAdmin(productRepository.save(p));
+  }
+
+  @Transactional
   public void delete(String id) {
     Product p =
         productRepository

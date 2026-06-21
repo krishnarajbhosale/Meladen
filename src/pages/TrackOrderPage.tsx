@@ -75,9 +75,17 @@ export default function TrackOrderPage() {
         {status === 'loading' && <p className="text-sm text-brand-gray">Loading tracking…</p>}
         {status === 'missing' && <p className="text-sm text-brand-gray">Order id missing.</p>}
         {status === 'ready' && (
-          <p className="text-sm text-brand-gray">
-            Redirecting you to Shiprocket tracking…
-          </p>
+          <>
+            <p className="text-sm text-brand-gray">Redirecting you to Shiprocket tracking…</p>
+            <a
+              href={trackingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-block text-sm text-gold underline underline-offset-2"
+            >
+              Open tracking link
+            </a>
+          </>
         )}
         {status === 'notReady' && <p className="text-sm text-brand-gray">{message}</p>}
         {status === 'error' && <p className="text-sm text-amber-400/90">{message}</p>}

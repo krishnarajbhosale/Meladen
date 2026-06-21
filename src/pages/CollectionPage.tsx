@@ -257,7 +257,7 @@ export default function CollectionPage() {
           cardClassName="w-full"
           addToBag={{
             disabled: isOutOfStock,
-            label: isOutOfStock ? 'Out of Stock' : 'Add to Bag',
+            label: isOutOfStock ? 'Out of Stock' : 'Add to Cart',
             onClick: e => {
               if (!firstAvailable) return;
               addToCart(p, firstAvailable.label, firstAvailable.price);

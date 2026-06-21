@@ -28,6 +28,10 @@ public class OrderPostConfirmService {
     try {
       shiprocketService.createShipmentForOrder(order);
       orderRepository.save(order);
+      order =
+          orderRepository
+              .findByIdWithItems(orderId)
+              .orElse(order);
     } catch (Exception e) {
       log.warn("Shiprocket dispatch failed for {}: {}", order.getOrderNumber(), e.getMessage());
     }

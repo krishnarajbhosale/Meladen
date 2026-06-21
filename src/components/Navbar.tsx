@@ -524,7 +524,7 @@ export default function Navbar() {
                     setCartOpen(true);
                   }}
                 >
-                  Bag {count > 0 && `(${count})`}
+                  Cart {count > 0 && `(${count})`}
                 </button>
               </div>
             </motion.nav>
