@@ -7,6 +7,7 @@ import CartDrawer from './CartDrawer';
 import sparklingLogo from '../assets/Sparkling-Logo-optimized.mp4';
 import AutoplayVideo from './AutoplayVideo';
 import { apiProductToProduct, fetchCategoriesWithProducts } from '../api/catalog';
+import type { CategoryWithProductsApi } from '../api/types';
 import { bentoFilterKey, NAV_SHOP_CATEGORIES, buildBentoCollectionUrl, type BentoProductFilter } from '../data/collections';
 import { CUSTOMER_AUTH_CHANGED_EVENT, isCustomerLoggedIn } from '../api/customerAuth';
 import { products as fallbackProducts, type Product } from '../data/products';
@@ -17,6 +18,18 @@ const primaryNavLinks = [
 ] as const;
 
 const SEARCH_HINT_TEXT = 'e.g. Summer, Strong, Office, Fresh, Date Night';
+
+type NavCategory = { name: string; slug: string; sortOrder: number };
+
+function categoriesFromCatalog(data: CategoryWithProductsApi[]): NavCategory[] {
+  return data
+    .map(row => ({
+      name: row.category.name,
+      slug: row.category.slug,
+      sortOrder: row.category.sortOrder ?? 0,
+    }))
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+}
 
 function SearchResultRow({ item, onSelect }: { item: Product; onSelect: () => void }) {
   return (
@@ -48,6 +61,7 @@ export default function Navbar() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchPool, setSearchPool] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<NavCategory[]>([]);
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [mobileCategoryOpen, setMobileCategoryOpen] = useState(false);
   const { count } = useCart();
@@ -136,9 +150,11 @@ export default function Navbar() {
         if (cancelled) return;
         const fromApi = data.flatMap(section => section.products.map(apiProductToProduct));
         setSearchPool(fromApi.length > 0 ? fromApi : fallbackProducts);
+        setCategories(data.length > 0 ? categoriesFromCatalog(data) : []);
       } catch {
         if (!cancelled) {
           setSearchPool(fallbackProducts);
+          setCategories([]);
         }
       }
     })();
@@ -146,6 +162,16 @@ export default function Navbar() {
       cancelled = true;
     };
   }, []);
+
+  const goToCategory = (slug: string) => {
+    setCategoryMenuOpen(false);
+    setMobileCategoryOpen(false);
+    setMenuOpen(false);
+    navigate(
+      { pathname: '/collection', search: `?category=${encodeURIComponent(slug)}` },
+      { state: { scrollToCategory: slug } },
+    );
+  };
 
   const goToShopCategory = (filter: BentoProductFilter) => {
     setCategoryMenuOpen(false);
@@ -264,7 +290,25 @@ export default function Navbar() {
                     transition={{ duration: 0.18 }}
                     className="absolute left-1/2 top-full z-[60] min-w-[220px] -translate-x-1/2 pt-2"
                   >
-                    <div className="overflow-hidden rounded-xl border border-brand-beige/30 bg-[#111111] py-1.5 shadow-xl">
+                    <div className="max-h-[min(70vh,420px)] overflow-y-auto rounded-xl border border-brand-beige/30 bg-[#111111] py-1.5 shadow-xl">
+                      {categories.length > 0 ? (
+                        categories.map(cat => (
+                          <button
+                            key={cat.slug}
+                            type="button"
+                            className="block w-full px-4 py-2.5 text-left text-[11px] font-medium uppercase tracking-[0.1em] text-brand-dark transition-colors hover:bg-[#1a1a1a] hover:text-brand-cream"
+                            onClick={() => goToCategory(cat.slug)}
+                          >
+                            {cat.name}
+                          </button>
+                        ))
+                      ) : (
+                        <p className="px-4 py-2.5 text-[11px] text-brand-gray">No categories yet</p>
+                      )}
+                      <div className="mx-4 my-1.5 border-t border-brand-beige/20" />
+                      <p className="px-4 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-brand-gray">
+                        Our Specials
+                      </p>
                       {NAV_SHOP_CATEGORIES.map(filter => (
                         <button
                           key={bentoFilterKey(filter)}
@@ -472,19 +516,48 @@ export default function Navbar() {
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.22 }}
-                        className="mt-3 space-y-2 overflow-hidden border-l border-brand-beige/30 pl-4"
+                        className="mt-3 space-y-3 overflow-hidden border-l border-brand-beige/30 pl-4"
                       >
-                        {NAV_SHOP_CATEGORIES.map(filter => (
-                          <li key={bentoFilterKey(filter)}>
-                            <button
-                              type="button"
-                              className="text-left text-sm tracking-wide text-brand-gray transition-colors hover:text-brand-dark"
-                              onClick={() => goToShopCategory(filter)}
-                            >
-                              {filter.label}
-                            </button>
-                          </li>
-                        ))}
+                        <div>
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-gray">
+                            Collections
+                          </p>
+                          {categories.length > 0 ? (
+                            <ul className="space-y-2">
+                              {categories.map(cat => (
+                                <li key={cat.slug}>
+                                  <button
+                                    type="button"
+                                    className="text-left text-sm tracking-wide text-brand-gray transition-colors hover:text-brand-dark"
+                                    onClick={() => goToCategory(cat.slug)}
+                                  >
+                                    {cat.name}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-brand-gray">No categories yet</p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-gray">
+                            Our Specials
+                          </p>
+                          <ul className="space-y-2">
+                            {NAV_SHOP_CATEGORIES.map(filter => (
+                              <li key={bentoFilterKey(filter)}>
+                                <button
+                                  type="button"
+                                  className="text-left text-sm tracking-wide text-brand-gray transition-colors hover:text-brand-dark"
+                                  onClick={() => goToShopCategory(filter)}
+                                >
+                                  {filter.label}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </motion.ul>
                     )}
                   </AnimatePresence>
