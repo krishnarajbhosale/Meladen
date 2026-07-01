@@ -161,7 +161,7 @@ export default function ProductCard({
         <p className={`text-sm font-medium ${priceClass}`}>
           {formatInr(listPrice.price, 0)}
           <span className={`ml-1.5 text-[10px] font-normal ${metaClass}`}>
-            {formatProductSizeDisplay(listPrice.sizeLabel)}
+            {formatProductSizeDisplay(listPrice.sizeLabel, product)}
           </span>
         </p>
         {collectionLayout && addToBag?.disabled && (

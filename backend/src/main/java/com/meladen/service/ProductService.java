@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -171,6 +172,17 @@ public class ProductService {
             .findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     clearGallerySlot(p, slot);
+    return toAdmin(productRepository.save(p));
+  }
+
+  @Transactional
+  public ProductAdminResponse deletePrimaryImage(String id) {
+    Product p =
+        productRepository
+            .findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    p.setImageBlob(null);
+    p.setImageContentType(null);
     return toAdmin(productRepository.save(p));
   }
 
@@ -472,35 +484,81 @@ public class ProductService {
     }
   }
 
-  private boolean isPerfumeCategory(Product p) {
+  private boolean isLiquidPerfumeProduct(Product p) {
     Category c = p.getCategory();
-    if (c == null || c.getName() == null) return false;
-    return c.getName().toLowerCase().contains("perfume");
+    String categoryName = c != null && c.getName() != null ? c.getName().toLowerCase(Locale.ROOT) : "";
+    String concentration =
+        p.getConcentration() != null ? p.getConcentration().toLowerCase(Locale.ROOT) : "";
+
+    if (isNonMlFragranceCategory(categoryName) || isNonMlFragranceCategory(concentration)) {
+      return false;
+    }
+
+    boolean hasFinished =
+        p.getPriceGel() != null || p.getPriceAttar() != null || p.getPriceCarPerfume() != null;
+    boolean hasMl =
+        p.getPrice30Ml() != null || p.getPrice50Ml() != null || p.getPrice100Ml() != null;
+    if (hasFinished && !hasMl) {
+      return false;
+    }
+    if (hasMl) {
+      return true;
+    }
+
+    return isLiquidPerfumeCategoryName(categoryName) || isLiquidPerfumeCategoryName(concentration);
+  }
+
+  private boolean isNonMlFragranceCategory(String cat) {
+    if (cat == null || cat.isBlank()) {
+      return false;
+    }
+    return cat.contains("gel")
+        || cat.contains("attar")
+        || cat.contains("car")
+        || cat.contains("mist")
+        || cat.contains("body")
+        || cat.contains("hair");
+  }
+
+  private boolean isLiquidPerfumeCategoryName(String cat) {
+    if (cat == null || cat.isBlank() || isNonMlFragranceCategory(cat)) {
+      return false;
+    }
+    return cat.contains("eau de parfum")
+        || cat.contains("extrait")
+        || cat.contains("eau de toilette")
+        || cat.contains("edp")
+        || cat.contains("edt")
+        || cat.equals("perfume")
+        || cat.equals("perfumes")
+        || (cat.contains("parfum") && !cat.contains("gel") && !cat.contains("car"));
   }
 
   private BigDecimal primaryPrice(Product p) {
-    if (isPerfumeCategory(p) && p.getPrice30Ml() != null) {
+    if (isLiquidPerfumeProduct(p) && p.getPrice30Ml() != null) {
       return p.getPrice30Ml();
     }
-    if (p.getPrice50Ml() != null) return p.getPrice50Ml();
-    if (p.getPrice30Ml() != null) return p.getPrice30Ml();
-    if (p.getPrice100Ml() != null) return p.getPrice100Ml();
     if (p.getPriceGel() != null) return p.getPriceGel();
     if (p.getPriceAttar() != null) return p.getPriceAttar();
     if (p.getPriceCarPerfume() != null) return p.getPriceCarPerfume();
+    if (isLiquidPerfumeProduct(p)) {
+      if (p.getPrice50Ml() != null) return p.getPrice50Ml();
+      if (p.getPrice100Ml() != null) return p.getPrice100Ml();
+    }
     return BigDecimal.ZERO;
   }
 
   private String listSizeForCard(Product p) {
-    if (isPerfumeCategory(p) && p.getPrice30Ml() != null) {
+    if (isLiquidPerfumeProduct(p) && p.getPrice30Ml() != null) {
       return "30ml";
     }
-    if (p.getPrice50Ml() != null) return "50ml";
-    if (p.getPrice30Ml() != null) return "30ml";
-    if (p.getPrice100Ml() != null) return "100ml";
     if (p.getPriceGel() != null) return "Perfume Gel";
     if (p.getPriceAttar() != null) return "Attar";
     if (p.getPriceCarPerfume() != null) return "Car Perfume";
+    if (isLiquidPerfumeProduct(p)) {
+      if (p.getPrice50Ml() != null) return "50ml";
+      if (p.getPrice100Ml() != null) return "100ml";
+    }
     return "50ml";
   }
 

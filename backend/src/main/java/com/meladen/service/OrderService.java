@@ -563,17 +563,6 @@ public class OrderService {
 
   private SizeRecipe sizeRecipe(String raw) {
     String value = raw == null ? "" : raw.toLowerCase(Locale.ROOT).replace(" ", "");
-    if (value.contains("100")) {
-      return new SizeRecipe("100ml", new BigDecimal("20"), new BigDecimal("60"));
-    }
-    if (value.contains("30")) {
-      return new SizeRecipe("30ml", new BigDecimal("6"), new BigDecimal("18"));
-    }
-    if (value.contains("50")) {
-      return new SizeRecipe("50ml", new BigDecimal("10"), new BigDecimal("30"));
-    }
-    // Finished products: each unit deducts 1 from product oil (no alcohol).
-    // When product oil reaches 0, the variant shows out of stock.
     if (value.contains("gel")) {
       return new SizeRecipe("Perfume Gel", BigDecimal.ONE, BigDecimal.ZERO);
     }
@@ -582,6 +571,18 @@ public class OrderService {
     }
     if (value.contains("car")) {
       return new SizeRecipe("Car Perfume", BigDecimal.ONE, BigDecimal.ZERO);
+    }
+    if (value.contains("mist") || value.contains("body") || value.contains("hair")) {
+      return new SizeRecipe("Body and Hair Mist", BigDecimal.ONE, BigDecimal.ZERO);
+    }
+    if (value.contains("100")) {
+      return new SizeRecipe("100ml", new BigDecimal("20"), new BigDecimal("60"));
+    }
+    if (value.contains("30")) {
+      return new SizeRecipe("30ml", new BigDecimal("6"), new BigDecimal("18"));
+    }
+    if (value.contains("50")) {
+      return new SizeRecipe("50ml", new BigDecimal("10"), new BigDecimal("30"));
     }
     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported size: " + raw);
   }

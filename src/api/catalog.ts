@@ -233,6 +233,21 @@ export async function adminDeleteProductGalleryImage(
   return res.json() as Promise<ProductAdminApi>;
 }
 
+export async function adminDeleteProductPrimaryImage(
+  token: string,
+  productId: string,
+): Promise<ProductAdminApi> {
+  const res = await fetch(`${API_BASE_URL}/api/admin/products/${encodeURIComponent(productId)}/image`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(formatHttpError(res.status, text, 'Primary image delete failed'));
+  }
+  return res.json() as Promise<ProductAdminApi>;
+}
+
 export async function adminDeleteProduct(token: string, id: string) {
   return fetchJson(`/api/admin/products/${encodeURIComponent(id)}`, {
     method: 'DELETE',

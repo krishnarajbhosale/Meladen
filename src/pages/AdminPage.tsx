@@ -22,6 +22,7 @@ import {
   adminUpdateProduct,
   adminReplaceProductGalleryImage,
   adminDeleteProductGalleryImage,
+  adminDeleteProductPrimaryImage,
   fetchAdminReturnVideoBlobUrl,
   loginAdmin,
 } from '../api/catalog';
@@ -283,6 +284,9 @@ export default function AdminPage() {
   const [galleryDeleteField, setGalleryDeleteField] = useState<
     'galleryImage1' | 'galleryImage2' | 'galleryImage3' | null
   >(null);
+  const [primaryHasImage, setPrimaryHasImage] = useState(false);
+  const [primaryImageCacheKey, setPrimaryImageCacheKey] = useState(0);
+  const [primaryImageRemoving, setPrimaryImageRemoving] = useState(false);
   const [celebReplaceId, setCelebReplaceId] = useState<number | null>(null);
 
   const readStatus = (err: unknown): number | null => {
@@ -897,6 +901,16 @@ export default function AdminPage() {
   const gallerySlotForField = (field: 'galleryImage1' | 'galleryImage2' | 'galleryImage3'): 1 | 2 | 3 =>
     field === 'galleryImage1' ? 1 : field === 'galleryImage2' ? 2 : 3;
 
+  const syncGalleryFieldFromProduct = (
+    updated: ProductAdminApi,
+    field: 'galleryImage1' | 'galleryImage2' | 'galleryImage3',
+  ) => {
+    const slot = gallerySlotForField(field);
+    const ref =
+      slot === 1 ? updated.galleryImage1 : slot === 2 ? updated.galleryImage2 : updated.galleryImage3;
+    setProductField(field, ref ? `${ref}?v=${Date.now()}` : '');
+  };
+
   const buildProductPayload = () => ({
     categoryId: Number(productForm.categoryId) || categories[0]?.id,
     meladenFragrance: productForm.meladenFragrance,
@@ -947,6 +961,7 @@ export default function AdminPage() {
       }
       setEditingProductId(null);
       setSelectedImageName('');
+      setPrimaryHasImage(false);
       setProductForm(emptyProductForm(categories[0]?.id ?? 0, mediaDefaults));
       await refresh();
     } catch (err) {
@@ -996,6 +1011,8 @@ export default function AdminPage() {
       archived: Boolean((p as any).archived),
     });
     setSelectedImageName(p.hasImage ? 'Existing image present (choose file to replace)' : '');
+    setPrimaryHasImage(Boolean(p.hasImage));
+    setPrimaryImageCacheKey(Date.now());
   };
 
   const removeProduct = async (id: string) => {
@@ -1091,10 +1108,41 @@ export default function AdminPage() {
       setProductField('imageBase64', base64);
       setProductField('imageContentType', file.type || 'application/octet-stream');
       setProductField('clearImage', false);
+      setPrimaryHasImage(true);
       setSelectedImageName(file.name);
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Image upload failed');
     }
+  };
+
+  const onPrimaryImageRemove = async () => {
+    if (!primaryHasImage && !productForm.imageBase64) return;
+    if (!confirm('Remove primary product image?')) return;
+
+    if (editingProductId && token) {
+      try {
+        setPrimaryImageRemoving(true);
+        const updated = await adminDeleteProductPrimaryImage(token, editingProductId);
+        setPrimaryHasImage(Boolean(updated.hasImage));
+        setProductField('imageBase64', '');
+        setProductField('imageContentType', '');
+        setProductField('clearImage', false);
+        setSelectedImageName('');
+        setPrimaryImageCacheKey(Date.now());
+        await refresh();
+      } catch (e) {
+        alert(e instanceof Error ? e.message : 'Could not remove primary image');
+      } finally {
+        setPrimaryImageRemoving(false);
+      }
+      return;
+    }
+
+    setPrimaryHasImage(false);
+    setProductField('imageBase64', '');
+    setProductField('imageContentType', '');
+    setProductField('clearImage', false);
+    setSelectedImageName('');
   };
 
   const onGalleryReplace = async (
@@ -1108,9 +1156,7 @@ export default function AdminPage() {
       setGalleryUploadField(field);
       if (editingProductId) {
         const updated = await adminReplaceProductGalleryImage(token, editingProductId, slot, file);
-        const ref =
-          slot === 1 ? updated.galleryImage1 : slot === 2 ? updated.galleryImage2 : updated.galleryImage3;
-        setProductField(field, ref ? `${ref}?v=${Date.now()}` : '');
+        syncGalleryFieldFromProduct(updated, field);
       } else {
         const dataUrl = await readFileAsDataUrl(file);
         setProductField(field, dataUrl);
@@ -1130,8 +1176,9 @@ export default function AdminPage() {
       const slot = gallerySlotForField(field);
       try {
         setGalleryDeleteField(field);
-        await adminDeleteProductGalleryImage(token, editingProductId, slot);
-        setProductField(field, '');
+        const updated = await adminDeleteProductGalleryImage(token, editingProductId, slot);
+        syncGalleryFieldFromProduct(updated, field);
+        await refresh();
       } catch (e) {
         alert(e instanceof Error ? e.message : 'Could not remove gallery image');
       } finally {
@@ -1576,6 +1623,19 @@ export default function AdminPage() {
                       Primary image (BLOB upload)
                     </p>
                     <p className="mb-2 text-[11px] text-[#8a7a66]">Max file size: {MAX_IMAGE_UPLOAD_LABEL}</p>
+                    {(primaryHasImage || productForm.imageBase64) && (
+                      <img
+                        src={
+                          productForm.imageBase64
+                            ? `data:${productForm.imageContentType || 'image/jpeg'};base64,${productForm.imageBase64}`
+                            : editingProductId
+                              ? `${resolveProductMediaUrl(`/api/public/products/${editingProductId}/image`)}?v=${primaryImageCacheKey}`
+                              : ''
+                        }
+                        alt="Primary product preview"
+                        className="mb-2 h-28 w-full rounded-md border border-[#e5d7c2] object-cover"
+                      />
+                    )}
                     <input
                       type="file"
                       accept="image/*"
@@ -1588,21 +1648,21 @@ export default function AdminPage() {
                     {selectedImageName && (
                       <p className="mt-2 text-xs text-[#6b5c4b]">{selectedImageName}</p>
                     )}
-                    <label className="mt-2 flex items-center gap-2 text-xs text-[#6b5c4b]">
-                      <input
-                        type="checkbox"
-                        checked={productForm.clearImage}
-                        onChange={e => {
-                          setProductField('clearImage', e.target.checked);
-                          if (e.target.checked) {
-                            setProductField('imageBase64', '');
-                            setProductField('imageContentType', '');
-                            setSelectedImageName('');
-                          }
-                        }}
-                      />
-                      Remove current image
-                    </label>
+                    {editingProductId && (
+                      <p className="mt-2 text-[11px] text-[#8a7a66]">
+                        Remove applies immediately — no need to save the whole product again.
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      disabled={
+                        primaryImageRemoving || (!primaryHasImage && !productForm.imageBase64)
+                      }
+                      onClick={() => void onPrimaryImageRemove()}
+                      className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-800 disabled:opacity-50"
+                    >
+                      {primaryImageRemoving ? 'Removing…' : 'Remove image'}
+                    </button>
                   </div>
 
                   {(['galleryImage1', 'galleryImage2', 'galleryImage3'] as const).map((field, idx) => (
@@ -1658,7 +1718,7 @@ export default function AdminPage() {
                           onClick={() => void onGalleryDelete(field)}
                           className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-800 disabled:opacity-50"
                         >
-                          {galleryDeleteField === field ? 'Removing…' : 'Delete'}
+                          {galleryDeleteField === field ? 'Removing…' : 'Remove image'}
                         </button>
                         <input
                           placeholder={
@@ -1762,8 +1822,9 @@ export default function AdminPage() {
                       onClick={() => {
                         setEditingProductId(null);
                         setActiveProductTab('Basics');
-                      setSelectedImageName('');
-                      setProductForm(emptyProductForm(categories[0]?.id ?? 0, mediaDefaults));
+                        setSelectedImageName('');
+                        setPrimaryHasImage(false);
+                        setProductForm(emptyProductForm(categories[0]?.id ?? 0, mediaDefaults));
                       }}
                       className="rounded-lg border border-[#ccbca7] bg-white px-4 py-2 text-sm text-[#4e4134]"
                     >

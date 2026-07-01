@@ -98,6 +98,20 @@ export const BENTO_PRODUCT_FILTERS = {
   luxury: { kind: 'premium', label: 'Luxury' } as const,
 };
 
+/** Navbar dropdown — same filters and order as the homepage bento grid. */
+export const NAV_SHOP_CATEGORIES: BentoProductFilter[] = [
+  BENTO_PRODUCT_FILTERS.men,
+  BENTO_PRODUCT_FILTERS.luxury,
+  BENTO_PRODUCT_FILTERS.women,
+  BENTO_PRODUCT_FILTERS.unisex,
+];
+
+export function bentoFilterKey(filter: BentoProductFilter): string {
+  if (filter.kind === 'idealFor') return `idealFor-${filter.value}`;
+  if (filter.kind === 'mood') return `mood-${filter.value}`;
+  return 'premium';
+}
+
 export function buildBentoCollectionUrl(filter: BentoProductFilter): string {
   const params = new URLSearchParams();
   if (filter.kind === 'idealFor') params.set('idealFor', filter.value);

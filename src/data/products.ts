@@ -69,11 +69,66 @@ const SIZE_RECIPES: Record<string, { oil: number; alcohol: number }> = {
   'Perfume Gel': { oil: 1, alcohol: 0 },
   Attar: { oil: 1, alcohol: 0 },
   'Car Perfume': { oil: 1, alcohol: 0 },
+  'Body and Hair Mist': { oil: 1, alcohol: 0 },
 };
 
 export const SIZE_PERFUME_GEL = 'Perfume Gel';
 export const SIZE_ATTAR = 'Attar';
 export const SIZE_CAR_PERFUME = 'Car Perfume';
+export const SIZE_BODY_HAIR_MIST = 'Body and Hair Mist';
+
+function normalizeCategoryName(category: string): string {
+  return category.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/** Attar, gel, car, mist, etc. — not made via ml + alcohol blending. */
+export function isNonMlFragranceCategory(category: string | undefined): boolean {
+  const cat = normalizeCategoryName(category ?? '');
+  if (!cat) return false;
+  return (
+    cat.includes('gel') ||
+    cat.includes('attar') ||
+    cat.includes('car') ||
+    cat.includes('mist') ||
+    cat.includes('body') ||
+    cat.includes('hair')
+  );
+}
+
+/** True for pourable perfumes sold in 30/50/100ml (uses oil + alcohol stock). */
+export function isLiquidPerfumeProduct(
+  product: Pick<
+    Product,
+    | 'category'
+    | 'price30Ml'
+    | 'price50Ml'
+    | 'price100Ml'
+    | 'priceGel'
+    | 'priceAttar'
+    | 'priceCarPerfume'
+  >,
+): boolean {
+  if (isNonMlFragranceCategory(product.category)) return false;
+
+  const hasFinished =
+    product.priceGel != null || product.priceAttar != null || product.priceCarPerfume != null;
+  const hasMl =
+    product.price30Ml != null || product.price50Ml != null || product.price100Ml != null;
+  if (hasFinished && !hasMl) return false;
+  if (hasMl) return true;
+
+  const cat = normalizeCategoryName(product.category);
+  return (
+    cat.includes('eau de parfum') ||
+    cat.includes('extrait') ||
+    cat.includes('eau de toilette') ||
+    cat.includes('edp') ||
+    cat.includes('edt') ||
+    cat === 'perfume' ||
+    cat === 'perfumes' ||
+    (cat.includes('parfum') && !cat.includes('gel') && !cat.includes('car'))
+  );
+}
 
 /** Sub-category label above the product name (e.g. Adventure). Falls back to main category. */
 export function getProductDisplayCategory(product: Pick<Product, 'category2' | 'category'>): string {
@@ -88,12 +143,50 @@ export function normalizeProductSizeKey(size: string): string {
   if (normalized === 'perfumegel' || normalized === 'gel') return SIZE_PERFUME_GEL;
   if (normalized === 'attar') return SIZE_ATTAR;
   if (normalized === 'carperfume' || normalized === 'car') return SIZE_CAR_PERFUME;
+  if (normalized === 'bodyandhairmist' || normalized === 'mist') return SIZE_BODY_HAIR_MIST;
   return size.trim();
 }
 
-/** Customer-facing size label for product UI, cart, and checkout. */
-export function formatProductSizeDisplay(sizeLabel: string): string {
+export function liquidPerfumeMlVolume(sizeLabel: string): number | null {
   switch (normalizeProductSizeKey(sizeLabel)) {
+    case '30ml':
+      return 30;
+    case '50ml':
+      return 50;
+    case '100ml':
+      return 100;
+    default:
+      return null;
+  }
+}
+
+/** USP under ml size tabs — e.g. (14.96/ml). Liquid perfumes only. */
+export function formatLiquidPerfumePricePerMl(price: number, sizeLabel: string): string | null {
+  const ml = liquidPerfumeMlVolume(sizeLabel);
+  if (ml == null || ml <= 0 || !Number.isFinite(price) || price <= 0) return null;
+  return `(${(price / ml).toFixed(2)}/ml)`;
+}
+
+/** Customer-facing size label for product UI, cart, and checkout. */
+export function formatProductSizeDisplay(
+  sizeLabel: string,
+  product?: Pick<
+    Product,
+    | 'category'
+    | 'price30Ml'
+    | 'price50Ml'
+    | 'price100Ml'
+    | 'priceGel'
+    | 'priceAttar'
+    | 'priceCarPerfume'
+  >,
+): string {
+  const key = normalizeProductSizeKey(sizeLabel);
+  const isMl = key === '30ml' || key === '50ml' || key === '100ml';
+  if (isMl && product && !isLiquidPerfumeProduct(product)) {
+    return key;
+  }
+  switch (key) {
     case '30ml':
       return 'Starter Size';
     case '50ml':
@@ -106,38 +199,62 @@ export function formatProductSizeDisplay(sizeLabel: string): string {
 }
 
 /** Volume plus marketing label, e.g. "50ml · Most Popular ⭐". */
-export function formatProductSizeLine(sizeLabel: string): string {
+export function formatProductSizeLine(
+  sizeLabel: string,
+  product?: Pick<
+    Product,
+    | 'category'
+    | 'price30Ml'
+    | 'price50Ml'
+    | 'price100Ml'
+    | 'priceGel'
+    | 'priceAttar'
+    | 'priceCarPerfume'
+  >,
+): string {
   const key = normalizeProductSizeKey(sizeLabel);
-  const display = formatProductSizeDisplay(sizeLabel);
-  if (display === sizeLabel) return sizeLabel;
+  const display = formatProductSizeDisplay(sizeLabel, product);
+  if (display === sizeLabel || display === key) return sizeLabel;
   return `${key} · ${display}`;
 }
 
-/** List price on product cards — uses 30ml when that size is priced (typical for perfumes). */
+/** List price on product cards — 30ml starter price only for liquid perfumes. */
 export function getProductCardListPrice(product: Product): { price: number; sizeLabel: string } {
-  if (product.price30Ml != null) {
+  if (isLiquidPerfumeProduct(product) && product.price30Ml != null) {
     return { price: product.price30Ml, sizeLabel: '30ml' };
   }
   const options = getProductSizeOptions(product);
   if (options.length > 0) {
     return { price: options[0].price, sizeLabel: options[0].label };
   }
-  return { price: product.price, sizeLabel: product.size || '50ml' };
+  return {
+    price: product.price,
+    sizeLabel: product.size || (isLiquidPerfumeProduct(product) ? '50ml' : ''),
+  };
 }
 
 export function getProductSizeOptions(product: Product): ProductSizeOption[] {
   const options: ProductSizeOption[] = [];
-  if (product.price30Ml != null) options.push({ label: '30ml', price: product.price30Ml });
-  if (product.price50Ml != null) options.push({ label: '50ml', price: product.price50Ml });
-  if (product.price100Ml != null) options.push({ label: '100ml', price: product.price100Ml });
+  const liquid = isLiquidPerfumeProduct(product);
+
+  if (liquid) {
+    if (product.price30Ml != null) options.push({ label: '30ml', price: product.price30Ml });
+    if (product.price50Ml != null) options.push({ label: '50ml', price: product.price50Ml });
+    if (product.price100Ml != null) options.push({ label: '100ml', price: product.price100Ml });
+  }
   if (product.priceGel != null) options.push({ label: SIZE_PERFUME_GEL, price: product.priceGel });
   if (product.priceAttar != null) options.push({ label: SIZE_ATTAR, price: product.priceAttar });
-  if (product.priceCarPerfume != null) options.push({ label: SIZE_CAR_PERFUME, price: product.priceCarPerfume });
+  if (product.priceCarPerfume != null) {
+    options.push({ label: SIZE_CAR_PERFUME, price: product.priceCarPerfume });
+  }
   if (options.length > 0) return options;
 
   // Legacy/demo products with only a single list price
   if (product.price > 0) {
-    return [{ label: product.size || '50ml', price: product.price }];
+    const fallbackLabel =
+      product.size ||
+      (liquid ? '50ml' : isNonMlFragranceCategory(product.category) ? product.category : '50ml');
+    return [{ label: fallbackLabel, price: product.price }];
   }
   return [];
 }

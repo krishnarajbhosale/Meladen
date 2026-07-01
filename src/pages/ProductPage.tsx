@@ -6,6 +6,8 @@ import {
   getProductDisplayCategory,
   getProductSizeAvailability,
   formatProductSizeDisplay,
+  formatLiquidPerfumePricePerMl,
+  isLiquidPerfumeProduct,
   type Product,
 } from '../data/products';
 import { useCart } from '../context/CartContext';
@@ -377,7 +379,7 @@ export default function ProductPage() {
             {selectedSize ? formatInr(selectedSize.price, 0) : formatInr(product.price, 0)}
             {selectedSize && (
               <span className="ml-2 text-sm font-normal text-brand-gray">
-                {formatProductSizeDisplay(selectedSize.label)}
+                {formatProductSizeDisplay(selectedSize.label, product)}
               </span>
             )}
           </motion.p>
@@ -394,7 +396,7 @@ export default function ProductPage() {
                 {rating.reviewCount} review{rating.reviewCount === 1 ? '' : 's'}
               </span>
             </div>
-            {(product.category ?? '').toLowerCase().includes('perfume') && (
+            {isLiquidPerfumeProduct(product) && (
               <p className="mt-1.5 text-xs uppercase tracking-[0.12em] text-brand-sage">
                 Extrait de Parfum (30% oil)
               </p>
@@ -418,6 +420,10 @@ export default function ProductPage() {
             <div className={`grid gap-2.5 ${sizeGridClass}`}>
               {sizeOptions.map(option => {
                 const isActive = selectedSize?.label === option.label;
+                const pricePerMl =
+                  isLiquidPerfumeProduct(product)
+                    ? formatLiquidPerfumePricePerMl(option.price, option.label)
+                    : null;
 
                 return (
                   <button
@@ -434,11 +440,24 @@ export default function ProductPage() {
                     }`}
                   >
                     <span className="block w-full text-center text-sm font-medium leading-snug">
-                      {formatProductSizeDisplay(option.label)}
+                      {formatProductSizeDisplay(option.label, product)}
                     </span>
-                    <span className="mt-1 block w-full text-center text-xs uppercase tracking-[0.12em] text-white">
+                    <span
+                      className={`mt-1 block w-full text-center text-xs uppercase tracking-[0.12em] ${
+                        isActive ? 'text-brand-dark/80' : 'text-white'
+                      }`}
+                    >
                       {option.label}
                     </span>
+                    {pricePerMl && (
+                      <span
+                        className={`mt-1 block text-[10px] tabular-nums ${
+                          isActive ? 'text-brand-gray' : 'text-brand-gray/90'
+                        }`}
+                      >
+                        {pricePerMl}
+                      </span>
+                    )}
                     {!option.available && (
                       <span className="mt-1 block text-[10px] font-semibold uppercase tracking-wide text-red-700">
                         Out of stock
