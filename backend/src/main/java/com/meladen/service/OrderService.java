@@ -15,6 +15,7 @@ import com.meladen.entity.Product;
 import com.meladen.repository.CustomerOrderRepository;
 import com.meladen.repository.InventoryStockRepository;
 import com.meladen.repository.ProductRepository;
+import com.meladen.util.ProductCategoryRules;
 import com.meladen.util.InvoiceHsnCodes;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -37,7 +38,6 @@ public class OrderService {
 
   private static final Long STOCK_ROW_ID = 1L;
   private static final BigDecimal LOW_ALCOHOL_THRESHOLD = new BigDecimal("200");
-  private static final BigDecimal LOW_PRODUCT_OIL_THRESHOLD = new BigDecimal("100");
 
   private final MeladenProperties properties;
   private final ProductRepository productRepository;
@@ -245,11 +245,19 @@ public class OrderService {
       if (oilRequired.signum() > 0) {
         if (product.getProductOil() == null) {
           throw new ResponseStatusException(
-              HttpStatus.BAD_REQUEST, "Product oil stock not set for " + product.getMeladenFragrance());
+              HttpStatus.BAD_REQUEST, "Product stock not set for " + product.getMeladenFragrance());
         }
         if (product.getProductOil().compareTo(oilRequired) < 0) {
+          String unit = ProductCategoryRules.isFinishedProduct(product) ? "units" : "gm";
           throw new ResponseStatusException(
-              HttpStatus.BAD_REQUEST, "Insufficient product oil for " + product.getMeladenFragrance());
+              HttpStatus.BAD_REQUEST,
+              "Insufficient product stock for "
+                  + product.getMeladenFragrance()
+                  + " (need "
+                  + oilRequired.stripTrailingZeros().toPlainString()
+                  + " "
+                  + unit
+                  + ")");
         }
       }
 
@@ -480,12 +488,16 @@ public class OrderService {
         productRepository.findAllForAdmin().stream()
             .filter(p -> p.getProductOil() != null)
             .map(
-                p ->
-                    new StockSummaryResponse.LowOilProduct(
-                        p.getId(),
-                        p.getMeladenFragrance(),
-                        p.getProductOil().setScale(2, RoundingMode.HALF_UP),
-                        p.getProductOil().compareTo(LOW_PRODUCT_OIL_THRESHOLD) <= 0))
+                p -> {
+                  boolean finished = ProductCategoryRules.isFinishedProduct(p);
+                  BigDecimal remaining = p.getProductOil().setScale(2, RoundingMode.HALF_UP);
+                  return new StockSummaryResponse.LowOilProduct(
+                      p.getId(),
+                      p.getMeladenFragrance(),
+                      remaining,
+                      ProductCategoryRules.isLowProductOil(p),
+                      finished);
+                })
             .toList();
     return new StockSummaryResponse(
         stock.getAlcoholStockGm().setScale(2, RoundingMode.HALF_UP),

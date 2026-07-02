@@ -101,6 +101,7 @@ export interface StockLowOilProductApi {
   productName: string;
   remainingOilGm: number;
   lowOil: boolean;
+  finishedProduct: boolean;
 }
 
 export interface StockSummaryApi {

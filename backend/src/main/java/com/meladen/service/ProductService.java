@@ -8,6 +8,7 @@ import com.meladen.entity.Product;
 import com.meladen.repository.CategoryRepository;
 import com.meladen.repository.CustomerOrderRepository;
 import com.meladen.repository.ProductRepository;
+import com.meladen.util.ProductCategoryRules;
 import com.meladen.util.UploadSizeValidator;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -16,7 +17,6 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -485,53 +485,7 @@ public class ProductService {
   }
 
   private boolean isLiquidPerfumeProduct(Product p) {
-    Category c = p.getCategory();
-    String categoryName = c != null && c.getName() != null ? c.getName().toLowerCase(Locale.ROOT) : "";
-    String concentration =
-        p.getConcentration() != null ? p.getConcentration().toLowerCase(Locale.ROOT) : "";
-
-    if (isNonMlFragranceCategory(categoryName) || isNonMlFragranceCategory(concentration)) {
-      return false;
-    }
-
-    boolean hasFinished =
-        p.getPriceGel() != null || p.getPriceAttar() != null || p.getPriceCarPerfume() != null;
-    boolean hasMl =
-        p.getPrice30Ml() != null || p.getPrice50Ml() != null || p.getPrice100Ml() != null;
-    if (hasFinished && !hasMl) {
-      return false;
-    }
-    if (hasMl) {
-      return true;
-    }
-
-    return isLiquidPerfumeCategoryName(categoryName) || isLiquidPerfumeCategoryName(concentration);
-  }
-
-  private boolean isNonMlFragranceCategory(String cat) {
-    if (cat == null || cat.isBlank()) {
-      return false;
-    }
-    return cat.contains("gel")
-        || cat.contains("attar")
-        || cat.contains("car")
-        || cat.contains("mist")
-        || cat.contains("body")
-        || cat.contains("hair");
-  }
-
-  private boolean isLiquidPerfumeCategoryName(String cat) {
-    if (cat == null || cat.isBlank() || isNonMlFragranceCategory(cat)) {
-      return false;
-    }
-    return cat.contains("eau de parfum")
-        || cat.contains("extrait")
-        || cat.contains("eau de toilette")
-        || cat.contains("edp")
-        || cat.contains("edt")
-        || cat.equals("perfume")
-        || cat.equals("perfumes")
-        || (cat.contains("parfum") && !cat.contains("gel") && !cat.contains("car"));
+    return ProductCategoryRules.isLiquidPerfumeProduct(p);
   }
 
   private BigDecimal primaryPrice(Product p) {

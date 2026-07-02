@@ -21,6 +21,7 @@ import ShippingPolicyPage from './pages/policies/ShippingPolicyPage';
 import ReturnsRefundPolicyPage from './pages/policies/ReturnsRefundPolicyPage';
 import JurisdictionPage from './pages/policies/JurisdictionPage';
 import TrackOrderPage from './pages/TrackOrderPage';
+import Ga4PageViewTracker from './components/Ga4PageViewTracker';
 
 const CHROME_ROUTES = [
   '/',
@@ -55,6 +56,7 @@ export default function App() {
   return (
     <MobileContainer>
       <ScrollToTop />
+      <Ga4PageViewTracker />
       {showChrome && <Navbar />}
       <AnimatePresence
         mode="wait"

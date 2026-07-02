@@ -10,5 +10,10 @@ public record StockSummaryResponse(
     List<LowOilProduct> lowOilProducts,
     Instant updatedAt) {
 
-  public record LowOilProduct(String productId, String productName, BigDecimal remainingOilGm, boolean lowOil) {}
+  public record LowOilProduct(
+      String productId,
+      String productName,
+      BigDecimal remainingOilGm,
+      boolean lowOil,
+      boolean finishedProduct) {}
 }

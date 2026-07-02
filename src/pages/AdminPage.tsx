@@ -151,6 +151,21 @@ type ProductFormState = {
 
 type ProductMediaDefaults = Pick<ProductFormState, 'galleryImage1' | 'galleryImage2' | 'galleryImage3'>;
 
+type GalleryField = 'galleryImage1' | 'galleryImage2' | 'galleryImage3';
+
+function stripMediaQuery(url: string): string {
+  const i = url.indexOf('?');
+  return i >= 0 ? url.slice(0, i) : url;
+}
+
+function formatGalleryFieldValue(ref: string | null | undefined, cacheKey: number): string {
+  const trimmed = ref?.trim() ?? '';
+  if (!trimmed) return '';
+  if (trimmed.startsWith('data:')) return trimmed;
+  const base = trimmed.startsWith('/api/') ? stripMediaQuery(trimmed) : trimmed;
+  return base.startsWith('/api/') ? `${base}?v=${cacheKey}` : base;
+}
+
 function reorderList<T>(list: T[], fromIndex: number, toIndex: number): T[] {
   if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return list;
   const next = [...list];
@@ -287,6 +302,12 @@ export default function AdminPage() {
   const [primaryHasImage, setPrimaryHasImage] = useState(false);
   const [primaryImageCacheKey, setPrimaryImageCacheKey] = useState(0);
   const [primaryImageRemoving, setPrimaryImageRemoving] = useState(false);
+  const [galleryPreviewKeys, setGalleryPreviewKeys] = useState<Record<GalleryField, number>>({
+    galleryImage1: 0,
+    galleryImage2: 0,
+    galleryImage3: 0,
+  });
+  const [galleryBroken, setGalleryBroken] = useState<Partial<Record<GalleryField, boolean>>>({});
   const [celebReplaceId, setCelebReplaceId] = useState<number | null>(null);
 
   const readStatus = (err: unknown): number | null => {
@@ -898,17 +919,42 @@ export default function AdminPage() {
     return trimmed.split('?')[0] ?? trimmed;
   };
 
-  const gallerySlotForField = (field: 'galleryImage1' | 'galleryImage2' | 'galleryImage3'): 1 | 2 | 3 =>
+  const gallerySlotForField = (field: GalleryField): 1 | 2 | 3 =>
     field === 'galleryImage1' ? 1 : field === 'galleryImage2' ? 2 : 3;
 
-  const syncGalleryFieldFromProduct = (
-    updated: ProductAdminApi,
-    field: 'galleryImage1' | 'galleryImage2' | 'galleryImage3',
-  ) => {
+  const mergeProductInList = (updated: ProductAdminApi) => {
+    setProducts(prev => prev.map(p => (p.id === updated.id ? updated : p)));
+  };
+
+  const bumpGalleryPreviewKey = (field: GalleryField) => {
+    const cacheKey = Date.now();
+    setGalleryPreviewKeys(prev => ({ ...prev, [field]: cacheKey }));
+    setGalleryBroken(prev => ({ ...prev, [field]: false }));
+    return cacheKey;
+  };
+
+  const applyPrimaryMediaFromApi = (updated: ProductAdminApi, cacheKey = Date.now()) => {
+    setPrimaryHasImage(Boolean(updated.hasImage));
+    setSelectedImageName(updated.hasImage ? 'Existing image present (choose file to replace)' : '');
+    setPrimaryImageCacheKey(cacheKey);
+    setProductForm(prev => ({
+      ...prev,
+      imageBase64: '',
+      imageContentType: '',
+      clearImage: false,
+    }));
+  };
+
+  const syncGalleryFieldFromProduct = (updated: ProductAdminApi, field: GalleryField) => {
     const slot = gallerySlotForField(field);
     const ref =
       slot === 1 ? updated.galleryImage1 : slot === 2 ? updated.galleryImage2 : updated.galleryImage3;
-    setProductField(field, ref ? `${ref}?v=${Date.now()}` : '');
+    const cacheKey = bumpGalleryPreviewKey(field);
+    setProductForm(prev => ({
+      ...prev,
+      [field]: formatGalleryFieldValue(ref, cacheKey),
+    }));
+    mergeProductInList(updated);
   };
 
   const buildProductPayload = () => ({
@@ -972,6 +1018,7 @@ export default function AdminPage() {
   };
 
   const editProduct = (p: ProductAdminApi) => {
+    const cacheKey = Date.now();
     setEditingProductId(p.id);
     setActiveProductTab('Basics');
     setProductForm({
@@ -1001,9 +1048,9 @@ export default function AdminPage() {
       imageBase64: '',
       imageContentType: '',
       clearImage: false,
-      galleryImage1: p.galleryImage1 ?? '',
-      galleryImage2: p.galleryImage2 ?? '',
-      galleryImage3: p.galleryImage3 ?? '',
+      galleryImage1: formatGalleryFieldValue(p.galleryImage1, cacheKey),
+      galleryImage2: formatGalleryFieldValue(p.galleryImage2, cacheKey),
+      galleryImage3: formatGalleryFieldValue(p.galleryImage3, cacheKey),
       tag: p.tag ?? '',
       isNew: p.isNew,
       isBestseller: p.isBestseller,
@@ -1012,7 +1059,13 @@ export default function AdminPage() {
     });
     setSelectedImageName(p.hasImage ? 'Existing image present (choose file to replace)' : '');
     setPrimaryHasImage(Boolean(p.hasImage));
-    setPrimaryImageCacheKey(Date.now());
+    setPrimaryImageCacheKey(cacheKey);
+    setGalleryPreviewKeys({
+      galleryImage1: cacheKey,
+      galleryImage2: cacheKey,
+      galleryImage3: cacheKey,
+    });
+    setGalleryBroken({});
   };
 
   const removeProduct = async (id: string) => {
@@ -1119,36 +1172,39 @@ export default function AdminPage() {
     if (!primaryHasImage && !productForm.imageBase64) return;
     if (!confirm('Remove primary product image?')) return;
 
-    if (editingProductId && token) {
-      try {
-        setPrimaryImageRemoving(true);
-        const updated = await adminDeleteProductPrimaryImage(token, editingProductId);
-        setPrimaryHasImage(Boolean(updated.hasImage));
-        setProductField('imageBase64', '');
-        setProductField('imageContentType', '');
-        setProductField('clearImage', false);
-        setSelectedImageName('');
-        setPrimaryImageCacheKey(Date.now());
-        await refresh();
-      } catch (e) {
-        alert(e instanceof Error ? e.message : 'Could not remove primary image');
-      } finally {
-        setPrimaryImageRemoving(false);
-      }
-      return;
-    }
+    const previousHasImage = primaryHasImage;
+    const previousBase64 = productForm.imageBase64;
+    const previousContentType = productForm.imageContentType;
+    const previousSelectedName = selectedImageName;
+    const previousCacheKey = primaryImageCacheKey;
 
     setPrimaryHasImage(false);
     setProductField('imageBase64', '');
     setProductField('imageContentType', '');
     setProductField('clearImage', false);
     setSelectedImageName('');
+    setPrimaryImageCacheKey(Date.now());
+
+    if (editingProductId && token) {
+      try {
+        setPrimaryImageRemoving(true);
+        const updated = await adminDeleteProductPrimaryImage(token, editingProductId);
+        applyPrimaryMediaFromApi(updated);
+        mergeProductInList(updated);
+      } catch (e) {
+        setPrimaryHasImage(previousHasImage);
+        setProductField('imageBase64', previousBase64);
+        setProductField('imageContentType', previousContentType);
+        setSelectedImageName(previousSelectedName);
+        setPrimaryImageCacheKey(previousCacheKey);
+        alert(e instanceof Error ? e.message : 'Could not remove primary image');
+      } finally {
+        setPrimaryImageRemoving(false);
+      }
+    }
   };
 
-  const onGalleryReplace = async (
-    field: 'galleryImage1' | 'galleryImage2' | 'galleryImage3',
-    file: File | null,
-  ) => {
+  const onGalleryReplace = async (field: GalleryField, file: File | null) => {
     if (!file || !token) return;
     const slot = gallerySlotForField(field);
     try {
@@ -1168,9 +1224,13 @@ export default function AdminPage() {
     }
   };
 
-  const onGalleryDelete = async (field: 'galleryImage1' | 'galleryImage2' | 'galleryImage3') => {
+  const onGalleryDelete = async (field: GalleryField) => {
     const imageNumber = gallerySlotForField(field) + 1;
     if (!confirm(`Remove gallery image ${imageNumber}?`)) return;
+
+    const previousValue = productForm[field];
+    setProductForm(prev => ({ ...prev, [field]: '' }));
+    bumpGalleryPreviewKey(field);
 
     if (editingProductId && token) {
       const slot = gallerySlotForField(field);
@@ -1178,16 +1238,15 @@ export default function AdminPage() {
         setGalleryDeleteField(field);
         const updated = await adminDeleteProductGalleryImage(token, editingProductId, slot);
         syncGalleryFieldFromProduct(updated, field);
-        await refresh();
       } catch (e) {
+        setProductForm(prev => ({ ...prev, [field]: previousValue }));
+        bumpGalleryPreviewKey(field);
         alert(e instanceof Error ? e.message : 'Could not remove gallery image');
       } finally {
         setGalleryDeleteField(null);
       }
       return;
     }
-
-    setProductField(field, '');
   };
 
   const replaceCelebPhoto = async (id: number, file: File | null) => {
@@ -1535,7 +1594,7 @@ export default function AdminPage() {
                     type="number"
                     step="0.01"
                     min="0"
-                    placeholder="Product OIL"
+                    placeholder="Product stock (units for Attar/Gel/Car/Mist · gm for perfumes)"
                     value={productForm.productOil}
                     onChange={e => setProductField('productOil', e.target.value)}
                     className="w-full rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-3 py-2 text-sm text-[#251d15] outline-none focus:border-[#8c7458] focus:ring-1 focus:ring-[#d7c4aa]"
@@ -1625,6 +1684,7 @@ export default function AdminPage() {
                     <p className="mb-2 text-[11px] text-[#8a7a66]">Max file size: {MAX_IMAGE_UPLOAD_LABEL}</p>
                     {(primaryHasImage || productForm.imageBase64) && (
                       <img
+                        key={`primary-${primaryImageCacheKey}`}
                         src={
                           productForm.imageBase64
                             ? `data:${productForm.imageContentType || 'image/jpeg'};base64,${productForm.imageBase64}`
@@ -1676,12 +1736,13 @@ export default function AdminPage() {
                           Replace or delete uploads immediately — no need to save the whole product again.
                         </p>
                       )}
-                      {productForm[field] ? (
+                      {productForm[field] && !galleryBroken[field] ? (
                         <img
-                          key={productForm[field]}
+                          key={`${field}-${galleryPreviewKeys[field]}-${productForm[field]}`}
                           src={resolveProductMediaUrl(productForm[field])}
                           alt={`Preview ${idx + 2}`}
                           className="mb-2 h-28 w-full rounded-md border border-[#e5d7c2] object-cover"
+                          onError={() => setGalleryBroken(prev => ({ ...prev, [field]: true }))}
                         />
                       ) : (
                         <div className="mb-2 flex h-28 items-center justify-center rounded-md border border-dashed border-[#e5d7c2] text-xs text-[#8a7a66]">
@@ -1727,7 +1788,10 @@ export default function AdminPage() {
                               : 'or paste image URL'
                           }
                           value={productForm[field].startsWith('data:') ? '' : productForm[field]}
-                          onChange={e => setProductField(field, e.target.value)}
+                          onChange={e => {
+                            setGalleryBroken(prev => ({ ...prev, [field]: false }));
+                            setProductField(field, e.target.value);
+                          }}
                           className="w-full rounded-lg border border-[#ccbca7] bg-[#fffdfa] px-3 py-2 text-sm text-[#251d15] outline-none focus:border-[#8c7458] focus:ring-1 focus:ring-[#d7c4aa]"
                         />
                       </div>
@@ -1885,7 +1949,7 @@ export default function AdminPage() {
                   </div>
                   <div className="rounded-xl border border-[#dbcdb8] bg-white p-4 shadow-sm">
                     <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[#7a6b57]">
-                      Product oil stock alerts (threshold: 100 gm)
+                      Product stock alerts (finished: ≤3 units · perfumes: ≤100 gm)
                     </p>
                     <ul className="max-h-80 space-y-2 overflow-y-auto text-sm">
                       {stock.lowOilProducts.map(item => (
@@ -1898,7 +1962,16 @@ export default function AdminPage() {
                           }`}
                         >
                           <span>{item.productName}</span>
-                          <span>{item.remainingOilGm} gm</span>
+                          <span>
+                            {item.remainingOilGm} {item.finishedProduct ? 'units' : 'gm'}
+                            {item.finishedProduct && item.remainingOilGm <= 0
+                              ? ' · Out of stock'
+                              : item.lowOil
+                                ? item.finishedProduct
+                                  ? ' · Low stock'
+                                  : ' · Low'
+                                : ''}
+                          </span>
                         </li>
                       ))}
                     </ul>

@@ -264,12 +264,20 @@ export function getProductSizeAvailability(
   alcoholStockGm: number | null | undefined,
 ): ProductSizeAvailability[] {
   const options = getProductSizeOptions(product);
+  const liquid = isLiquidPerfumeProduct(product);
+
   return options.map(option => {
     const recipe = SIZE_RECIPES[option.label];
     if (!recipe) return { ...option, available: true };
+
     const oil = product.productOil;
+
+    if (!liquid) {
+      const units = oil ?? 0;
+      return { ...option, available: units >= 1 };
+    }
+
     const alcohol = alcoholStockGm;
-    // Only the stocks a recipe actually consumes gate availability.
     const oilOk = recipe.oil <= 0 || (oil != null && oil >= recipe.oil);
     const alcoholOk = recipe.alcohol <= 0 || (alcohol != null && alcohol >= recipe.alcohol);
     return { ...option, available: oilOk && alcoholOk };
