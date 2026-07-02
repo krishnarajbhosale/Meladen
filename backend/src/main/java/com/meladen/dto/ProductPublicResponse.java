@@ -5,7 +5,8 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Public catalog shape aligned with the React {@code Product} type (plus extended fragrance fields).
+ * Public catalog shape aligned with the React {@code Product} type (plus
+ * extended fragrance fields).
  */
 public record ProductPublicResponse(
     String id,
@@ -14,10 +15,8 @@ public record ProductPublicResponse(
     int price,
     String size,
     String category,
-    String categoryName,
     String tag,
     String image,
-    boolean hasImage,
     List<String> gallery,
     String description,
     Notes notes,
@@ -39,10 +38,10 @@ public record ProductPublicResponse(
     String category2,
     BigDecimal productOil,
     String concentration,
-    @JsonProperty("liquidPerfume") boolean liquidPerfume,
     @JsonProperty("isNew") boolean isNew,
     @JsonProperty("isBestseller") boolean isBestseller,
     @JsonProperty("isPremium") boolean isPremium) {
 
-  public record Notes(List<String> top, List<String> heart, List<String> base) {}
+  public record Notes(List<String> top, List<String> heart, List<String> base) {
+  }
 }

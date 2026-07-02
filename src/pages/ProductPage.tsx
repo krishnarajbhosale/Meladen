@@ -136,16 +136,12 @@ export default function ProductPage() {
 
   const galleryImages = useMemo(() => {
     if (!product) return [];
-    const seen = new Set<string>();
-    const imgs: string[] = [];
-    const add = (src: string | undefined) => {
-      if (!src?.trim() || seen.has(src)) return;
-      seen.add(src);
-      imgs.push(src);
-    };
-    add(product.image);
-    product.gallery.forEach(g => add(g));
-    return imgs;
+    return [
+      product.image,
+      product.gallery[0] ?? product.image,
+      product.gallery[1] ?? product.gallery[0] ?? product.image,
+      product.gallery[2] ?? product.gallery[1] ?? product.gallery[0] ?? product.image,
+    ];
   }, [product]);
 
   const imageCount = Math.max(galleryImages.length, 1);

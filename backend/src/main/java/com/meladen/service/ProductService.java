@@ -41,8 +41,8 @@ public class ProductService {
     return productRepository.findAllForAdmin().stream()
         .sorted(
             Comparator.comparing(
-                    (Product p) -> p.getCategory().getSortOrder(),
-                    Comparator.nullsLast(Integer::compareTo))
+                (Product p) -> p.getCategory().getSortOrder(),
+                Comparator.nullsLast(Integer::compareTo))
                 .thenComparing(p -> p.getCategory().getName(), Comparator.nullsLast(String::compareToIgnoreCase))
                 .thenComparing(Product::getMeladenFragrance, Comparator.nullsLast(String::compareToIgnoreCase)))
         .map(this::toAdmin)
@@ -51,19 +51,17 @@ public class ProductService {
 
   @Transactional(readOnly = true)
   public ProductAdminResponse getForAdmin(String id) {
-    Product p =
-        productRepository
-            .findDetailById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    Product p = productRepository
+        .findDetailById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     return toAdmin(p);
   }
 
   @Transactional(readOnly = true)
   public ProductPublicResponse getPublic(String id) {
-    Product p =
-        productRepository
-            .findDetailById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    Product p = productRepository
+        .findDetailById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     if (p.isArchived()) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
     }
@@ -75,10 +73,9 @@ public class ProductService {
     if (slot < 1 || slot > 3) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid gallery slot");
     }
-    Product p =
-        productRepository
-            .findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    Product p = productRepository
+        .findById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     byte[] bytes = galleryBlob(p, slot);
     if (bytes == null || bytes.length == 0) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Gallery image not found");
@@ -92,26 +89,23 @@ public class ProductService {
 
   @Transactional(readOnly = true)
   public ProductImageData getImage(String id) {
-    Product p =
-        productRepository
-            .findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    Product p = productRepository
+        .findById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     if (p.getImageBlob() == null || p.getImageBlob().length == 0) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product image not found");
     }
-    String contentType =
-        p.getImageContentType() != null && !p.getImageContentType().isBlank()
-            ? p.getImageContentType()
-            : "application/octet-stream";
+    String contentType = p.getImageContentType() != null && !p.getImageContentType().isBlank()
+        ? p.getImageContentType()
+        : "application/octet-stream";
     return new ProductImageData(p.getImageBlob(), contentType);
   }
 
   @Transactional
   public ProductAdminResponse create(ProductRequest request) {
-    Category category =
-        categoryRepository
-            .findById(request.categoryId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid category"));
+    Category category = categoryRepository
+        .findById(request.categoryId())
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid category"));
 
     Product p = new Product();
     p.setId(UUID.randomUUID().toString());
@@ -121,14 +115,12 @@ public class ProductService {
 
   @Transactional
   public ProductAdminResponse update(String id, ProductRequest request) {
-    Product p =
-        productRepository
-            .findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
-    Category category =
-        categoryRepository
-            .findById(request.categoryId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid category"));
+    Product p = productRepository
+        .findById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    Category category = categoryRepository
+        .findById(request.categoryId())
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid category"));
     apply(p, request, category);
     return toAdmin(productRepository.save(p));
   }
@@ -141,18 +133,16 @@ public class ProductService {
     if (image == null || image.isEmpty()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Image file is required");
     }
-    Product p =
-        productRepository
-            .findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    Product p = productRepository
+        .findById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     uploadSizeValidator.validateImageFile(image, "Gallery image " + slot);
     try {
       byte[] bytes = image.getBytes();
       uploadSizeValidator.validateImageBytes(bytes, "Gallery image " + slot);
-      String contentType =
-          image.getContentType() != null && !image.getContentType().isBlank()
-              ? image.getContentType()
-              : "application/octet-stream";
+      String contentType = image.getContentType() != null && !image.getContentType().isBlank()
+          ? image.getContentType()
+          : "application/octet-stream";
       setGalleryBlob(p, slot, bytes);
       setGalleryContentType(p, slot, contentType);
       setGalleryString(p, slot, null);
@@ -167,20 +157,18 @@ public class ProductService {
     if (slot < 1 || slot > 3) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid gallery slot");
     }
-    Product p =
-        productRepository
-            .findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    Product p = productRepository
+        .findById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     clearGallerySlot(p, slot);
     return toAdmin(productRepository.save(p));
   }
 
   @Transactional
   public ProductAdminResponse deletePrimaryImage(String id) {
-    Product p =
-        productRepository
-            .findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    Product p = productRepository
+        .findById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     p.setImageBlob(null);
     p.setImageContentType(null);
     return toAdmin(productRepository.save(p));
@@ -188,10 +176,9 @@ public class ProductService {
 
   @Transactional
   public void delete(String id) {
-    Product p =
-        productRepository
-            .findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    Product p = productRepository
+        .findById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
     long usedInOrders = orderRepository.countItemsByProductId(id);
     if (usedInOrders > 0) {
       throw new ResponseStatusException(
@@ -203,12 +190,9 @@ public class ProductService {
 
   public ProductPublicResponse toPublic(Product p) {
     Category c = p.getCategory();
-    String cardCategory =
-        p.getConcentration() != null && !p.getConcentration().isBlank()
-            ? p.getConcentration()
-            : c.getName();
-    String categoryName = c.getName() != null ? c.getName() : "";
-    boolean liquidPerfume = ProductCategoryRules.isLiquidPerfumeProduct(p);
+    String cardCategory = p.getConcentration() != null && !p.getConcentration().isBlank()
+        ? p.getConcentration()
+        : c.getName();
 
     BigDecimal primary = primaryPrice(p);
     int price = toInt(primary);
@@ -216,19 +200,17 @@ public class ProductService {
 
     List<String> gallery = new ArrayList<>();
     for (int slot = 1; slot <= 3; slot++) {
-      String ref = galleryPublicRef(p, slot);
+      String ref = resolveGalleryRef(p, slot);
       if (ref != null) {
         gallery.add(ref);
       }
     }
 
-    boolean hasImage = hasPrimaryImage(p);
-    String image = hasImage ? primaryImagePublicUrl(p) : null;
+    String image = "/api/public/products/" + p.getId() + "/image";
 
-    String description =
-        p.getLuxuryDescription() != null && !p.getLuxuryDescription().isBlank()
-            ? p.getLuxuryDescription()
-            : "";
+    String description = p.getLuxuryDescription() != null && !p.getLuxuryDescription().isBlank()
+        ? p.getLuxuryDescription()
+        : "";
 
     return new ProductPublicResponse(
         p.getId(),
@@ -237,13 +219,12 @@ public class ProductService {
         price,
         listSize,
         cardCategory,
-        categoryName,
         p.getTag(),
         image,
-        hasImage,
         gallery,
         description,
-        new ProductPublicResponse.Notes(splitNotes(p.getNotesTop()), splitNotes(p.getNotesMiddle()), splitNotes(p.getNotesBase())),
+        new ProductPublicResponse.Notes(splitNotes(p.getNotesTop()), splitNotes(p.getNotesMiddle()),
+            splitNotes(p.getNotesBase())),
         toNullableInt(p.getPrice30Ml()),
         toNullableInt(p.getPrice50Ml()),
         toNullableInt(p.getPrice100Ml()),
@@ -262,7 +243,6 @@ public class ProductService {
         nullToEmpty(p.getCategory2()),
         p.getProductOil(),
         nullToEmpty(p.getConcentration()),
-        liquidPerfume,
         p.isNew(),
         p.isBestseller(),
         p.isPremium());
@@ -408,32 +388,6 @@ public class ProductService {
     return null;
   }
 
-  private boolean hasPrimaryImage(Product p) {
-    return p.getImageBlob() != null && p.getImageBlob().length > 0;
-  }
-
-  private String primaryImagePublicUrl(Product p) {
-    return "/api/public/products/" + p.getId() + "/image?v=" + mediaVersion(p.getImageBlob());
-  }
-
-  private String galleryPublicRef(Product p, int slot) {
-    String ref = resolveGalleryRef(p, slot);
-    if (ref == null) {
-      return null;
-    }
-    if (ref.startsWith("/api/public/products/")) {
-      return ref + "?v=" + mediaVersion(galleryBlob(p, slot));
-    }
-    return ref;
-  }
-
-  private static String mediaVersion(byte[] bytes) {
-    if (bytes == null || bytes.length == 0) {
-      return "0";
-    }
-    return Integer.toHexString(Arrays.hashCode(bytes));
-  }
-
   private boolean isExistingGalleryApiUrl(String productId, int slot, String value) {
     if (productId == null || productId.isBlank()) {
       return false;
@@ -494,7 +448,8 @@ public class ProductService {
       case 1 -> p.setGalleryBlob1(bytes);
       case 2 -> p.setGalleryBlob2(bytes);
       case 3 -> p.setGalleryBlob3(bytes);
-      default -> {}
+      default -> {
+      }
     }
   }
 
@@ -503,7 +458,8 @@ public class ProductService {
       case 1 -> p.setGalleryContentType1(contentType);
       case 2 -> p.setGalleryContentType2(contentType);
       case 3 -> p.setGalleryContentType3(contentType);
-      default -> {}
+      default -> {
+      }
     }
   }
 
@@ -512,7 +468,8 @@ public class ProductService {
       case 1 -> p.setGalleryImage1(value);
       case 2 -> p.setGalleryImage2(value);
       case 3 -> p.setGalleryImage3(value);
-      default -> {}
+      default -> {
+      }
     }
   }
 
@@ -524,12 +481,17 @@ public class ProductService {
     if (isLiquidPerfumeProduct(p) && p.getPrice30Ml() != null) {
       return p.getPrice30Ml();
     }
-    if (p.getPriceGel() != null) return p.getPriceGel();
-    if (p.getPriceAttar() != null) return p.getPriceAttar();
-    if (p.getPriceCarPerfume() != null) return p.getPriceCarPerfume();
+    if (p.getPriceGel() != null)
+      return p.getPriceGel();
+    if (p.getPriceAttar() != null)
+      return p.getPriceAttar();
+    if (p.getPriceCarPerfume() != null)
+      return p.getPriceCarPerfume();
     if (isLiquidPerfumeProduct(p)) {
-      if (p.getPrice50Ml() != null) return p.getPrice50Ml();
-      if (p.getPrice100Ml() != null) return p.getPrice100Ml();
+      if (p.getPrice50Ml() != null)
+        return p.getPrice50Ml();
+      if (p.getPrice100Ml() != null)
+        return p.getPrice100Ml();
     }
     return BigDecimal.ZERO;
   }
@@ -538,28 +500,36 @@ public class ProductService {
     if (isLiquidPerfumeProduct(p) && p.getPrice30Ml() != null) {
       return "30ml";
     }
-    if (p.getPriceGel() != null) return "Perfume Gel";
-    if (p.getPriceAttar() != null) return "Attar";
-    if (p.getPriceCarPerfume() != null) return "Car Perfume";
+    if (p.getPriceGel() != null)
+      return "Perfume Gel";
+    if (p.getPriceAttar() != null)
+      return "Attar";
+    if (p.getPriceCarPerfume() != null)
+      return "Car Perfume";
     if (isLiquidPerfumeProduct(p)) {
-      if (p.getPrice50Ml() != null) return "50ml";
-      if (p.getPrice100Ml() != null) return "100ml";
+      if (p.getPrice50Ml() != null)
+        return "50ml";
+      if (p.getPrice100Ml() != null)
+        return "100ml";
     }
     return "50ml";
   }
 
   private int toInt(BigDecimal v) {
-    if (v == null) return 0;
+    if (v == null)
+      return 0;
     return v.setScale(0, RoundingMode.HALF_UP).intValue();
   }
 
   private Integer toNullableInt(BigDecimal v) {
-    if (v == null) return null;
+    if (v == null)
+      return null;
     return v.setScale(0, RoundingMode.HALF_UP).intValue();
   }
 
   private List<String> splitNotes(String raw) {
-    if (raw == null || raw.isBlank()) return List.of();
+    if (raw == null || raw.isBlank())
+      return List.of();
     return Arrays.stream(raw.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
   }
 
@@ -567,5 +537,6 @@ public class ProductService {
     return s == null ? "" : s;
   }
 
-  public record ProductImageData(byte[] bytes, String contentType) {}
+  public record ProductImageData(byte[] bytes, String contentType) {
+  }
 }

@@ -19,10 +19,8 @@ export interface ProductPublicApi {
   price: number;
   size: string;
   category: string;
-  categoryName: string;
   tag: string | null;
-  image: string | null;
-  hasImage: boolean;
+  image: string;
   gallery: string[];
   description: string;
   notes: ProductNotes;
@@ -44,7 +42,6 @@ export interface ProductPublicApi {
   category2: string;
   productOil: number | null;
   concentration: string;
-  liquidPerfume: boolean;
   isNew: boolean;
   isBestseller: boolean;
   isPremium: boolean;
