@@ -12,6 +12,7 @@ import {
   adminDeletePromoCode,
   adminListCategories,
   adminListProducts,
+  adminGetProduct,
   adminListPromoCodes,
   adminListReturnRequests,
   adminListWalletCustomers,
@@ -997,31 +998,17 @@ export default function AdminPage() {
     archived: productForm.archived,
   });
 
-  const saveProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token) return;
-    setBusy(true);
-    try {
-      const payload = buildProductPayload();
-      const saved = editingProductId
-        ? await adminUpdateProduct(token, editingProductId, payload)
-        : await adminCreateProduct(token, payload);
-      mergeProductInList(saved);
-      setEditingProductId(saved.id);
-      editProduct(saved);
-      setActiveProductTab('Pricing & Notes');
-      await refresh();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Save failed');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const editProduct = (p: ProductAdminApi) => {
+  const loadProductIntoForm = (
+    p: ProductAdminApi,
+    options?: { activeTab?: (typeof PRODUCT_TABS)[number] },
+  ) => {
     const cacheKey = Date.now();
     setEditingProductId(p.id);
-    setActiveProductTab('Basics');
+    if (options?.activeTab) {
+      setActiveProductTab(options.activeTab);
+    } else {
+      setActiveProductTab('Basics');
+    }
     setProductForm({
       categoryId: p.categoryId,
       meladenFragrance: p.meladenFragrance,
@@ -1068,6 +1055,40 @@ export default function AdminPage() {
       galleryImage3: cacheKey,
     });
     setGalleryBroken({});
+  };
+
+  const editProduct = (p: ProductAdminApi) => {
+    loadProductIntoForm(p);
+  };
+
+  const saveProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    setBusy(true);
+    try {
+      const payload = buildProductPayload();
+      const savedId = editingProductId
+        ? (
+            await adminUpdateProduct(token, editingProductId, payload)
+          ).id
+        : (await adminCreateProduct(token, payload)).id;
+      const fresh = await adminGetProduct(token, savedId);
+      mergeProductInList(fresh);
+      loadProductIntoForm(fresh, { activeTab: 'Pricing & Notes' });
+
+      const sentMist = payload.priceBodyHairMist;
+      if (sentMist != null && fresh.priceBodyHairMist == null) {
+        alert(
+          'Body & Hair Mist price was not stored by the server. Rebuild and restart the backend (needs the price_body_hair_mist column), then save again.',
+        );
+      }
+
+      void refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Save failed');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const removeProduct = async (id: string) => {

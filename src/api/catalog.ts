@@ -182,6 +182,12 @@ export async function adminListProducts(token: string): Promise<ProductAdminApi[
   });
 }
 
+export async function adminGetProduct(token: string, id: string): Promise<ProductAdminApi> {
+  return fetchJson<ProductAdminApi>(`/api/admin/products/${encodeURIComponent(id)}`, {
+    headers: authHeaders(token),
+  });
+}
+
 export async function adminCreateProduct(token: string, body: Record<string, unknown>) {
   return fetchJson<ProductAdminApi>('/api/admin/products', {
     method: 'POST',
