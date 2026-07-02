@@ -207,6 +207,8 @@ public class ProductService {
         p.getConcentration() != null && !p.getConcentration().isBlank()
             ? p.getConcentration()
             : c.getName();
+    String categoryName = c.getName() != null ? c.getName() : "";
+    boolean liquidPerfume = ProductCategoryRules.isLiquidPerfumeProduct(p);
 
     BigDecimal primary = primaryPrice(p);
     int price = toInt(primary);
@@ -214,13 +216,14 @@ public class ProductService {
 
     List<String> gallery = new ArrayList<>();
     for (int slot = 1; slot <= 3; slot++) {
-      String ref = resolveGalleryRef(p, slot);
+      String ref = galleryPublicRef(p, slot);
       if (ref != null) {
         gallery.add(ref);
       }
     }
 
-    String image = "/api/public/products/" + p.getId() + "/image";
+    boolean hasImage = hasPrimaryImage(p);
+    String image = hasImage ? primaryImagePublicUrl(p) : null;
 
     String description =
         p.getLuxuryDescription() != null && !p.getLuxuryDescription().isBlank()
@@ -234,8 +237,10 @@ public class ProductService {
         price,
         listSize,
         cardCategory,
+        categoryName,
         p.getTag(),
         image,
+        hasImage,
         gallery,
         description,
         new ProductPublicResponse.Notes(splitNotes(p.getNotesTop()), splitNotes(p.getNotesMiddle()), splitNotes(p.getNotesBase())),
@@ -257,6 +262,7 @@ public class ProductService {
         nullToEmpty(p.getCategory2()),
         p.getProductOil(),
         nullToEmpty(p.getConcentration()),
+        liquidPerfume,
         p.isNew(),
         p.isBestseller(),
         p.isPremium());
@@ -400,6 +406,32 @@ public class ProductService {
       return url.trim();
     }
     return null;
+  }
+
+  private boolean hasPrimaryImage(Product p) {
+    return p.getImageBlob() != null && p.getImageBlob().length > 0;
+  }
+
+  private String primaryImagePublicUrl(Product p) {
+    return "/api/public/products/" + p.getId() + "/image?v=" + mediaVersion(p.getImageBlob());
+  }
+
+  private String galleryPublicRef(Product p, int slot) {
+    String ref = resolveGalleryRef(p, slot);
+    if (ref == null) {
+      return null;
+    }
+    if (ref.startsWith("/api/public/products/")) {
+      return ref + "?v=" + mediaVersion(galleryBlob(p, slot));
+    }
+    return ref;
+  }
+
+  private static String mediaVersion(byte[] bytes) {
+    if (bytes == null || bytes.length == 0) {
+      return "0";
+    }
+    return Integer.toHexString(Arrays.hashCode(bytes));
   }
 
   private boolean isExistingGalleryApiUrl(String productId, int slot, String value) {

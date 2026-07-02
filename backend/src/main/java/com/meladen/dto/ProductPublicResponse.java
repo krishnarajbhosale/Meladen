@@ -14,8 +14,10 @@ public record ProductPublicResponse(
     int price,
     String size,
     String category,
+    String categoryName,
     String tag,
     String image,
+    boolean hasImage,
     List<String> gallery,
     String description,
     Notes notes,
@@ -37,6 +39,7 @@ public record ProductPublicResponse(
     String category2,
     BigDecimal productOil,
     String concentration,
+    @JsonProperty("liquidPerfume") boolean liquidPerfume,
     @JsonProperty("isNew") boolean isNew,
     @JsonProperty("isBestseller") boolean isBestseller,
     @JsonProperty("isPremium") boolean isPremium) {

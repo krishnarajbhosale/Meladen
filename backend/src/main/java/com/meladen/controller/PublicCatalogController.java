@@ -39,7 +39,7 @@ public class PublicCatalogController {
   public ResponseEntity<byte[]> productImage(@PathVariable String id) {
     var image = productService.getImage(id);
     return ResponseEntity.ok()
-        .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+        .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400, must-revalidate")
         .contentType(MediaType.parseMediaType(image.contentType()))
         .body(image.bytes());
   }
@@ -48,7 +48,7 @@ public class PublicCatalogController {
   public ResponseEntity<byte[]> productGalleryImage(@PathVariable String id, @PathVariable int slot) {
     var image = productService.getGalleryImage(id, slot);
     return ResponseEntity.ok()
-        .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+        .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400, must-revalidate")
         .contentType(MediaType.parseMediaType(image.contentType()))
         .body(image.bytes());
   }

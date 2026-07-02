@@ -48,15 +48,20 @@ function isStoredGalleryImage(value: string): boolean {
 }
 
 export function apiProductToProduct(p: ProductPublicApi): Product {
-  const normalizedImage = normalizeImagePath(p.image);
-  const image = resolveProductMediaUrl(normalizedImage?.trim() ? normalizedImage : p.image) || meladen1;
-  const fallbackGallery = [default2, default3, default4];
-  const apiGallery = (p.gallery ?? [])
+  const hasPrimary = Boolean(p.hasImage);
+  const primaryFromApi =
+    hasPrimary && p.image?.trim() ? resolveProductMediaUrl(normalizeImagePath(p.image)) : '';
+
+  const gallery = (p.gallery ?? [])
     .map(g => resolveProductMediaUrl(normalizeImagePath(g)))
     .filter(isStoredGalleryImage);
-  const gallery = [...apiGallery];
-  while (gallery.length < 3) {
-    gallery.push(fallbackGallery[gallery.length]);
+
+  let image = primaryFromApi;
+  if (!image && gallery.length > 0) {
+    image = gallery[0];
+  }
+  if (!image) {
+    image = meladen1;
   }
 
   return {
@@ -66,6 +71,7 @@ export function apiProductToProduct(p: ProductPublicApi): Product {
     price: p.price,
     size: p.size || '50ml',
     category: p.category,
+    categoryName: p.categoryName || undefined,
     tag: p.tag ?? undefined,
     image,
     gallery: gallery.slice(0, 3),
@@ -94,8 +100,9 @@ export function apiProductToProduct(p: ProductPublicApi): Product {
     howToApply: p.howToApply || undefined,
     searchKeywords: p.searchKeywords || undefined,
     category2: p.category2 || undefined,
-    productOil: p.productOil ?? undefined,
+    productOil: p.productOil != null ? Number(p.productOil) : undefined,
     concentration: p.concentration || undefined,
+    liquidPerfume: p.liquidPerfume,
   };
 }
 

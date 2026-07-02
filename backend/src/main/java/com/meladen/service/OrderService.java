@@ -14,7 +14,7 @@ import com.meladen.entity.InventoryStock;
 import com.meladen.entity.Product;
 import com.meladen.repository.CustomerOrderRepository;
 import com.meladen.repository.InventoryStockRepository;
-import com.meladen.repository.ProductRepository;
+import com.meladen.util.ProductCategoryRules;
 import com.meladen.util.ProductCategoryRules;
 import com.meladen.util.InvoiceHsnCodes;
 import java.math.BigDecimal;
@@ -235,6 +235,7 @@ public class OrderService {
               .findDetailById(item.productId())
               .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid product: " + item.productId()));
       SizeRecipe recipe = sizeRecipe(item.size());
+      validateSizeForProduct(product, recipe);
       int qty = item.quantity();
       BigDecimal qtyDecimal = BigDecimal.valueOf(qty);
 
@@ -571,6 +572,21 @@ public class OrderService {
               stock.setUpdatedAt(Instant.now());
               return stockRepository.save(stock);
             });
+  }
+
+  private void validateSizeForProduct(Product product, SizeRecipe recipe) {
+    boolean liquid = ProductCategoryRules.isLiquidPerfumeProduct(product);
+    boolean mlSize = recipe.label().toLowerCase(Locale.ROOT).endsWith("ml");
+    if (liquid && !mlSize) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "Size \"" + recipe.label() + "\" is not valid for liquid perfume " + product.getMeladenFragrance());
+    }
+    if (!liquid && mlSize) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "Size \"" + recipe.label() + "\" is not valid for " + product.getMeladenFragrance());
+    }
   }
 
   private SizeRecipe sizeRecipe(String raw) {

@@ -21,6 +21,8 @@ export interface Product {
   price: number;
   size: string;
   category: string;
+  /** Parent category from catalog (e.g. Perfume Gel) — used for stock/type rules. */
+  categoryName?: string;
   tag?: string;
   image: string;
   /** Extra gallery shots for the product detail page (main `image` is hero). */
@@ -50,6 +52,8 @@ export interface Product {
   category2?: string;
   productOil?: number;
   concentration?: string;
+  /** From API — pourable 30/50/100ml vs finished unit (gel, attar, car, mist). */
+  liquidPerfume?: boolean;
 }
 
 export interface ProductSizeOption {
@@ -99,7 +103,10 @@ export function isNonMlFragranceCategory(category: string | undefined): boolean 
 export function isLiquidPerfumeProduct(
   product: Pick<
     Product,
+    | 'liquidPerfume'
+    | 'categoryName'
     | 'category'
+    | 'concentration'
     | 'price30Ml'
     | 'price50Ml'
     | 'price100Ml'
@@ -108,6 +115,10 @@ export function isLiquidPerfumeProduct(
     | 'priceCarPerfume'
   >,
 ): boolean {
+  if (typeof product.liquidPerfume === 'boolean') return product.liquidPerfume;
+
+  if (isNonMlFragranceCategory(product.categoryName)) return false;
+  if (isNonMlFragranceCategory(product.concentration)) return false;
   if (isNonMlFragranceCategory(product.category)) return false;
 
   const hasFinished =
@@ -128,6 +139,13 @@ export function isLiquidPerfumeProduct(
     cat === 'perfumes' ||
     (cat.includes('parfum') && !cat.includes('gel') && !cat.includes('car'))
   );
+}
+
+function productOilUnits(product: Pick<Product, 'productOil'>): number {
+  const raw = product.productOil;
+  if (raw == null) return 0;
+  const n = typeof raw === 'number' ? raw : Number(raw);
+  return Number.isFinite(n) ? n : 0;
 }
 
 /** Sub-category label above the product name (e.g. Adventure). Falls back to main category. */
@@ -234,26 +252,31 @@ export function getProductCardListPrice(product: Product): { price: number; size
 }
 
 export function getProductSizeOptions(product: Product): ProductSizeOption[] {
-  const options: ProductSizeOption[] = [];
   const liquid = isLiquidPerfumeProduct(product);
 
   if (liquid) {
-    if (product.price30Ml != null) options.push({ label: '30ml', price: product.price30Ml });
-    if (product.price50Ml != null) options.push({ label: '50ml', price: product.price50Ml });
-    if (product.price100Ml != null) options.push({ label: '100ml', price: product.price100Ml });
+    const mlOptions: ProductSizeOption[] = [];
+    if (product.price30Ml != null) mlOptions.push({ label: '30ml', price: product.price30Ml });
+    if (product.price50Ml != null) mlOptions.push({ label: '50ml', price: product.price50Ml });
+    if (product.price100Ml != null) mlOptions.push({ label: '100ml', price: product.price100Ml });
+    if (mlOptions.length > 0) return mlOptions;
+  } else {
+    const finishedOptions: ProductSizeOption[] = [];
+    if (product.priceGel != null) {
+      finishedOptions.push({ label: SIZE_PERFUME_GEL, price: product.priceGel });
+    }
+    if (product.priceAttar != null) finishedOptions.push({ label: SIZE_ATTAR, price: product.priceAttar });
+    if (product.priceCarPerfume != null) {
+      finishedOptions.push({ label: SIZE_CAR_PERFUME, price: product.priceCarPerfume });
+    }
+    if (finishedOptions.length > 0) return finishedOptions;
   }
-  if (product.priceGel != null) options.push({ label: SIZE_PERFUME_GEL, price: product.priceGel });
-  if (product.priceAttar != null) options.push({ label: SIZE_ATTAR, price: product.priceAttar });
-  if (product.priceCarPerfume != null) {
-    options.push({ label: SIZE_CAR_PERFUME, price: product.priceCarPerfume });
-  }
-  if (options.length > 0) return options;
 
   // Legacy/demo products with only a single list price
   if (product.price > 0) {
     const fallbackLabel =
       product.size ||
-      (liquid ? '50ml' : isNonMlFragranceCategory(product.category) ? product.category : '50ml');
+      (liquid ? '50ml' : isNonMlFragranceCategory(product.categoryName ?? product.category) ? product.category : '50ml');
     return [{ label: fallbackLabel, price: product.price }];
   }
   return [];
@@ -265,21 +288,21 @@ export function getProductSizeAvailability(
 ): ProductSizeAvailability[] {
   const options = getProductSizeOptions(product);
   const liquid = isLiquidPerfumeProduct(product);
+  const oilUnits = productOilUnits(product);
+  const alcohol = alcoholStockGm ?? 0;
 
   return options.map(option => {
     const recipe = SIZE_RECIPES[option.label];
-    if (!recipe) return { ...option, available: true };
-
-    const oil = product.productOil;
 
     if (!liquid) {
-      const units = oil ?? 0;
-      return { ...option, available: units >= 1 };
+      const required = recipe?.oil ?? 1;
+      return { ...option, available: oilUnits >= required };
     }
 
-    const alcohol = alcoholStockGm;
-    const oilOk = recipe.oil <= 0 || (oil != null && oil >= recipe.oil);
-    const alcoholOk = recipe.alcohol <= 0 || (alcohol != null && alcohol >= recipe.alcohol);
+    if (!recipe) return { ...option, available: true };
+
+    const oilOk = recipe.oil <= 0 || oilUnits >= recipe.oil;
+    const alcoholOk = recipe.alcohol <= 0 || alcohol >= recipe.alcohol;
     return { ...option, available: oilOk && alcoholOk };
   });
 }
