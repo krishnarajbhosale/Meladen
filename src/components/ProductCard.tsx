@@ -13,6 +13,7 @@ import { formatInr } from '../utils/currency';
 import { resolveProductRating } from '../utils/productRating';
 import InspiredByBadge from './InspiredByBadge';
 import StarRating from './StarRating';
+import { useProductImageSrc } from '../utils/productImage';
 
 type AddToBagConfig = {
   onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
@@ -57,6 +58,7 @@ export default function ProductCard({
 
   const listPrice = getProductCardListPrice(product);
   const rating = showRating ? resolveProductRating(product.id) : null;
+  const productImage = useProductImageSrc(product.image);
   const effectiveTone = collectionLayout ? 'dark' : tone;
   const metaClass = effectiveTone === 'dark' ? 'text-white/45' : 'text-[#888]';
   const titleClass = effectiveTone === 'dark' ? 'text-[#ece8e0]' : 'text-[#b8b3ac]';
@@ -80,8 +82,9 @@ export default function ProductCard({
       >
         {inRail ? (
           <img
-            src={product.image}
+            src={productImage.src}
             alt={product.name}
+            onError={productImage.onError}
             className="relative z-0 h-full w-full object-cover object-center transition-transform duration-300 ease-out lg:group-hover:scale-105"
             loading="lazy"
             decoding="async"
@@ -89,8 +92,9 @@ export default function ProductCard({
           />
         ) : (
           <motion.img
-            src={product.image}
+            src={productImage.src}
             alt={product.name}
+            onError={productImage.onError}
             className="relative z-0 h-full w-full object-cover object-center"
             animate={{ scale: hovered ? 1.05 : 1 }}
             transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}

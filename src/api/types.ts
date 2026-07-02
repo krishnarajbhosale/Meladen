@@ -20,7 +20,7 @@ export interface ProductPublicApi {
   size: string;
   category: string;
   tag: string | null;
-  image: string;
+  image: string | null;
   gallery: string[];
   description: string;
   notes: ProductNotes;

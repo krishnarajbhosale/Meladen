@@ -21,7 +21,7 @@ import FloatingReviewNotification from '../components/FloatingReviewNotification
 import StarRating from '../components/StarRating';
 import { resolveProductRating } from '../utils/productRating';
 import { pageVariants, fadeUp } from '../animations/variants';
-import { apiProductToProduct, fetchCategoriesWithProducts, fetchPublicProduct, fetchPublicStock } from '../api/catalog';
+import { apiProductToProduct, fetchCategoriesWithProducts, fetchPublicProduct, fetchPublicStock, PRODUCT_IMAGE_PLACEHOLDER } from '../api/catalog';
 import { category2Matches } from '../data/collections';
 import { formatInr } from '../utils/currency';
 
@@ -37,6 +37,7 @@ export default function ProductPage() {
   const [selectedSizeLabel, setSelectedSizeLabel] = useState('');
   const [alcoholStockGm, setAlcoholStockGm] = useState<number | null>(null);
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
+  const [brokenGallerySlots, setBrokenGallerySlots] = useState<Set<number>>(() => new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -136,15 +137,24 @@ export default function ProductPage() {
 
   const galleryImages = useMemo(() => {
     if (!product) return [];
-    return [
-      product.image,
-      product.gallery[0] ?? product.image,
-      product.gallery[1] ?? product.gallery[0] ?? product.image,
-      product.gallery[2] ?? product.gallery[1] ?? product.gallery[0] ?? product.image,
-    ];
+    const shots = [product.image, ...(product.gallery ?? [])].filter(Boolean);
+    const unique = [...new Set(shots)];
+    return unique.length > 0 ? unique : [PRODUCT_IMAGE_PLACEHOLDER];
   }, [product]);
 
-  const imageCount = Math.max(galleryImages.length, 1);
+  useEffect(() => {
+    setBrokenGallerySlots(new Set());
+  }, [product?.id, galleryImages]);
+
+  const displayGalleryImages = useMemo(
+    () =>
+      galleryImages.map((img, index) =>
+        brokenGallerySlots.has(index) ? PRODUCT_IMAGE_PLACEHOLDER : img,
+      ),
+    [galleryImages, brokenGallerySlots],
+  );
+
+  const imageCount = Math.max(displayGalleryImages.length, 1);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const SWIPE_THRESHOLD_PX = 48;
@@ -268,8 +278,15 @@ export default function ProductPage() {
             <AnimatePresence mode="wait" initial={false}>
               <motion.img
                 key={activeImg}
-                src={galleryImages[activeImg]}
+                src={displayGalleryImages[activeImg]}
                 alt={product.name}
+                onError={() =>
+                  setBrokenGallerySlots(prev => {
+                    const next = new Set(prev);
+                    next.add(activeImg);
+                    return next;
+                  })
+                }
                 className="h-full w-full object-contain p-3"
                 style={{ transformOrigin: zoomOrigin }}
                 initial={{ opacity: 0, x: 24 }}
@@ -319,7 +336,7 @@ export default function ProductPage() {
           </div>
 
           <div className="mb-5 flex gap-3">
-            {galleryImages.map((img, i) => (
+            {displayGalleryImages.map((img, i) => (
               <button
                 key={i}
                 onClick={() => setActiveImg(i)}
@@ -327,13 +344,24 @@ export default function ProductPage() {
                   activeImg === i ? 'border-brand-dark' : 'border-transparent opacity-50'
                 }`}
               >
-                <img src={img} alt="" className="h-full w-full object-contain bg-brand-light-gray p-1" />
+                <img
+                  src={img}
+                  alt=""
+                  onError={() =>
+                    setBrokenGallerySlots(prev => {
+                      const next = new Set(prev);
+                      next.add(i);
+                      return next;
+                    })
+                  }
+                  className="h-full w-full object-contain bg-brand-light-gray p-1"
+                />
               </button>
             ))}
           </div>
 
           <div className="mb-5 flex justify-center gap-2 lg:hidden">
-            {galleryImages.map((_, i) => (
+            {displayGalleryImages.map((_, i) => (
               <motion.button
                 key={i}
                 onClick={() => setActiveImg(i)}

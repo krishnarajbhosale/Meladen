@@ -18,6 +18,9 @@ import default2 from '../assets/Default 2.jpg';
 import default3 from '../assets/DEFAULT 3.png';
 import default4 from '../assets/Default 4.png';
 
+/** Shown when a product has no uploaded primary image or the API image fails to load. */
+export const PRODUCT_IMAGE_PLACEHOLDER = meladen1;
+
 function normalizeImagePath(value: string | null | undefined): string {
   if (!value) return '';
   const decoded = decodeURIComponent(value);
@@ -48,16 +51,13 @@ function isStoredGalleryImage(value: string): boolean {
 }
 
 export function apiProductToProduct(p: ProductPublicApi): Product {
-  const normalizedImage = normalizeImagePath(p.image);
-  const image = resolveProductMediaUrl(normalizedImage?.trim() ? normalizedImage : p.image) || meladen1;
-  const fallbackGallery = [default2, default3, default4];
-  const apiGallery = (p.gallery ?? [])
+  const primaryFromApi = p.image?.trim()
+    ? resolveProductMediaUrl(normalizeImagePath(p.image))
+    : '';
+  const image = primaryFromApi || PRODUCT_IMAGE_PLACEHOLDER;
+  const gallery = (p.gallery ?? [])
     .map(g => resolveProductMediaUrl(normalizeImagePath(g)))
     .filter(isStoredGalleryImage);
-  const gallery = [...apiGallery];
-  while (gallery.length < 3) {
-    gallery.push(fallbackGallery[gallery.length]);
-  }
 
   return {
     id: p.id,
@@ -68,7 +68,7 @@ export function apiProductToProduct(p: ProductPublicApi): Product {
     category: p.category,
     tag: p.tag ?? undefined,
     image,
-    gallery: gallery.slice(0, 3),
+    gallery,
     description: p.description || p.luxuryDescription || '',
     notes: {
       top: p.notes?.top ?? [],

@@ -198,15 +198,18 @@ public class ProductService {
     int price = toInt(primary);
     String listSize = listSizeForCard(p);
 
+    long mediaVersion = mediaVersion(p);
     List<String> gallery = new ArrayList<>();
     for (int slot = 1; slot <= 3; slot++) {
       String ref = resolveGalleryRef(p, slot);
       if (ref != null) {
-        gallery.add(ref);
+        gallery.add(withMediaVersion(ref, mediaVersion));
       }
     }
 
-    String image = "/api/public/products/" + p.getId() + "/image";
+    String image = hasPrimaryImage(p)
+        ? withMediaVersion("/api/public/products/" + p.getId() + "/image", mediaVersion)
+        : null;
 
     String description = p.getLuxuryDescription() != null && !p.getLuxuryDescription().isBlank()
         ? p.getLuxuryDescription()
@@ -408,6 +411,42 @@ public class ProductService {
 
   private String galleryApiPath(String productId, int slot) {
     return "/api/public/products/" + productId + "/gallery/" + slot;
+  }
+
+  private boolean hasPrimaryImage(Product p) {
+    return p.getImageBlob() != null && p.getImageBlob().length > 0;
+  }
+
+  /** Changes when primary/gallery blobs or external gallery URLs change — used for cache busting. */
+  private long mediaVersion(Product p) {
+    long version = 5381L;
+    byte[] primary = p.getImageBlob();
+    version = version * 31 + (primary != null ? primary.length : 0);
+    version = version * 31 + blobLength(p.getGalleryBlob1());
+    version = version * 31 + blobLength(p.getGalleryBlob2());
+    version = version * 31 + blobLength(p.getGalleryBlob3());
+    version = version * 31 + stringHash(p.getGalleryImage1());
+    version = version * 31 + stringHash(p.getGalleryImage2());
+    version = version * 31 + stringHash(p.getGalleryImage3());
+    return version;
+  }
+
+  private int blobLength(byte[] bytes) {
+    return bytes != null ? bytes.length : 0;
+  }
+
+  private int stringHash(String value) {
+    return value != null ? value.hashCode() : 0;
+  }
+
+  private String withMediaVersion(String ref, long version) {
+    if (ref == null || ref.isBlank()) {
+      return ref;
+    }
+    if (ref.startsWith("/api/")) {
+      return ref + "?v=" + version;
+    }
+    return ref;
   }
 
   private void clearGallerySlot(Product p, int slot) {
