@@ -30,6 +30,7 @@ export interface ProductPublicApi {
   priceGel: number | null;
   priceAttar: number | null;
   priceCarPerfume: number | null;
+  priceBodyHairMist: number | null;
   inspiredBy: string;
   luxuryDescription: string;
   mood: string;
@@ -75,6 +76,7 @@ export interface ProductAdminApi {
   priceGel: number | null;
   priceAttar: number | null;
   priceCarPerfume: number | null;
+  priceBodyHairMist: number | null;
   notesTop: string | null;
   notesMiddle: string | null;
   notesBase: string | null;

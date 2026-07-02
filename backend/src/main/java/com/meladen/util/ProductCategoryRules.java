@@ -40,7 +40,11 @@ public final class ProductCategoryRules {
       return false;
     }
 
-    boolean hasFinished = p.getPriceGel() != null || p.getPriceAttar() != null || p.getPriceCarPerfume() != null;
+    boolean hasFinished =
+        p.getPriceGel() != null
+            || p.getPriceAttar() != null
+            || p.getPriceCarPerfume() != null
+            || p.getPriceBodyHairMist() != null;
     boolean hasMl = p.getPrice30Ml() != null || p.getPrice50Ml() != null || p.getPrice100Ml() != null;
     if (hasFinished && !hasMl) {
       return false;

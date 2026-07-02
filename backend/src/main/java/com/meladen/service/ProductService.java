@@ -234,6 +234,7 @@ public class ProductService {
         toNullableInt(p.getPriceGel()),
         toNullableInt(p.getPriceAttar()),
         toNullableInt(p.getPriceCarPerfume()),
+        toNullableInt(p.getPriceBodyHairMist()),
         nullToEmpty(p.getInspiredBy()),
         nullToEmpty(p.getLuxuryDescription()),
         nullToEmpty(p.getMood()),
@@ -270,6 +271,7 @@ public class ProductService {
         p.getPriceGel(),
         p.getPriceAttar(),
         p.getPriceCarPerfume(),
+        p.getPriceBodyHairMist(),
         p.getNotesTop(),
         p.getNotesMiddle(),
         p.getNotesBase(),
@@ -306,6 +308,7 @@ public class ProductService {
     p.setPriceGel(r.priceGel());
     p.setPriceAttar(r.priceAttar());
     p.setPriceCarPerfume(r.priceCarPerfume());
+    p.setPriceBodyHairMist(r.priceBodyHairMist());
     p.setNotesTop(r.notesTop());
     p.setNotesMiddle(r.notesMiddle());
     p.setNotesBase(r.notesBase());
@@ -526,6 +529,8 @@ public class ProductService {
       return p.getPriceAttar();
     if (p.getPriceCarPerfume() != null)
       return p.getPriceCarPerfume();
+    if (p.getPriceBodyHairMist() != null)
+      return p.getPriceBodyHairMist();
     if (isLiquidPerfumeProduct(p)) {
       if (p.getPrice50Ml() != null)
         return p.getPrice50Ml();
@@ -545,6 +550,8 @@ public class ProductService {
       return "Attar";
     if (p.getPriceCarPerfume() != null)
       return "Car Perfume";
+    if (p.getPriceBodyHairMist() != null)
+      return "Body and Hair Mist";
     if (isLiquidPerfumeProduct(p)) {
       if (p.getPrice50Ml() != null)
         return "50ml";

@@ -84,6 +84,7 @@ export function apiProductToProduct(p: ProductPublicApi): Product {
     priceGel: p.priceGel ?? undefined,
     priceAttar: p.priceAttar ?? undefined,
     priceCarPerfume: p.priceCarPerfume ?? undefined,
+    priceBodyHairMist: p.priceBodyHairMist ?? undefined,
     inspiredBy: p.inspiredBy?.trim() || undefined,
     luxuryDescription: p.luxuryDescription || undefined,
     mood: p.mood || undefined,

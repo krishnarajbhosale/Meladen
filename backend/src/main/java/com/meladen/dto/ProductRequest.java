@@ -19,6 +19,7 @@ public record ProductRequest(
     BigDecimal priceGel,
     BigDecimal priceAttar,
     BigDecimal priceCarPerfume,
+    BigDecimal priceBodyHairMist,
     String notesTop,
     String notesMiddle,
     String notesBase,

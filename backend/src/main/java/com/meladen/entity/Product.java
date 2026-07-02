@@ -70,6 +70,9 @@ public class Product {
   @Column(name = "price_car_perfume", precision = 12, scale = 2)
   private BigDecimal priceCarPerfume;
 
+  @Column(name = "price_body_hair_mist", precision = 12, scale = 2)
+  private BigDecimal priceBodyHairMist;
+
   @Lob
   @Column(name = "notes_top", columnDefinition = "TEXT")
   private String notesTop;

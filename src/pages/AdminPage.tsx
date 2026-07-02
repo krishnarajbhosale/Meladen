@@ -127,6 +127,7 @@ type ProductFormState = {
   priceGel: string;
   priceAttar: string;
   priceCarPerfume: string;
+  priceBodyHairMist: string;
   notesTop: string;
   notesMiddle: string;
   notesBase: string;
@@ -190,6 +191,7 @@ function emptyProductForm(defaultCategoryId: number, defaults?: ProductMediaDefa
     priceGel: '',
     priceAttar: '',
     priceCarPerfume: '',
+    priceBodyHairMist: '',
     notesTop: '',
     notesMiddle: '',
     notesBase: '',
@@ -972,6 +974,7 @@ export default function AdminPage() {
     priceGel: toNum(productForm.priceGel),
     priceAttar: toNum(productForm.priceAttar),
     priceCarPerfume: toNum(productForm.priceCarPerfume),
+    priceBodyHairMist: toNum(productForm.priceBodyHairMist),
     notesTop: productForm.notesTop || null,
     notesMiddle: productForm.notesMiddle || null,
     notesBase: productForm.notesBase || null,
@@ -1036,6 +1039,7 @@ export default function AdminPage() {
       priceGel: p.priceGel != null ? String(p.priceGel) : '',
       priceAttar: p.priceAttar != null ? String(p.priceAttar) : '',
       priceCarPerfume: p.priceCarPerfume != null ? String(p.priceCarPerfume) : '',
+      priceBodyHairMist: p.priceBodyHairMist != null ? String(p.priceBodyHairMist) : '',
       notesTop: p.notesTop ?? '',
       notesMiddle: p.notesMiddle ?? '',
       notesBase: p.notesBase ?? '',
@@ -1629,6 +1633,7 @@ export default function AdminPage() {
                         ['priceGel', 'Perfume Gel price'],
                         ['priceAttar', 'Attar price'],
                         ['priceCarPerfume', 'Car Perfume price'],
+                        ['priceBodyHairMist', 'Body & Hair Mist price'],
                       ] as const
                     ).map(([field, label]) => (
                       <input

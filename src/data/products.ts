@@ -38,6 +38,7 @@ export interface Product {
   priceGel?: number;
   priceAttar?: number;
   priceCarPerfume?: number;
+  priceBodyHairMist?: number;
   inspiredBy?: string;
   luxuryDescription?: string;
   mood?: string;
@@ -106,12 +107,16 @@ export function isLiquidPerfumeProduct(
     | 'priceGel'
     | 'priceAttar'
     | 'priceCarPerfume'
+    | 'priceBodyHairMist'
   >,
 ): boolean {
   if (isNonMlFragranceCategory(product.category)) return false;
 
   const hasFinished =
-    product.priceGel != null || product.priceAttar != null || product.priceCarPerfume != null;
+    product.priceGel != null ||
+    product.priceAttar != null ||
+    product.priceCarPerfume != null ||
+    product.priceBodyHairMist != null;
   const hasMl =
     product.price30Ml != null || product.price50Ml != null || product.price100Ml != null;
   if (hasFinished && !hasMl) return false;
@@ -179,6 +184,7 @@ export function formatProductSizeDisplay(
     | 'priceGel'
     | 'priceAttar'
     | 'priceCarPerfume'
+    | 'priceBodyHairMist'
   >,
 ): string {
   const key = normalizeProductSizeKey(sizeLabel);
@@ -210,6 +216,7 @@ export function formatProductSizeLine(
     | 'priceGel'
     | 'priceAttar'
     | 'priceCarPerfume'
+    | 'priceBodyHairMist'
   >,
 ): string {
   const key = normalizeProductSizeKey(sizeLabel);
@@ -246,6 +253,9 @@ export function getProductSizeOptions(product: Product): ProductSizeOption[] {
   if (product.priceAttar != null) options.push({ label: SIZE_ATTAR, price: product.priceAttar });
   if (product.priceCarPerfume != null) {
     options.push({ label: SIZE_CAR_PERFUME, price: product.priceCarPerfume });
+  }
+  if (product.priceBodyHairMist != null) {
+    options.push({ label: SIZE_BODY_HAIR_MIST, price: product.priceBodyHairMist });
   }
   if (options.length > 0) return options;
 

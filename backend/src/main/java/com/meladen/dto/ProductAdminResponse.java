@@ -20,6 +20,7 @@ public record ProductAdminResponse(
     BigDecimal priceGel,
     BigDecimal priceAttar,
     BigDecimal priceCarPerfume,
+    BigDecimal priceBodyHairMist,
     String notesTop,
     String notesMiddle,
     String notesBase,

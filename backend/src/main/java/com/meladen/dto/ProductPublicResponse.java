@@ -26,6 +26,7 @@ public record ProductPublicResponse(
     Integer priceGel,
     Integer priceAttar,
     Integer priceCarPerfume,
+    Integer priceBodyHairMist,
     String inspiredBy,
     String luxuryDescription,
     String mood,
