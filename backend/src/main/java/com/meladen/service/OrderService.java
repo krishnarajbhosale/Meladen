@@ -14,7 +14,7 @@ import com.meladen.entity.InventoryStock;
 import com.meladen.entity.Product;
 import com.meladen.repository.CustomerOrderRepository;
 import com.meladen.repository.InventoryStockRepository;
-import com.meladen.util.ProductCategoryRules;
+import com.meladen.repository.ProductRepository;
 import com.meladen.util.ProductCategoryRules;
 import com.meladen.util.InvoiceHsnCodes;
 import java.math.BigDecimal;
