@@ -1003,15 +1003,13 @@ export default function AdminPage() {
     setBusy(true);
     try {
       const payload = buildProductPayload();
-      if (editingProductId) {
-        await adminUpdateProduct(token, editingProductId, payload);
-      } else {
-        await adminCreateProduct(token, payload);
-      }
-      setEditingProductId(null);
-      setSelectedImageName('');
-      setPrimaryHasImage(false);
-      setProductForm(emptyProductForm(categories[0]?.id ?? 0, mediaDefaults));
+      const saved = editingProductId
+        ? await adminUpdateProduct(token, editingProductId, payload)
+        : await adminCreateProduct(token, payload);
+      mergeProductInList(saved);
+      setEditingProductId(saved.id);
+      editProduct(saved);
+      setActiveProductTab('Pricing & Notes');
       await refresh();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Save failed');
