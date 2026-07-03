@@ -22,7 +22,7 @@ public class MeladenProperties {
   public static class Mail {
     private String from = "team.meladenperfumes@gmail.com";
     /** Receives an email when a new order is confirmed (paid, COD, or wallet). */
-    private String adminNotifyTo = "prateek.s149@gmail.com";
+    private String adminNotifyTo = "meladenperfumes@gmail.com";
   }
 
   @Getter
@@ -48,7 +48,10 @@ public class MeladenProperties {
   @Getter
   @Setter
   public static class OrderPricing {
-    /** Flat shipping fee when order subtotal (after promo) is below free-shipping threshold. */
+    /**
+     * Flat shipping fee when order subtotal (after promo) is below free-shipping
+     * threshold.
+     */
     private BigDecimal shippingFee = new BigDecimal("12");
     /** Subtotal after promo at or above this value ships free. */
     private BigDecimal freeShippingThreshold = new BigDecimal("150");
