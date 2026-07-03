@@ -98,6 +98,12 @@ public class OrderService {
     if (!"PAYMENT_PENDING".equals(order.getStatus())) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order is not awaiting payment");
     }
+    ComputedOrder computed = computeOrder(orderToSnapshotRequest(order), customerId);
+    order.setShipping(computed.shipping());
+    order.setCodCharges(computed.codCharges());
+    order.setWalletDiscount(computed.walletUse());
+    order.setTotal(computed.finalTotal());
+    order = orderRepository.save(order);
     if (order.getTotal().compareTo(BigDecimal.ZERO) <= 0) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No payment required for this order");
     }
@@ -401,7 +407,7 @@ public class OrderService {
         items,
         order.getPromoCode(),
         order.getWalletDiscount(),
-        order.getTotal(),
+        null,
         order.getPaymentMethod());
   }
 
@@ -453,6 +459,24 @@ public class OrderService {
       return toOrderResponse(order);
     }
     order.setCodPaymentReceived(true);
+    return toOrderResponse(orderRepository.save(order));
+  }
+
+  @Transactional
+  public OrderResponse markOrderCompleted(String orderId) {
+    CustomerOrder order =
+        orderRepository
+            .findByIdWithItems(orderId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+    String status = order.getStatus() == null ? "" : order.getStatus().trim().toUpperCase(Locale.ROOT);
+    if ("COMPLETED".equals(status)) {
+      return toOrderResponse(order);
+    }
+    if (!"PAID".equals(status) && !"COD".equals(status)) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Only paid or COD orders can be marked completed");
+    }
+    order.setStatus("COMPLETED");
     return toOrderResponse(orderRepository.save(order));
   }
 

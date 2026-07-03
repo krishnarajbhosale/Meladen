@@ -3,6 +3,7 @@ import {
   adminGetStock,
   adminListOrders,
   adminMarkCodPaymentReceived,
+  adminMarkOrderCompleted,
   adminCreatePromoCode,
   adminCreateCategory,
   adminCreateProduct,
@@ -71,7 +72,7 @@ const ORDERS_SEEN_AT_KEY = 'meladen_admin_orders_seen_at';
 const ORDERS_POLL_MS = 30_000;
 
 function isAdminConfirmedOrder(order: OrderApi): boolean {
-  return order.status === 'PAID' || order.status === 'COD';
+  return order.status === 'PAID' || order.status === 'COD' || order.status === 'COMPLETED';
 }
 
 function getOrdersSeenAtMs(): number | null {
@@ -232,6 +233,7 @@ export default function AdminPage() {
   const [stock, setStock] = useState<StockSummaryApi | null>(null);
   const [orders, setOrders] = useState<OrderApi[]>([]);
   const [codMarkBusy, setCodMarkBusy] = useState<string | null>(null);
+  const [completeMarkBusy, setCompleteMarkBusy] = useState<string | null>(null);
   const [unseenOrderIds, setUnseenOrderIds] = useState<Set<string>>(() => new Set());
   const [promoRows, setPromoRows] = useState<PromoCodeRow[]>([]);
   const [returnRows, setReturnRows] = useState<ReturnRequestRow[]>([]);
@@ -617,6 +619,19 @@ export default function AdminPage() {
       alert(err instanceof Error ? err.message : 'Could not update COD payment status');
     } finally {
       setCodMarkBusy(null);
+    }
+  };
+
+  const markOrderCompleted = async (orderId: string) => {
+    if (!token) return;
+    setCompleteMarkBusy(orderId);
+    try {
+      const updated = await adminMarkOrderCompleted(token, orderId);
+      setOrders(prev => prev.map(o => (o.id === orderId ? updated : o)));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not mark order completed');
+    } finally {
+      setCompleteMarkBusy(null);
     }
   };
 
@@ -2026,7 +2041,9 @@ export default function AdminPage() {
                     const statusLabel = order.status.replace(/_/g, ' ');
                     const paymentLabel = formatPaymentMethod(order.paymentMethod, order.status);
                     const statusTone =
-                      order.status === 'PAID' || order.status === 'PLACED'
+                      order.status === 'COMPLETED'
+                        ? 'bg-[#241d14] text-white border-[#241d14]'
+                        : order.status === 'PAID' || order.status === 'PLACED'
                         ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
                         : order.status === 'PAYMENT_PENDING'
                           ? 'bg-amber-100 text-amber-900 border-amber-200'
@@ -2187,6 +2204,27 @@ export default function AdminPage() {
                           )}
                         </div>
                       )}
+
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#eadfce] bg-[#fffdfa] px-3 py-2">
+                        <div>
+                          <p className="text-xs font-semibold text-[#3a2f25]">Order processing</p>
+                          <p className="text-[10px] text-[#7a6b57]">
+                            Mark this after the order has been processed and completed.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={order.status === 'COMPLETED' || completeMarkBusy === order.id}
+                          onClick={() => void markOrderCompleted(order.id)}
+                          className="rounded-lg border border-[#241d14] bg-[#241d14] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#3a2f25] disabled:cursor-not-allowed disabled:border-[#dbcdb8] disabled:bg-[#f0ebe3] disabled:text-[#7a6b57]"
+                        >
+                          {order.status === 'COMPLETED'
+                            ? 'Completed'
+                            : completeMarkBusy === order.id
+                              ? 'Updating...'
+                              : 'Mark processed & completed'}
+                        </button>
+                      </div>
 
                       <div className="mt-3 overflow-x-auto rounded-lg border border-[#eadfce] bg-[#fffdfa]">
                         <table className="min-w-full text-xs text-[#3a2f25]">

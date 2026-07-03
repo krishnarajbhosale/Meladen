@@ -26,4 +26,9 @@ public class AdminOrderController {
   public OrderResponse markCodPaymentReceived(@PathVariable String orderId) {
     return orderService.markCodPaymentReceived(orderId);
   }
+
+  @PutMapping("/{orderId}/complete")
+  public OrderResponse markCompleted(@PathVariable String orderId) {
+    return orderService.markOrderCompleted(orderId);
+  }
 }

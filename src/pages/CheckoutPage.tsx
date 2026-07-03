@@ -18,6 +18,12 @@ import { formatInr } from '../utils/currency';
 import { sanitizePhoneDigits } from '../utils/phone';
 
 const CITY_NOT_LISTED = 'Other (city not listed)';
+const ENGLISH_INPUT_PATTERN = '[\\x20-\\x7E]*';
+const ENGLISH_INPUT_REGEX = /^[\x20-\x7E]*$/;
+const PINCODE_PATTERN = '\\d{6}';
+const PINCODE_REGEX = /^\d{6}$/;
+const ENGLISH_INPUT_TITLE = 'Please enter this in English only.';
+const PINCODE_TITLE = 'Please enter a valid 6-digit pincode.';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -52,6 +58,7 @@ export default function CheckoutPage() {
   });
 
   const set = (key: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [key]: v }));
+  const setPostcode = (v: string) => set('postcode')(v.replace(/\D/g, '').slice(0, 6));
 
   // City is a dropdown driven by the chosen state; "Other" falls back to a text input.
   const [cityCustom, setCityCustom] = useState(false);
@@ -215,6 +222,24 @@ export default function CheckoutPage() {
       setSubmitError('Your cart is empty.');
       return;
     }
+    if (!PINCODE_REGEX.test(form.postcode.trim())) {
+      setSubmitError(PINCODE_TITLE);
+      return;
+    }
+    const shippingTextFields = [
+      form.firstName,
+      form.lastName,
+      form.apartmentHouseNumber,
+      form.address,
+      form.nearestLandmark,
+      form.city,
+      form.state,
+      form.country,
+    ];
+    if (shippingTextFields.some(value => !ENGLISH_INPUT_REGEX.test(value))) {
+      setSubmitError('Please enter all shipping details in English only.');
+      return;
+    }
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -294,8 +319,22 @@ export default function CheckoutPage() {
             <p className="mb-4 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Contact</p>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <InputField label="First Name" value={form.firstName} onChange={set('firstName')} required />
-                <InputField label="Last Name" value={form.lastName} onChange={set('lastName')} required />
+                <InputField
+                  label="First Name"
+                  value={form.firstName}
+                  onChange={set('firstName')}
+                  pattern={ENGLISH_INPUT_PATTERN}
+                  title={ENGLISH_INPUT_TITLE}
+                  required
+                />
+                <InputField
+                  label="Last Name"
+                  value={form.lastName}
+                  onChange={set('lastName')}
+                  pattern={ENGLISH_INPUT_PATTERN}
+                  title={ENGLISH_INPUT_TITLE}
+                  required
+                />
               </div>
               <InputField label="Email" type="email" value={form.email} onChange={set('email')} required />
               <InputField
@@ -322,12 +361,23 @@ export default function CheckoutPage() {
                 label="Apartment / House Number"
                 value={form.apartmentHouseNumber}
                 onChange={set('apartmentHouseNumber')}
+                pattern={ENGLISH_INPUT_PATTERN}
+                title={ENGLISH_INPUT_TITLE}
               />
-              <InputField label="Street Address" value={form.address} onChange={set('address')} required />
+              <InputField
+                label="Street Address"
+                value={form.address}
+                onChange={set('address')}
+                pattern={ENGLISH_INPUT_PATTERN}
+                title={ENGLISH_INPUT_TITLE}
+                required
+              />
               <InputField
                 label="Nearest Landmark"
                 value={form.nearestLandmark}
                 onChange={set('nearestLandmark')}
+                pattern={ENGLISH_INPUT_PATTERN}
+                title={ENGLISH_INPUT_TITLE}
               />
               <SelectField
                 label="State"
@@ -340,7 +390,14 @@ export default function CheckoutPage() {
               <div className="grid grid-cols-2 gap-3">
                 {cityCustom ? (
                   <div>
-                    <InputField label="City" value={form.city} onChange={set('city')} required />
+                    <InputField
+                      label="City"
+                      value={form.city}
+                      onChange={set('city')}
+                      pattern={ENGLISH_INPUT_PATTERN}
+                      title={ENGLISH_INPUT_TITLE}
+                      required
+                    />
                     <button
                       type="button"
                       onClick={() => {
@@ -363,7 +420,16 @@ export default function CheckoutPage() {
                     required
                   />
                 )}
-                <InputField label="Postcode" value={form.postcode} onChange={set('postcode')} required />
+                <InputField
+                  label="Pincode"
+                  value={form.postcode}
+                  onChange={setPostcode}
+                  inputMode="numeric"
+                  maxLength={6}
+                  pattern={PINCODE_PATTERN}
+                  title={PINCODE_TITLE}
+                  required
+                />
               </div>
               <SelectField
                 label="Country"

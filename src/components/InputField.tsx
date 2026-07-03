@@ -9,6 +9,8 @@ interface Props {
   maxLength?: number;
   placeholder?: string;
   inputMode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search';
+  pattern?: string;
+  title?: string;
 }
 
 export default function InputField({
@@ -20,6 +22,8 @@ export default function InputField({
   maxLength,
   placeholder,
   inputMode,
+  pattern,
+  title,
 }: Props) {
   const [focused, setFocused] = useState(false);
   const active = focused || value.length > 0;
@@ -36,6 +40,8 @@ export default function InputField({
         maxLength={maxLength}
         placeholder={placeholder}
         inputMode={inputMode}
+        pattern={pattern}
+        title={title}
         className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 pt-5 pb-2 text-sm text-[#b8b3ac] outline-none focus:border-[#c9a84c] transition-colors duration-200"
       />
       <label

@@ -78,6 +78,12 @@ export const SIZE_ATTAR = 'Attar';
 export const SIZE_CAR_PERFUME = 'Car Perfume';
 export const SIZE_BODY_HAIR_MIST = 'Body and Hair Mist';
 
+const FINISHED_PRODUCT_SIZE_DISPLAY: Record<string, string> = {
+  [SIZE_ATTAR]: '6 ML',
+  [SIZE_PERFUME_GEL]: '10.5 ML',
+  [SIZE_BODY_HAIR_MIST]: '100 ML',
+};
+
 function normalizeCategoryName(category: string): string {
   return category.trim().toLowerCase().replace(/\s+/g, ' ');
 }
@@ -193,6 +199,10 @@ export function formatProductSizeDisplay(
     return key;
   }
   switch (key) {
+    case SIZE_ATTAR:
+    case SIZE_PERFUME_GEL:
+    case SIZE_BODY_HAIR_MIST:
+      return FINISHED_PRODUCT_SIZE_DISPLAY[key];
     case '30ml':
       return 'Starter Size';
     case '50ml':

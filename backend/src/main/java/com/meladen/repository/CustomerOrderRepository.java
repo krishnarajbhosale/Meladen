@@ -11,7 +11,7 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, St
 
   @Query(
       "SELECT DISTINCT o FROM CustomerOrder o LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.product p "
-          + "LEFT JOIN FETCH p.category WHERE UPPER(o.status) IN ('PAID', 'COD') ORDER BY o.createdAt DESC")
+          + "LEFT JOIN FETCH p.category WHERE UPPER(o.status) IN ('PAID', 'COD', 'COMPLETED') ORDER BY o.createdAt DESC")
   List<CustomerOrder> findConfirmedWithItems();
 
   @Query(

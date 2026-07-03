@@ -289,6 +289,13 @@ export async function adminMarkCodPaymentReceived(token: string, orderId: string
   });
 }
 
+export async function adminMarkOrderCompleted(token: string, orderId: string): Promise<OrderApi> {
+  return fetchJson<OrderApi>(`/api/admin/orders/${encodeURIComponent(orderId)}/complete`, {
+    method: 'PUT',
+    headers: authHeaders(token),
+  });
+}
+
 export async function fetchMyOrders(): Promise<OrderApi[]> {
   return fetchJson<OrderApi[]>('/api/public/orders/me', {
     headers: { ...customerAuthHeaders() },
