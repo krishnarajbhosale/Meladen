@@ -4,11 +4,20 @@ interface Props {
   value: number;
   onChange: (v: number) => void;
   min?: number;
+  max?: number;
+  onMaxReached?: () => void;
   /** Tighter control for cart drawer / dense layouts */
   compact?: boolean;
 }
 
-export default function QuantityStepper({ value, onChange, min = 1, compact = false }: Props) {
+export default function QuantityStepper({
+  value,
+  onChange,
+  min = 1,
+  max = Number.MAX_SAFE_INTEGER,
+  onMaxReached,
+  compact = false,
+}: Props) {
   const btn = compact ? 'h-7 w-7 text-sm' : 'h-8 w-8 text-base';
   const qty = compact ? 'min-w-[1.5rem] text-xs' : 'min-w-[1.75rem] text-sm';
 
@@ -31,9 +40,16 @@ export default function QuantityStepper({ value, onChange, min = 1, compact = fa
         type="button"
         whileTap={{ scale: 0.9 }}
         transition={{ duration: 0.1 }}
-        className={`flex items-center justify-center rounded-full bg-[#c9a84c] text-black transition-colors hover:bg-[#d7b45d] ${btn}`}
+        aria-disabled={value >= max}
+        className={`flex items-center justify-center rounded-full bg-[#c9a84c] text-black transition-colors ${value >= max ? 'cursor-not-allowed opacity-40' : 'hover:bg-[#d7b45d]'} ${btn}`}
         aria-label="Increase quantity"
-        onClick={() => onChange(value + 1)}
+        onClick={() => {
+          if (value >= max) {
+            onMaxReached?.();
+            return;
+          }
+          onChange(value + 1);
+        }}
       >
         +
       </motion.button>

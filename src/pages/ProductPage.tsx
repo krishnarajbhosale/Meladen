@@ -5,12 +5,14 @@ import {
   products,
   getProductDisplayCategory,
   getProductSizeAvailability,
+  getMaxProductQuantity,
   formatProductSizeDisplay,
   formatLiquidPerfumePricePerMl,
   isLiquidPerfumeProduct,
   type Product,
 } from '../data/products';
 import { useCart } from '../context/CartContext';
+import { useToast } from '../context/ToastContext';
 import Accordion from '../components/Accordion';
 import FragranceNotesSection from '../components/FragranceNotesSection';
 import Button from '../components/Button';
@@ -24,11 +26,13 @@ import { pageVariants, fadeUp } from '../animations/variants';
 import { apiProductToProduct, fetchCategoriesWithProducts, fetchPublicProduct, fetchPublicStock, PRODUCT_IMAGE_PLACEHOLDER } from '../api/catalog';
 import { category2Matches } from '../data/collections';
 import { formatInr } from '../utils/currency';
+import { newMetaEventId, trackMetaEvent } from '../analytics/metaPixel';
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { showToast } = useToast();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
@@ -38,6 +42,7 @@ export default function ProductPage() {
   const [alcoholStockGm, setAlcoholStockGm] = useState<number | null>(null);
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
   const [brokenGallerySlots, setBrokenGallerySlots] = useState<Set<number>>(() => new Set());
+  const metaViewContentProductId = useRef('');
 
   useEffect(() => {
     let cancelled = false;
@@ -110,6 +115,22 @@ export default function ProductPage() {
     const pick = options.find(option => option.available) ?? options[0];
     if (pick) setSelectedSizeLabel(pick.label);
   }, [product?.id, alcoholStockGm]);
+
+  useEffect(() => {
+    if (!product || metaViewContentProductId.current === product.id) return;
+    metaViewContentProductId.current = product.id;
+    trackMetaEvent(
+      'ViewContent',
+      {
+        value: Number(product.price),
+        currency: 'INR',
+        content_ids: [product.id],
+        contents: [{ id: product.id, quantity: 1, item_price: Number(product.price) }],
+        content_type: 'product',
+      },
+      newMetaEventId('view_content'),
+    );
+  }, [product]);
 
   useEffect(() => {
     if (!product || !selectedSizeLabel) return;
@@ -233,12 +254,20 @@ export default function ProductPage() {
     sizeOptions[0] ??
     null;
   const selectedUnavailable = !selectedSize || !selectedSize.available;
+  const selectedMaxQuantity = selectedSize
+    ? getMaxProductQuantity(product, selectedSize.label, alcoholStockGm)
+    : 0;
   const sizeGridClass =
     sizeOptions.length <= 1 ? 'grid-cols-1' : sizeOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-3';
 
   const handleAdd = () => {
     if (!selectedSize || selectedUnavailable) return;
-    addToCart(product, selectedSize.label, selectedSize.price, qty);
+    const allowedQty = Math.min(qty, getMaxProductQuantity(product, selectedSize.label, alcoholStockGm));
+    if (allowedQty <= 0) {
+      showToast('No more quantity available.');
+      return;
+    }
+    addToCart(product, selectedSize.label, selectedSize.price, allowedQty);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -458,7 +487,10 @@ export default function ProductPage() {
                     key={option.label}
                     type="button"
                     disabled={!option.available}
-                    onClick={() => setSelectedSizeLabel(option.label)}
+                    onClick={() => {
+                      setSelectedSizeLabel(option.label);
+                      setQty(1);
+                    }}
                     className={`flex min-h-[112px] flex-col items-center justify-center rounded-2xl border px-3 py-3 text-center transition-all duration-300 ${
                       isActive
                         ? 'border-brand-dark bg-brand-beige text-brand-dark shadow-[0_14px_30px_rgba(184,179,172,0.16)]'
@@ -510,7 +542,12 @@ export default function ProductPage() {
             animate="visible"
             className="mb-10 flex items-center gap-3"
           >
-            <QuantityStepper value={qty} onChange={setQty} />
+            <QuantityStepper
+              value={Math.min(qty, Math.max(1, selectedMaxQuantity))}
+              onChange={setQty}
+              max={Math.max(1, selectedMaxQuantity)}
+              onMaxReached={() => showToast('No more quantity available.')}
+            />
             <Button onClick={handleAdd} variant="gold" fullWidth className="flex-1" disabled={selectedUnavailable}>
               {selectedUnavailable ? 'Out of Stock' : added ? 'Added to Cart' : 'Add to Cart'}
             </Button>

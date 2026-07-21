@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useCart } from '../context/CartContext';
@@ -16,10 +16,11 @@ import Drawer from '../components/Drawer';
 import { pageVariants, fadeUp } from '../animations/variants';
 import { formatInr } from '../utils/currency';
 import { sanitizePhoneDigits } from '../utils/phone';
+import { isEnglishOnly, sanitizeEnglishInput } from '../utils/englishInput';
+import { newMetaEventId, trackMetaEvent } from '../analytics/metaPixel';
 
 const CITY_NOT_LISTED = 'Other (city not listed)';
 const ENGLISH_INPUT_PATTERN = '[\\x20-\\x7E]*';
-const ENGLISH_INPUT_REGEX = /^[\x20-\x7E]*$/;
 const PINCODE_PATTERN = '\\d{6}';
 const PINCODE_REGEX = /^\d{6}$/;
 const ENGLISH_INPUT_TITLE = 'Please enter this in English only.';
@@ -40,8 +41,30 @@ export default function CheckoutPage() {
   const [shippingFee, setShippingFee] = useState(0);
   const [shippingLoading, setShippingLoading] = useState(false);
   const [shippingSource, setShippingSource] = useState<string | null>(null);
+  const initiateCheckoutTracked = useRef(false);
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  useEffect(() => {
+    if (initiateCheckoutTracked.current || items.length === 0) return;
+    initiateCheckoutTracked.current = true;
+    trackMetaEvent(
+      'InitiateCheckout',
+      {
+        value: total,
+        currency: 'INR',
+        content_ids: items.map(item => item.product.id),
+        contents: items.map(item => ({
+          id: item.product.id,
+          quantity: item.quantity,
+          item_price: item.unitPrice,
+        })),
+        content_type: 'product',
+        num_items: itemCount,
+      },
+      newMetaEventId('initiate_checkout'),
+    );
+  }, [items, itemCount, total]);
 
   const [form, setForm] = useState({
     firstName: '',
@@ -58,6 +81,8 @@ export default function CheckoutPage() {
   });
 
   const set = (key: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [key]: v }));
+  const setEnglish =
+    (key: keyof typeof form) => (v: string) => set(key)(sanitizeEnglishInput(v));
   const setPostcode = (v: string) => set('postcode')(v.replace(/\D/g, '').slice(0, 6));
 
   // City is a dropdown driven by the chosen state; "Other" falls back to a text input.
@@ -101,14 +126,16 @@ export default function CheckoutPage() {
         // Only fill fields the user hasn't already typed into.
         setForm(f => ({
           ...f,
-          firstName: f.firstName || firstName,
-          lastName: f.lastName || lastName,
+          firstName: f.firstName || sanitizeEnglishInput(firstName),
+          lastName: f.lastName || sanitizeEnglishInput(lastName),
           email: f.email || latest.customerEmail || '',
           phone: f.phone || (latest.customerPhone ?? ''),
-          apartmentHouseNumber: f.apartmentHouseNumber || (latest.apartmentHouseNumber ?? ''),
-          address: f.address || latest.address || '',
-          nearestLandmark: f.nearestLandmark || (latest.nearestLandmark ?? ''),
-          city: f.city || prefillCity,
+          apartmentHouseNumber:
+            f.apartmentHouseNumber || sanitizeEnglishInput(latest.apartmentHouseNumber ?? ''),
+          address: f.address || sanitizeEnglishInput(latest.address || ''),
+          nearestLandmark:
+            f.nearestLandmark || sanitizeEnglishInput(latest.nearestLandmark ?? ''),
+          city: f.city || sanitizeEnglishInput(prefillCity),
           state: f.state || validState,
           postcode: f.postcode || latest.postcode || '',
           country: f.country || latest.country || 'India',
@@ -236,7 +263,7 @@ export default function CheckoutPage() {
       form.state,
       form.country,
     ];
-    if (shippingTextFields.some(value => !ENGLISH_INPUT_REGEX.test(value))) {
+    if (shippingTextFields.some(value => !isEnglishOnly(value))) {
       setSubmitError('Please enter all shipping details in English only.');
       return;
     }
@@ -322,7 +349,7 @@ export default function CheckoutPage() {
                 <InputField
                   label="First Name"
                   value={form.firstName}
-                  onChange={set('firstName')}
+                  onChange={setEnglish('firstName')}
                   pattern={ENGLISH_INPUT_PATTERN}
                   title={ENGLISH_INPUT_TITLE}
                   required
@@ -330,7 +357,7 @@ export default function CheckoutPage() {
                 <InputField
                   label="Last Name"
                   value={form.lastName}
-                  onChange={set('lastName')}
+                  onChange={setEnglish('lastName')}
                   pattern={ENGLISH_INPUT_PATTERN}
                   title={ENGLISH_INPUT_TITLE}
                   required
@@ -355,19 +382,22 @@ export default function CheckoutPage() {
             animate="visible"
             className="rounded-[2rem] border border-[#2a2a2a] bg-[linear-gradient(180deg,#161616,#101010)] p-5 lg:p-6"
           >
-            <p className="mb-4 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Shipping Address</p>
+            <p className="mb-1 text-[10px] uppercase tracking-[0.2em] text-brand-gray">Shipping Address</p>
+            <p className="mb-4 text-[11px] text-brand-gray/80">
+              Enter all address details in English only (Latin letters, numbers, and punctuation).
+            </p>
             <div className="space-y-3">
               <InputField
                 label="Apartment / House Number"
                 value={form.apartmentHouseNumber}
-                onChange={set('apartmentHouseNumber')}
+                onChange={setEnglish('apartmentHouseNumber')}
                 pattern={ENGLISH_INPUT_PATTERN}
                 title={ENGLISH_INPUT_TITLE}
               />
               <InputField
                 label="Street Address"
                 value={form.address}
-                onChange={set('address')}
+                onChange={setEnglish('address')}
                 pattern={ENGLISH_INPUT_PATTERN}
                 title={ENGLISH_INPUT_TITLE}
                 required
@@ -375,7 +405,7 @@ export default function CheckoutPage() {
               <InputField
                 label="Nearest Landmark"
                 value={form.nearestLandmark}
-                onChange={set('nearestLandmark')}
+                onChange={setEnglish('nearestLandmark')}
                 pattern={ENGLISH_INPUT_PATTERN}
                 title={ENGLISH_INPUT_TITLE}
               />
@@ -393,7 +423,7 @@ export default function CheckoutPage() {
                     <InputField
                       label="City"
                       value={form.city}
-                      onChange={set('city')}
+                      onChange={setEnglish('city')}
                       pattern={ENGLISH_INPUT_PATTERN}
                       title={ENGLISH_INPUT_TITLE}
                       required

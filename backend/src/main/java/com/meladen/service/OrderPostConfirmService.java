@@ -16,6 +16,7 @@ public class OrderPostConfirmService {
   private final CustomerOrderRepository orderRepository;
   private final ShiprocketService shiprocketService;
   private final OrderMailService orderMailService;
+  private final MetaConversionsService metaConversionsService;
 
   @Transactional
   public void dispatch(String orderId) {
@@ -41,5 +42,6 @@ public class OrderPostConfirmService {
     } catch (Exception e) {
       log.warn("Order email dispatch failed for {}: {}", order.getOrderNumber(), e.getMessage());
     }
+    metaConversionsService.sendPurchase(order);
   }
 }

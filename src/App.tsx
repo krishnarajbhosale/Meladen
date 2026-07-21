@@ -1,5 +1,11 @@
 import { useEffect } from 'react';
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import {
+  Routes,
+  Route,
+  useLocation,
+  useNavigationType,
+  Navigate,
+} from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import MobileContainer from './components/MobileContainer';
 import Navbar from './components/Navbar';
@@ -22,6 +28,7 @@ import ReturnsRefundPolicyPage from './pages/policies/ReturnsRefundPolicyPage';
 import JurisdictionPage from './pages/policies/JurisdictionPage';
 import TrackOrderPage from './pages/TrackOrderPage';
 import Ga4PageViewTracker from './components/Ga4PageViewTracker';
+import MetaPageViewTracker from './components/MetaPageViewTracker';
 
 const CHROME_ROUTES = [
   '/',
@@ -34,12 +41,34 @@ const CHROME_ROUTES = [
   '/order-confirmation',
 ];
 
-function ScrollToTop() {
-  const { pathname } = useLocation();
+const scrollPositions = new Map<string, number>();
+
+function ScrollManager() {
+  const location = useLocation();
+  const navigationType = useNavigationType();
 
   useEffect(() => {
+    const key = location.key;
+    const savedPosition = scrollPositions.get(key);
+
+    if (navigationType === 'POP' && savedPosition != null) {
+      // The catalog loads asynchronously, so retry after its content expands.
+      const timers = [0, 100, 300, 700, 1200].map(delay =>
+        window.setTimeout(() => {
+          window.scrollTo({ top: savedPosition, left: 0, behavior: 'auto' });
+        }, delay),
+      );
+      return () => {
+        timers.forEach(window.clearTimeout);
+        scrollPositions.set(key, window.scrollY);
+      };
+    }
+
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  }, [pathname]);
+    return () => {
+      scrollPositions.set(key, window.scrollY);
+    };
+  }, [location.key, navigationType]);
 
   return null;
 }
@@ -55,13 +84,11 @@ export default function App() {
 
   return (
     <MobileContainer>
-      <ScrollToTop />
+      <ScrollManager />
       <Ga4PageViewTracker />
+      <MetaPageViewTracker />
       {showChrome && <Navbar />}
-      <AnimatePresence
-        mode="wait"
-        onExitComplete={() => window.scrollTo({ top: 0, left: 0, behavior: 'auto' })}
-      >
+      <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<HomePage />} />
           <Route path="/collection" element={<CollectionPage />} />

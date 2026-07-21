@@ -1,6 +1,10 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Product } from '../data/products';
+import {
+  getMaxProductQuantity,
+  getProductSizeRecipe,
+  type Product,
+} from '../data/products';
 import {
   CUSTOMER_AUTH_CHANGED_EVENT,
   getCustomerEmail,
@@ -12,6 +16,7 @@ import {
   savePersistedCart,
 } from '../utils/cartStorage';
 import { useToast } from './ToastContext';
+import { newMetaEventId, trackMetaEvent } from '../analytics/metaPixel';
 
 export interface CartItem {
   product: Product;
@@ -51,6 +56,25 @@ function mergeCarts(base: CartItem[], incoming: CartItem[]): CartItem[] {
   return merged;
 }
 
+function maxQuantityForLine(
+  items: CartItem[],
+  product: Product,
+  size: string,
+): number {
+  const recipe = getProductSizeRecipe(size);
+  if (!recipe || recipe.oil <= 0) return Number.MAX_SAFE_INTEGER;
+
+  const stock = Math.max(0, Number(product.productOil ?? 0));
+  const usedByOtherSizes = items.reduce((used, item) => {
+    if (item.product.id !== product.id || item.size === size) return used;
+    const otherRecipe = getProductSizeRecipe(item.size);
+    return used + (otherRecipe?.oil ?? 0) * item.quantity;
+  }, 0);
+  const remaining = Math.max(0, stock - usedByOtherSizes);
+  const stockAdjustedProduct = { ...product, productOil: remaining };
+  return getMaxProductQuantity(stockAdjustedProduct, size);
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => readLoggedInCart());
   const { showToast } = useToast();
@@ -85,20 +109,48 @@ export function CartProvider({ children }: { children: ReactNode }) {
     quantity = 1,
   ) => {
     const qty = Math.max(1, quantity);
+    const existing = items.find(i => i.product.id === product.id && i.size === size);
+    const maxQty = maxQuantityForLine(items, product, size);
+    const currentQty = existing?.quantity ?? 0;
+    const nextQty = Math.min(currentQty + qty, maxQty);
+    const addedQty = Math.max(0, nextQty - currentQty);
+    const limitedByStock = addedQty < qty;
+
     setItems(prev => {
-      const existing = prev.find(i => i.product.id === product.id && i.size === size);
+      if (addedQty <= 0) return prev;
       if (existing)
         return prev.map(i =>
           i.product.id === product.id && i.size === size
-            ? { ...i, quantity: i.quantity + qty }
+            ? { ...i, product, unitPrice, quantity: nextQty }
             : i,
         );
-      return [...prev, { product, size, unitPrice, quantity: qty }];
+      return [...prev, { product, size, unitPrice, quantity: addedQty }];
     });
     const label = product.name.length > 36 ? `${product.name.slice(0, 33)}…` : product.name;
-    showToast(
-      qty > 1 ? `Added ${qty} × ${label} to cart` : `Added ${label} to cart`,
-    );
+    if (limitedByStock) {
+      showToast(
+        addedQty > 0
+          ? `Only ${addedQty} more available. Added to cart.`
+          : 'No more quantity available.',
+      );
+    } else {
+      showToast(
+        qty > 1 ? `Added ${qty} × ${label} to cart` : `Added ${label} to cart`,
+      );
+    }
+    if (addedQty > 0) {
+      trackMetaEvent(
+        'AddToCart',
+        {
+          value: unitPrice * addedQty,
+          currency: 'INR',
+          content_ids: [product.id],
+          contents: [{ id: product.id, quantity: addedQty, item_price: unitPrice }],
+          content_type: 'product',
+        },
+        newMetaEventId('add_to_cart'),
+      );
+    }
   };
 
   const removeFromCart = (id: string, size: string) =>
@@ -106,6 +158,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const updateQty = (id: string, size: string, qty: number) => {
     if (qty <= 0) return removeFromCart(id, size);
+    const target = items.find(i => i.product.id === id && i.size === size);
+    if (!target) return;
+    const maxQty = maxQuantityForLine(items, target.product, size);
+    if (qty > maxQty) {
+      showToast('No more quantity available.');
+      return;
+    }
     setItems(prev =>
       prev.map(i =>
         i.product.id === id && i.size === size ? { ...i, quantity: qty } : i,

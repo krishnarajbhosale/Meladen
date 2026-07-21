@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useNavigationType,
+  useSearchParams,
+} from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProductSizeAvailability, products } from '../data/products';
 import { useCart } from '../context/CartContext';
@@ -45,6 +51,7 @@ function resolveCategorySlug(location: ReturnType<typeof useLocation>): string {
 export default function CollectionPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const navigationType = useNavigationType();
   const [searchParams] = useSearchParams();
   const { addToCart } = useCart();
 
@@ -222,6 +229,8 @@ export default function CollectionPage() {
   }, [selectedConc, selectedFamily, maxPrice, sort, useApiLayout, filterIdealFor, filterMood, filterPremium]);
 
   useEffect(() => {
+    // On browser Back/Forward, App's ScrollManager restores the exact product position.
+    if (navigationType === 'POP') return;
     if (!activeCategorySlug || catalogLoading || visibleSections.length === 0) return;
 
     const target = visibleSections[0].slug;
@@ -234,7 +243,7 @@ export default function CollectionPage() {
 
     const timers = [120, 350, 700].map(ms => window.setTimeout(scrollToSection, ms));
     return () => timers.forEach(window.clearTimeout);
-  }, [activeCategorySlug, catalogLoading, visibleSections, searchParams]);
+  }, [activeCategorySlug, catalogLoading, visibleSections, searchParams, navigationType]);
 
   const renderProductCard = (p: Product, i: number) => {
     const availability = getProductSizeAvailability(p, alcoholStockGm);

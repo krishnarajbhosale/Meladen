@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { API_BASE_URL } from '../api/client';
@@ -6,6 +7,7 @@ import type { OrderApi } from '../api/types';
 import { formatProductSizeLine } from '../data/products';
 import { formatInr } from '../utils/currency';
 import { formatShippingAddress } from '../utils/address';
+import { trackMetaEvent } from '../analytics/metaPixel';
 
 type LocationState = { order?: OrderApi };
 
@@ -19,6 +21,31 @@ export default function OrderConfirmationPage() {
   const location = useLocation();
   const order = (location.state as LocationState | null)?.order;
   const isCod = order?.paymentMethod === 'COD' || order?.status === 'COD';
+
+  useEffect(() => {
+    if (!order || (order.status !== 'PAID' && order.status !== 'COD')) return;
+
+    const eventId = `purchase_${order.id}`;
+    const storageKey = `meladen_meta_${eventId}`;
+    if (sessionStorage.getItem(storageKey)) return;
+
+    trackMetaEvent(
+      'Purchase',
+      {
+        value: Number(order.total),
+        currency: 'INR',
+        content_ids: order.items.map(item => item.productId),
+        contents: order.items.map(item => ({
+          id: item.productId,
+          quantity: item.quantity,
+          item_price: Number(item.unitPrice),
+        })),
+        content_type: 'product',
+      },
+      eventId,
+    );
+    sessionStorage.setItem(storageKey, '1');
+  }, [order]);
 
   return (
     <motion.div

@@ -73,6 +73,32 @@ const SIZE_RECIPES: Record<string, { oil: number; alcohol: number }> = {
   'Body and Hair Mist': { oil: 1, alcohol: 0 },
 };
 
+export function getProductSizeRecipe(
+  sizeLabel: string,
+): { oil: number; alcohol: number } | null {
+  return SIZE_RECIPES[normalizeProductSizeKey(sizeLabel)] ?? null;
+}
+
+/** Maximum whole units that can be made from the product's current inventory. */
+export function getMaxProductQuantity(
+  product: Product,
+  sizeLabel: string,
+  alcoholStockGm?: number | null,
+): number {
+  const recipe = getProductSizeRecipe(sizeLabel);
+  if (!recipe) return Number.MAX_SAFE_INTEGER;
+
+  const oil = Math.max(0, Number(product.productOil ?? 0));
+  const oilMax = recipe.oil > 0 ? Math.floor(oil / recipe.oil) : Number.MAX_SAFE_INTEGER;
+
+  if (!isLiquidPerfumeProduct(product) || recipe.alcohol <= 0 || alcoholStockGm === undefined) {
+    return oilMax;
+  }
+
+  const alcoholMax = Math.floor(Math.max(0, Number(alcoholStockGm ?? 0)) / recipe.alcohol);
+  return Math.min(oilMax, alcoholMax);
+}
+
 export const SIZE_PERFUME_GEL = 'Perfume Gel';
 export const SIZE_ATTAR = 'Attar';
 export const SIZE_CAR_PERFUME = 'Car Perfume';
